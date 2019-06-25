@@ -1,0 +1,22 @@
+# Maps Kabanero platform revisions to related component revisions
+# understood by the other operators. 
+
+# Note the following sequence: the Kabanero operator becomes aware
+# of a new version of the Kabanero platform, in part by editing this file
+# Once the operators are rolled out, the administrator can choose to use
+# the new Kabanero version by editing the Kabanero resource. This causes
+# other resources to be updated using this mapping
+
+revisions:
+
+  # When the resource does not specify which platform version, use this value
+  # This should be kept up to date
+  current:
+    kabanero: 0.0.1 
+
+  - kabanero: 0.0.1
+    tekton: 
+      version: 0.3.1
+  - kabanero-version: 0.0.2
+    tekton: 
+      version: 0.3.1

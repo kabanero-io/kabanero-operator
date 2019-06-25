@@ -1,0 +1,15 @@
+apiVersion: kabanero.io/v1alpha1
+kind: Kabanero
+metadata:
+  name: kabanero
+spec:
+  # The platform version determines the desired version for all components, but those
+  # can be overriden individually as well
+  version: 0.0.1
+
+  # Customizes the deployment of Tekton
+  tekton: 
+    disabled: false
+
+    # Overrides the platform specified version
+    version: 0.3.1

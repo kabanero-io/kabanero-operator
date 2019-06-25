@@ -1,0 +1,6 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Install
+metadata:
+  name: kabanero-tekton
+  namespace: openshift-pipelines-operator
+spec: {}
