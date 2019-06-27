@@ -4,6 +4,8 @@ build:
 	go install ./cmd/manager
 
 build-image: 
+	go get -u github.com/golang/dep/cmd/dep
+	dep ensure
 	operator-sdk build kabanero-operator:latest
 
 generate:
