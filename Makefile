@@ -1,8 +1,5 @@
 .PHONY: build deploy
 
-dependencies:
-	dep ensure
-
 build:
 	go install ./cmd/manager
 
@@ -18,6 +15,9 @@ install:
 deploy: 
 	kubectl create namespace kabanero || true
 	kubectl -n kabanero apply -f deploy/dependencies.yaml
+
+dependencies:
+	dep ensure
 
 # Requires https://github.com/pmezard/licenses
 dependency-report: dependencies
