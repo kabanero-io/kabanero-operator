@@ -7,6 +7,8 @@ build-image:
 	go get -u github.com/golang/dep/cmd/dep
 	dep ensure
 	operator-sdk build kabanero-operator:latest
+	# This is a workaround until manfistival can interact with the virtual file system
+	docker build -t kabanero-operator:latest .
 
 generate:
 	operator-sdk generate k8s
