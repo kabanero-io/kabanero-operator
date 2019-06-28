@@ -19,7 +19,7 @@ curl -L https://github.com/knative/serving/releases/download/v0.4.0/istio.yaml \
   | kubectl apply --filename -
 ```
 
-### Run the Operator Directly
+### Deploy the Operator and Dependencies
 ```
 # Create Kabanero CRDs
 make install
