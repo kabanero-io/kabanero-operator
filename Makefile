@@ -1,10 +1,10 @@
 .PHONY: build deploy
 
-build:
+build: 
 	go install ./cmd/manager
 
 build-image: 
-	operator-sdk build kabanero-operator:latest
+	operator-sdk build kabanero/kabanero-operator:latest
 
 generate:
 	operator-sdk generate k8s
@@ -14,7 +14,7 @@ install:
 	
 deploy: 
 	kubectl create namespace kabanero || true
-	kubectl -n kabanero apply -f deploy/dependencies.yaml
+	kubectl -n kabanero apply -f deploy/
 
 dependencies:
 	dep ensure
