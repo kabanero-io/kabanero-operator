@@ -79,6 +79,12 @@ spec:
   - 'Tekton'
   customresourcedefinitions:
     owned:
+    - kind: Collection
+      name: collections.kabanero.io
+      version: v1alpha1
+      group: kabanero.io
+      description: Kabanero Collection
+      displayName: Kabanero Collection
     - kind: Kabanero
       name: kabaneros.kabanero.io
       version: v1alpha1

@@ -1,0 +1,6 @@
+apiVersion: kabanero.io/v1alpha1
+kind: Collection
+metadata:
+  name: java-microprofile
+spec:
+  version: 1.0.0

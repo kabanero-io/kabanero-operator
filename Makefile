@@ -2,22 +2,27 @@ IMAGE ?= kabanero/kabanero-operator:latest
 
 .PHONY: build deploy
 
-build: 
+build: dependencies
 	go install ./cmd/manager
 
-build-image:  dependencies
+build-image:  dependencies generate
 	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} .
 
+push-image: build-image
+	docker push ${IMAGE}
+
 generate:
 	operator-sdk generate k8s
+	operator-sdk generate openapi
 
 install:
-	kubectl apply -f deploy/crds/kabanero_v1alpha1_kabanero_crd.yaml
+	kubectl apply -f deploy/crds/
 	
 deploy: 
 	kubectl create namespace kabanero || true
+	sed -i '' -e 's!image: kabanero/kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
 	kubectl -n kabanero apply -f deploy/
 
 dependencies:
