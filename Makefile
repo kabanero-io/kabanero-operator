@@ -5,7 +5,7 @@ IMAGE ?= kabanero/kabanero-operator:latest
 build: 
 	go install ./cmd/manager
 
-build-image: 
+build-image: dependencies
 	operator-sdk build ${IMAGE}
 
 generate:
@@ -19,6 +19,7 @@ deploy:
 	kubectl -n kabanero apply -f deploy/
 
 dependencies:
+  go get -u github.com/golang/dep/cmd/dep
 	dep ensure
 
 # Requires https://github.com/pmezard/licenses
