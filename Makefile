@@ -1,10 +1,12 @@
+IMAGE ?= kabanero/kabanero-operator:latest
+
 .PHONY: build deploy
 
 build: 
 	go install ./cmd/manager
 
 build-image: 
-	operator-sdk build kabanero/kabanero-operator:latest
+	operator-sdk build ${IMAGE}
 
 generate:
 	operator-sdk generate k8s
