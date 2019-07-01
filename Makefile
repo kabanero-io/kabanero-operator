@@ -19,7 +19,7 @@ deploy:
 	kubectl -n kabanero apply -f deploy/
 
 dependencies:
-  go get -u github.com/golang/dep/cmd/dep
+	go get -u github.com/golang/dep/cmd/dep
 	dep ensure
 
 # Requires https://github.com/pmezard/licenses
