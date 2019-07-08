@@ -1,14 +1,14 @@
+IMAGE ?= kabanero/kabanero-operator:latest
+
 .PHONY: build deploy
 
-build:
+build: 
 	go install ./cmd/manager
 
-build-image: 
-	go get -u github.com/golang/dep/cmd/dep
-	dep ensure
-	operator-sdk build kabanero-operator:latest
+build-image:  dependencies
+	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system
-	docker build -t kabanero-operator:latest .
+	docker build -t ${IMAGE} .
 
 generate:
 	operator-sdk generate k8s
@@ -18,9 +18,10 @@ install:
 	
 deploy: 
 	kubectl create namespace kabanero || true
-	kubectl -n kabanero apply -f deploy/dependencies.yaml
+	kubectl -n kabanero apply -f deploy/
 
 dependencies:
+	go get -u github.com/golang/dep/cmd/dep
 	dep ensure
 
 # Requires https://github.com/pmezard/licenses
