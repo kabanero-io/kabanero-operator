@@ -16,7 +16,7 @@ spec:
       containers:
         - name: knative-eventing-operator
           # Replace this with the built image name
-          image: quay.io/openshift-knative/knative-eventing-operator:v0.6.0
+          image: quay.io/openshift-knative/knative-eventing-operator:v0.7.0
           command:
           - knative-eventing-operator
           imagePullPolicy: Always
@@ -222,10 +222,8 @@ spec:
       serviceAccountName: knative-serving-operator
       containers:
         - name: knative-serving-operator
-          image: quay.io/openshift-knative/knative-serving-operator:v0.6.0
-          command:
-          - knative-serving-operator
-          imagePullPolicy: Always
+          image: quay.io/openshift-knative/knative-serving-operator:v0.7.0
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -449,13 +447,15 @@ spec:
       serviceAccountName: openshift-pipelines-operator
       containers:
         - name: openshift-pipelines-operator
-          image: quay.io/openshift-pipeline/openshift-pipelines-operator:v0.3.1-2
+          image: quay.io/openshift-pipeline/openshift-pipelines-operator:v0.4.0-1
           command:
           - openshift-pipelines-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
-              value: ""
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -479,6 +479,7 @@ rules:
   - events
   - configmaps
   - secrets
+  - pods/log
   verbs:
   - '*'
 - apiGroups:
@@ -688,4 +689,44 @@ spec:
     served: true
     storage: true
 ---
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-serving-operator
+rules:
+- apiGroups:
+  - '*'
+  attributeRestrictions: null
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups: null
+  attributeRestrictions: null
+  nonResourceURLs:
+  - '*'
+  resources: []
+  verbs:
+  - '*'
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-operator
+rules:
+- apiGroups:
+  - '*'
+  attributeRestrictions: null
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups: null
+  attributeRestrictions: null
+  nonResourceURLs:
+  - '*'
+  resources: []
+  verbs:
+  - '*'
 ---

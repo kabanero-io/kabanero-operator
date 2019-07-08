@@ -7,4 +7,5 @@ curl $BASEURL/crds/openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml
 cat openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml >> $DEST; echo "---" >> $DEST
 rm openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml
 
-sed -i '' 's/namespace: openshift-pipelines-operator/namespace: kabanero/' $DEST
+sed -i.bak 's/namespace: openshift-pipelines-operator/namespace: kabanero/g' $DEST
+rm $DEST.bak
