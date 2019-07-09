@@ -8,6 +8,7 @@ metadata:
     categories: "Integration & Delivery"
     certified: "false"
     containerImage: kabanero/kabanero-operator:latest
+    createdAt: 2019-06-28T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
     repository: https://github.com/kabanero-io/kabanero-operator
     support: IBM
@@ -189,6 +190,13 @@ spec:
           - '*'
           verbs:
           - '*'
+        - apiGroups:
+          - tekton.dev
+          resources:
+          - installs
+          verbs:
+          - get
+          - create
         serviceAccountName: kabanero-operator
     strategy: deployment
   installModes:
