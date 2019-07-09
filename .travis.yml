@@ -2,6 +2,8 @@ language: go
 go:
   - 1.12
 
+#go_import_path: kabanero-io/kabanero-operator
+
 services:
   - docker
 
@@ -13,9 +15,10 @@ before_install:
 - curl -OJL https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 - chmod +x operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu && sudo cp operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu /usr/local/bin/operator-sdk && rm operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 - operator-sdk version
-- go get -u github.com/golang/dep/cmd/dep
-# test only
-- cd ../../ && mkdir kabanero-io && cd kabanero-io && mv ../stevenschader/kabanero-operator . && cd kabanero-operator
+#- go get -u github.com/golang/dep/cmd/dep
+- mkdir -p $HOME/gopath/src/github.com/kabanero-io
+- mv kabanero-operator $HOME/gopath/src/github.com/kabanero-io
+- cd $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - pwd
 - dep ensure
 
