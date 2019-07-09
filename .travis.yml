@@ -15,7 +15,7 @@ before_install:
 - operator-sdk version
 - go get -u github.com/golang/dep/cmd/dep
 # test only
-- cd ../../ && mkdir kabanero-io && cd kabanero-io && ln -s ../stevenschader/kabanero-operator kabanero-operator && cd kabanero-operator
+- cd ../../ && mkdir kabanero-io && cd kabanero-io && mv ../stevenschader/kabanero-operator . && cd kabanero-operator
 - pwd
 - dep ensure
 
