@@ -17,6 +17,7 @@ before_install:
 - cd ../ && mv kabanero-operator $HOME/gopath/src/github.com/kabanero-io
 - cd $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 #- dep ensure
+- godep ensure
 
 script:
 - make
