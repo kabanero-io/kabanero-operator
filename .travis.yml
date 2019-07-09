@@ -16,13 +16,13 @@ before_install:
 - mkdir -p $HOME/gopath/src/github.com/kabanero-io
 - cd ../ && mv kabanero-operator $HOME/gopath/src/github.com/kabanero-io
 - cd $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
-- dep ensure
+- dep -v ensure
 
 script:
 - make
 
 after_script:
-- dep ensure
+- dep -v ensure
 
 cache:
   directories:
