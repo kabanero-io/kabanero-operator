@@ -152,23 +152,25 @@ spec:
           - ""
           resources:
           - pods
-          - services
-          - endpoints
-          - persistentvolumeclaims
-          - events
-          - configmaps
-          - secrets
           verbs:
-          - '*'
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - services
+          verbs:
+          - get
+          - create
         - apiGroups:
           - apps
           resources:
           - deployments
-          - daemonsets
           - replicasets
-          - statefulsets
           verbs:
-          - '*'
+          - get
         - apiGroups:
           - monitoring.coreos.com
           resources:
@@ -194,6 +196,21 @@ spec:
           - tekton.dev
           resources:
           - installs
+          verbs:
+          - get
+          - create
+          - delete
+        - apiGroups:
+          - eventing.knative.dev
+          resources:
+          - knativeeventings
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - serving.knative.dev
+          resources:
+          - knativeservings
           verbs:
           - get
           - create
