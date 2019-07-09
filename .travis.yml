@@ -20,7 +20,7 @@ before_install:
 - cd ../ && mv kabanero-operator $HOME/gopath/src/github.com/kabanero-io
 - cd $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - pwd
-- dep ensure
+#- dep ensure
 
 script:
 - make
