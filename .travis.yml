@@ -13,6 +13,8 @@ before_install:
 - curl -OJL https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 - chmod +x operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu && sudo cp operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu /usr/local/bin/operator-sdk && rm operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 - operator-sdk version
+# test only
+- cd ../&& ln -s kabanero-operator kabanero-io/kabanero-operator && cd kabanero-io/kabanero-operator
 - pwd
 
 script:
@@ -20,4 +22,4 @@ script:
 
 cache:
   directories:
-    - vendor
+    - vendor 
