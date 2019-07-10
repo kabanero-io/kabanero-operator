@@ -5,7 +5,7 @@ go:
 services:
   - docker
 
-# Install operator-sdk
+# Install operator-sdk 
 env:
   - RELEASE_VERSION=v0.8.1
 
