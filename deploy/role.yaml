@@ -70,4 +70,3 @@ rules:
   verbs:
   - get
   - create
----
