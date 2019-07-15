@@ -17,8 +17,9 @@ fi
 DEST_DIR=../deploy/releases/$version
 mkdir -p $DEST_DIR
 DEST_FILE=$DEST_DIR/kabanero-operator.yaml
-cat ../deploy/crds/kabanero_v1alpha1_kabanero_crd.yaml >> $DEST_FILE; echo >> $DEST_FILE; echo "---" >> $DEST_FILE; echo >> $DEST_FILE
-cat ../deploy/service_account.yaml >> $DEST_FILE; echo >> $DEST_FILE; echo "---" >> $DEST_FILE; echo >> $DEST_FILE
-cat ../deploy/operator.yaml >> $DEST_FILE; echo >> $DEST_FILE; echo "---" >> $DEST_FILE; echo >> $DEST_FILE
-cat ../deploy/role.yaml >> $DEST_FILE; echo >> $DEST_FILE; echo "---" >> $DEST_FILE; echo >> $DEST_FILE
+cat ../deploy/dependencies.yaml >> $DEST_FILE; echo "---" >> $DEST_FILE
+cat ../deploy/crds/kabanero_v1alpha1_kabanero_crd.yaml >> $DEST_FILE; echo "---" >> $DEST_FILE
+cat ../deploy/service_account.yaml >> $DEST_FILE; echo "---" >> $DEST_FILE
+cat ../deploy/operator.yaml >> $DEST_FILE; echo "---" >> $DEST_FILE; echo
+cat ../deploy/role.yaml >> $DEST_FILE;  echo "---" >> $DEST_FILE;
 cat ../deploy/role_binding.yaml >> $DEST_FILE
