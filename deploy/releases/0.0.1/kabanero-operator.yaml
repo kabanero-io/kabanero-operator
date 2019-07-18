@@ -1,6 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kabanero
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: kabanero
   name: knative-eventing-operator
 spec:
   replicas: 1
@@ -33,6 +39,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  namespace: kabanero
   creationTimestamp: null
   name: knative-eventing-operator
 rules:
@@ -98,6 +105,7 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  namespace: kabanero
   name: knative-eventing-operator
 subjects:
 - kind: ServiceAccount
@@ -123,6 +131,7 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  namespace: kabanero
   name: knative-eventing-operator
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -208,6 +217,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: kabanero
   name: knative-serving-operator
 spec:
   replicas: 1
@@ -237,6 +247,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  namespace: kabanero
   creationTimestamp: null
   name: knative-serving-operator
 rules:
@@ -301,6 +312,7 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  namespace: kabanero
   name: knative-serving-operator
 subjects:
 - kind: ServiceAccount
@@ -326,6 +338,7 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  namespace: kabanero
   name: knative-serving-operator
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -432,6 +445,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: kabanero
   name: openshift-pipelines-operator
   namespace: kabanero
 spec:
@@ -789,11 +803,13 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  namespace: kabanero
   name: kabanero-operator
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: kabanero
   name: kabanero-operator
 spec:
   replicas: 1
@@ -828,6 +844,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  namespace: kabanero
   creationTimestamp: null
   name: kabanero-operator
 rules:
@@ -901,6 +918,7 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  namespace: kabanero
   name: kabanero-operator
 subjects:
 - kind: ServiceAccount
