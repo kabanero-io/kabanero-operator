@@ -72,3 +72,7 @@ required = [
   [[prune.project]]
     name = "k8s.io/gengo"
     non-go = false
+
+[[constraint]]
+  name = "gopkg.in/yaml.v2"
+  version = "2.2.2"

@@ -13,9 +13,111 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Kabanero":       schema_pkg_apis_kabanero_v1alpha1_Kabanero(ref),
-		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroSpec":   schema_pkg_apis_kabanero_v1alpha1_KabaneroSpec(ref),
-		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroStatus": schema_pkg_apis_kabanero_v1alpha1_KabaneroStatus(ref),
+		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Collection":       schema_pkg_apis_kabanero_v1alpha1_Collection(ref),
+		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionSpec":   schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref),
+		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionStatus": schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref),
+		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Kabanero":         schema_pkg_apis_kabanero_v1alpha1_Kabanero(ref),
+		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroSpec":     schema_pkg_apis_kabanero_v1alpha1_KabaneroSpec(ref),
+		"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroStatus":   schema_pkg_apis_kabanero_v1alpha1_KabaneroStatus(ref),
+	}
+}
+
+func schema_pkg_apis_kabanero_v1alpha1_Collection(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Collection is the Schema for the collections API",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CollectionSpec defines the desired state of Collection",
+				Properties: map[string]spec.Schema{
+					"repositoryUrl": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CollectionStatus defines the observed state of Collection",
+				Properties: map[string]spec.Schema{
+					"activeVersion": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"activeDigest": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -74,6 +176,11 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroSpec(ref common.ReferenceCallback
 							Format: "",
 						},
 					},
+					"collections": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.InstanceCollectionConfig"),
+						},
+					},
 					"tekton": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonCustomizationSpec"),
@@ -83,7 +190,7 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonCustomizationSpec"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.InstanceCollectionConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonCustomizationSpec"},
 	}
 }
 
