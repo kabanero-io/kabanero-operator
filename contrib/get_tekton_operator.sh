@@ -1,11 +1,8 @@
-DEST=tekton.yaml
-
+DEST=tekton-operator.yaml
 BASEURL=https://raw.githubusercontent.com/openshift/tektoncd-pipeline-operator/master/deploy
-$(dirname $0)/get_operator_config.sh $BASEURL $DEST
 
-curl $BASEURL/crds/openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml -o openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml
-cat openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml >> $DEST; echo "---" >> $DEST
-rm openshift-pipelines-operator-tekton_v1alpha1_install_crd.yaml
-
-sed -i.bak 's/namespace: openshift-pipelines-operator/namespace: kabanero/g' $DEST
-rm $DEST.bak
+curl $BASEURL/operator.yaml -o $DEST; echo "---" >> $DEST
+curl $BASEURL/role.yaml >> $DEST; echo "---" >> $DEST
+curl $BASEURL/role_binding.yaml >> $DEST; echo "---" >> $DEST
+curl $BASEURL/service_account.yaml >> $DEST; echo "---" >> $DEST
+curl $BASEURL/crds/operator_v1alpha1_config_crd.yaml >> $DEST; echo "---" >> $DEST

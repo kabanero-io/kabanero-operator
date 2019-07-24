@@ -4,13 +4,6 @@ The Kabanero platform operator
 # Status
 [![Build Status](https://travis-ci.org/kabanero-io/kabanero-operator.svg?branch=master)](https://travis-ci.org/kabanero-io/kabanero-operator)
 
-## Clone the Kabanero operator
-
-```
-git clone https://github.com/kabanero-io/kabanero-operator
-cd kabanero-operator
-```
-
 # Quickstart - minikube
 
 Create a minikube instance: 
@@ -25,21 +18,16 @@ kubectl apply --filename https://github.com/knative/serving/releases/download/v0
 curl -L https://github.com/knative/serving/releases/download/v0.4.0/istio.yaml | sed 's/LoadBalancer/NodePort/' | kubectl apply --filename -
 ```
 
-## Create Kabanero CRDs
+## Deploy the Operators
 
 ```
-make install
+kubectl apply -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/deploy/releases/latest/kabanero-operators.yaml
 ```
 
-## Deploy the CRDs and some of the other controllers
-
-```
-make deploy
-```
 ## Deploy the sample
 
 ```
-kubectl apply -n kabanero -f config/samples/full.yaml
+kubectl apply -n kabanero -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/config/samples/full.yaml
 ```
 
 # Quickstart - OpenShift
@@ -58,16 +46,10 @@ kubectl apply --filename https://github.com/knative/serving/releases/download/v0
 curl -L https://github.com/knative/serving/releases/download/v0.4.0/istio.yaml | sed 's/LoadBalancer/NodePort/' | kubectl apply --filename -
 ```
 
-## Create Kabanero CRDs
+## Deploy the Operators
 
 ```
-make install
-```
-
-## Deploy the CRDs and some of the other controllers
-
-```
-make deploy
+kubectl apply -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/deploy/releases/latest/kabanero-operators.yaml
 ```
 
 ## Check that the operator pods are in Running state
@@ -89,7 +71,7 @@ openshift-pipelines-operator-c56876c69-hf74v   1/1       Running   0          5m
 ## Deploy the sample
 
 ```
-kubectl apply -n kabanero -f config/samples/full.yaml
+kubectl apply -n kabanero -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/config/samples/full.yaml
 ```
 
 kubectl get pods -n kabanero
