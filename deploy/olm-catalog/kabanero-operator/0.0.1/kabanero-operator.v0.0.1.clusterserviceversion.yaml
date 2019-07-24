@@ -132,6 +132,22 @@ spec:
           path: tekton.status
           x-descriptors:
             - 'urn:alm:descriptor:io.kubernetes.phase'
+    required:
+    - name: knativeservings.serving.knative.dev
+      version: v1alpha1
+      kind: KnativeServing
+      displayName: Knative Serving
+      description: Knative Serving
+    - name: knativeeventings.eventing.knative.dev
+      version: v1alpha1
+      kind: KnativeEventing
+      displayName: Knative Eventing
+      description: Knative Eventing
+    - name: installs.tekton.dev
+      version: v1alpha1
+      kind: Install
+      displayName: OpenShift Pipelines Install
+      description: OpenShift Pipelines using Tekton
   install:
     spec:
       deployments:
