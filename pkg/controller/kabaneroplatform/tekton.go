@@ -2,45 +2,35 @@ package kabaneroplatform
 
 import (
 	"context"
+	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	"github.com/kabanero-io/kabanero-operator/pkg/assets/config"
-	"github.com/kabanero-io/kabanero-operator/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func reconcile_tekton(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	f, _ := config.Open("reconciler/tekton.yaml")
-	defer f.Close()
+	filename := "config/reconciler/tekton.yaml"
+	m, err := mf.NewManifest(filename, true, c)
+	if err != nil {
+		return err
+	}
+
+	transforms := []mf.Transformer{
+		mf.InjectOwner(k),
+		mf.InjectNamespace(k.GetNamespace()),
+	}
+
+	err = m.Transform(transforms...)
+	if err != nil {
+		return err
+	}
 
 	if !k.Spec.Tekton.Disabled {
-		log.Info("Tekton is currently enabled")
-
-		options := &client.ApplyOptions{
-			OwningController: k,
-			Namespace:        k.GetNamespace(),
-		}
-
-		_, err := c.ApplyText(f, options)
-		if err != nil {
-			return err
-		}
+		err = m.ApplyAll()
 
 		k.Status.Tekton.Status = "created"
 	} else {
-		log.Info("Tekton is disabled")
-
-		objs, err := c.Unmarshal(f, "yaml")
-		if err != nil {
-			return err
-		}
-
-		//TODO: align metav1 vs runtime.Objects across this package
-		_objs := client.AsRuntimeObjects(objs)
-
-		err = c.DeleteAll(ctx, _objs, &client.DeleteOptions{Namespace: k.GetNamespace()})
-		if err != nil {
-			return err
-		}
+		m.DeleteAll(nil)
 	}
 
-	return nil
+	return err
 }

@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"fmt"
-	operatorclient "github.com/kabanero-io/kabanero-operator/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -96,8 +95,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	c := operatorclient.DefaultClient
-	err = reconcile_tekton(ctx, instance, c)
+	err = reconcile_tekton(ctx, instance, r.client)
 	if err != nil {
 		fmt.Println("Error in reconcile tekton: ", err)
 		return reconcile.Result{}, err
