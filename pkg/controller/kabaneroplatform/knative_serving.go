@@ -32,9 +32,12 @@ func (r *KNativeServingReconciler) Reconcile(ctx context.Context, k *kabanerov1a
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	r.config.Transform(transforms...)
+	err := r.config.Transform(transforms...)
+	if err != nil {
+		return err
+	}
 
-	err := r.config.ApplyAll()
+	err = r.config.ApplyAll()
 
 	return err
 }
