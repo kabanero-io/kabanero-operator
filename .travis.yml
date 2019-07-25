@@ -13,15 +13,22 @@ before_install:
 - curl -OJL https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 - chmod +x operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu && sudo cp operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu /usr/local/bin/operator-sdk && rm operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 - go get -u github.com/golang/dep/cmd/dep
-- mkdir -p $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
+- mkdir -p ${HOME}/gopath/src/github.com/kabanero-io/kabanero-operator
 - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - export TRAVIS_BUILD_DIR=$HOME/gopath/src/github.com/kabanero-io/kabanero-operator
-- cd $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
+- cd ${HOME}/gopath/src/github.com/kabanero-io/kabanero-operator
 - dep ensure
 
 script:
 - make
 - make build-image
+
+deploy:
+  provider: script
+  script: make push-image
+  on:
+     tags: true
+     condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
 
 cache:
   directories:
