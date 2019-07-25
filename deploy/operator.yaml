@@ -16,7 +16,7 @@ spec:
       containers:
         - name: kabanero-operator
           # Replace this with the built image name
-          image: kabanero/kabanero-operator:latest
+          image: kabanero-operator:latest
           command:
           - kabanero-operator
           imagePullPolicy: Always
