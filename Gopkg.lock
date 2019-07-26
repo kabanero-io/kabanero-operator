@@ -120,14 +120,6 @@
   version = "v2.9.3"
 
 [[projects]]
-  digest = "1:4322fcb2f4d508898c3d9b0390a2e58211b53e6d9c25230b225df9a032fe26d6"
-  name = "github.com/evanphx/json-patch"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "5858425f75500d40c52783dce87d085a483ce135"
-  version = "v4.2.0"
-
-[[projects]]
   digest = "1:81466b4218bf6adddac2572a30ac733a9255919bc2f470b4827a317bd4ee1756"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -888,7 +880,6 @@
     "pkg/util/framer",
     "pkg/util/intstr",
     "pkg/util/json",
-    "pkg/util/jsonmergepatch",
     "pkg/util/mergepatch",
     "pkg/util/naming",
     "pkg/util/net",
@@ -1065,7 +1056,6 @@
     "pkg/client/apiutil",
     "pkg/client/config",
     "pkg/controller",
-    "pkg/controller/controllerutil",
     "pkg/event",
     "pkg/handler",
     "pkg/internal/controller",
@@ -1127,28 +1117,16 @@
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/pkg/restmapper",
     "github.com/operator-framework/operator-sdk/version",
-    "github.com/pkg/errors",
     "github.com/shurcooL/vfsgen",
     "github.com/spf13/pflag",
     "gopkg.in/yaml.v2",
-    "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
-    "k8s.io/apimachinery/pkg/api/meta",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
-    "k8s.io/apimachinery/pkg/runtime/serializer/json",
-    "k8s.io/apimachinery/pkg/types",
-    "k8s.io/apimachinery/pkg/util/jsonmergepatch",
-    "k8s.io/apimachinery/pkg/util/mergepatch",
-    "k8s.io/apimachinery/pkg/util/yaml",
-    "k8s.io/client-go/discovery",
-    "k8s.io/client-go/kubernetes",
-    "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth",
-    "k8s.io/client-go/rest",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",
@@ -1158,10 +1136,8 @@
     "k8s.io/kube-openapi/cmd/openapi-gen",
     "k8s.io/kube-openapi/pkg/common",
     "sigs.k8s.io/controller-runtime/pkg/client",
-    "sigs.k8s.io/controller-runtime/pkg/client/apiutil",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/controller",
-    "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",

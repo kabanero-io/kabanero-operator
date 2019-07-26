@@ -7,10 +7,10 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 
 .PHONY: build deploy build-image push-image
 
-build: dependencies
+build:
 	go install ./cmd/manager
 
-build-image: dependencies generate
+build-image: generate
 	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
@@ -45,11 +45,13 @@ deploy:
 	sed -i '' -e 's!image: kabanero/kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
 	kubectl -n kabanero apply -f deploy/
 
-dependencies:
+dependencies: 
+ifeq (, $(shell which dep))
 	go get -u github.com/golang/dep/cmd/dep
+endif
 	dep ensure
 
 # Requires https://github.com/pmezard/licenses
-dependency-report: dependencies
+dependency-report: 
 	go get -u github.com/pmezard/licenses
 	licenses ./pkg/... | cut -c49- > 3RD_PARTY
