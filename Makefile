@@ -1,17 +1,37 @@
-IMAGE ?= kabanero/kabanero-operator:latest
+# The Docker image in format repository:tag. Repository may contain a remote reference.
+# Override in order to customize
+IMAGE ?= kabanero-operator:latest
 
-.PHONY: build deploy
+# Computed repository name (no tag) including repository host/path reference
+REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
+
+.PHONY: build deploy build-image push-image
 
 build: dependencies
 	go install ./cmd/manager
 
-build-image:  dependencies generate
+build-image: dependencies generate
 	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system
-	docker build -t ${IMAGE} .
+	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
 
-push-image: build-image
-	docker push ${IMAGE}
+push-image:
+ifneq "$(IMAGE)" "kabanero-operator:latest"
+	# Default push
+	docker push $(IMAGE)
+
+ifdef TRAVIS_TAG
+	# This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
+	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
+	docker push $(REPOSITORY):$(TRAVIS_TAG)
+endif
+
+ifdef TRAVIS_BRANCH
+	# This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
+	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
+	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
+endif
+endif
 
 generate:
 	operator-sdk generate k8s
