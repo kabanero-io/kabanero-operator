@@ -42,7 +42,15 @@ install:
 	
 deploy: 
 	kubectl create namespace kabanero || true
-	sed -i '' -e 's!image: kabanero/kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
+
+ifeq "$(IMAGE)" "kabanero-operator:latest"
+	# No image pull policy for local image
+	sed -i '' '/imagePullPolicy/d' deploy/operator.yaml
+else
+	# Substitute current image name
+	sed -i '' -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
+endif
+
 	kubectl -n kabanero apply -f deploy/
 
 dependencies: 
