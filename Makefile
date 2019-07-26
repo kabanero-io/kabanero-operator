@@ -1,11 +1,11 @@
-# leave as is or define  as a travis-ci env variables
-DOCKERHUB_PROJECT ?= kabanero
-DOCKERHUB_REPO ?= kabanero-operator
-# leave as is else this is overridden by github release tag
-TRAVIS_BRANCH ?= latest
-IMAGE ?= ${DOCKERHUB_PROJECT}/${DOCKERHUB_REPO}:${TRAVIS_BRANCH}
+# The Docker image in format repository:tag. Repository may contain a remote reference.
+# Override in order to customize
+IMAGE ?= kabanero-operator:latest
 
-.PHONY: build deploy
+# Computed repository name (no tag) including repository host/path reference
+REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
+
+.PHONY: build deploy build-image push-image
 
 build: dependencies
 	go install ./cmd/manager
@@ -13,13 +13,25 @@ build: dependencies
 build-image: dependencies generate
 	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system
-	docker build -t ${IMAGE} --build-arg DOCKERHUB_PROJECT=${DOCKERHUB_PROJECT} --build-arg DOCKERHUB_REPO=${DOCKERHUB_REPO} --build-arg TRAVIS_BRANCH=${TRAVIS_BRANCH} .
+	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
 
 push-image:
-	docker images
-	# docker user/pass travis-ci env variables
-	docker login -u $(DOCKER_USERNAME) -p $(DOCKER_PASSWORD)
+ifneq "$(IMAGE)" "kabanero-operator:latest"
+	# Default push
 	docker push $(IMAGE)
+
+ifdef TRAVIS_TAG
+	# This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
+	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
+	docker push $(REPOSITORY):$(TRAVIS_TAG)
+endif
+
+ifdef TRAVIS_BRANCH
+	# This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
+	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
+	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
+endif
+endif
 
 generate:
 	operator-sdk generate k8s
