@@ -16,7 +16,7 @@ before_install:
 - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - export TRAVIS_BUILD_DIR=$HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - cd ${HOME}/gopath/src/github.com/kabanero-io/kabanero-operator
-- if [ -z \"${DOCKER_USERNAME}\" ]; then docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD || true; fi
+- if [ ! -z \"$DOCKER_USERNAME\" ]; then docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD || true; fi
 
 script:
 - make
@@ -26,21 +26,17 @@ before_deploy:
 - .travis/prepare_release.sh
 
 deploy:
-  provider: script
+- provider: script
   script: make push-image
   on:
      tags: true
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
-
-deploy:
-  provider: script
+- provider: script
   script: make push-image
   on:
      branch: master
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
-
-deploy:
-  provider: releases
+- provider: releases
   api_key: 
     secure: "YNp3evFUzjyM8FcIdSpqt0AQ3NWxmsZF+9NXd3zsESqBAJeRlAfrrBrzpoy10euLz0p3Kj+aMRkS0S78T3y01Sy8z1Xbftv6hqAo9DhsYgie4E9RIK9s7VuHZptRCrXHBmBcMYQHqaxYA0Cn6O+NSlk63sZeUxhfmTVt6epH+/CDlbrgaYM5pSPR9vjCzsNc+TDuOCG+rV24vn5oDwrceSEfuHF+VHFsh8DUZdr+nQpmpyQlbOUMTRyOpKn4U+8/oSx4Z8C3p0dcD80qDYbDDR63W5azbAND27jU/RDFoTsjHF1zJouwRBFWQWw1/VOc0gLlEWBdrirLw53uD5QWEJrPZScVUPMInysW0aRzh0pjk2UQkYeGPYhKN3UUFE1OlQ7knzBO+ilptUmR0lGgC+ah92C6yoVAojxMdR8mDyqjRezJnYIRjknq50OuXxcXCsmRlYs4Ha4DcXU39ezzuvRUgNaEZMA/vNl+glFlx8SxtLMLS6+KQJvsM2WJ8cXK9cE+wqGYYwFgwRJ6c10JUCes3wD2GJRAPqp6b07NC0Vrjvg2sS8VDjwjqjNPhbvBfsaVK1zuWpxhkjSGY4Tm2InWxreVrKsnsHGR+gavN3CBZWUE8dEuoxracIJ6s23BU6CfMOPxP8NVuq8QDw+7+KtH6+KZvbbScgM5K0AsHSs="
   file: "deploy/kabanero-operators.yaml"
