@@ -51,11 +51,9 @@ rules:
 - apiGroups:
   - tekton.dev
   resources:
-  - installs
+  - '*'
   verbs:
-  - get
-  - create
-  - delete
+  - '*'
 - apiGroups:
   - eventing.knative.dev
   resources:

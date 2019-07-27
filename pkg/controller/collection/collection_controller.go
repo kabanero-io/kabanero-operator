@@ -30,7 +30,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileCollection{client: mgr.GetClient(), scheme: mgr.GetScheme(), indexResolver: resolveIndex}
+	return &ReconcileCollection{client: mgr.GetClient(), scheme: mgr.GetScheme(), indexResolver: ResolveIndex}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -137,9 +137,14 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 
 	//Retreive the remote index
 	var collection *CollectionV1
-	if len(k.Spec.Collections.Repositories) > 0 {
+	if k.Spec.Collections.Repositories != nil && len(k.Spec.Collections.Repositories) > 0 {
 		for _, repo := range k.Spec.Collections.Repositories {
-			_collection, err := r.searchCollection(collectionName, repo.Url)
+			index, err := r.indexResolver(repo.Url)
+			if err != nil {
+				return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+			}
+
+			_collection, err := SearchCollection(collectionName, index)
 			r_log.Error(err, "Could not search the provided index")
 			if _collection != nil {
 				collection = _collection
@@ -150,8 +155,14 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	//If not found, search the default
 	//TODO: incorporate this default into a webhook
 	default_url := "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml"
-	collection, err := r.searchCollection(collectionName, default_url)
-
+	index, err := r.indexResolver(default_url)
+	if err != nil {
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	}
+	collection, err = SearchCollection(collectionName, index)
+	if err != nil {
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	}
 	if collection == nil {
 		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, fmt.Errorf("Collection could not be found")
 	}
@@ -162,36 +173,6 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileCollection) searchCollection(collectionName string, url string) (*CollectionV1, error) {
-	fmt.Println("Search collection ", collectionName, url, r)
-	index, err := r.indexResolver(url)
-	if err != nil {
-		return nil, err
-	}
-
-	//Locate the desired collection in the index
-	var collectionRef *IndexedCollectionV1
-	for _, collectionList := range index.Collections {
-		for _, _collectionRef := range collectionList {
-			if _collectionRef.Name == collectionName {
-				collectionRef = &_collectionRef
-			}
-		}
-	}
-
-	if collectionRef == nil {
-		//The collection referenced in the Collection resource has no match in the index
-		return nil, nil
-	}
-
-	collection, err := resolveCollection(collectionRef.CollectionUrls...)
-	if err != nil {
-		return nil, err
-	}
-
-	return collection, nil
 }
 
 func activate(collectionResource *kabanerov1alpha1.Collection, collection *CollectionV1, c client.Client) error {
@@ -217,6 +198,9 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			}
 
 			err = m.ApplyAll()
+			if err != nil {
+				log.Error(err, "Error installing the resource", "resource", asset.Url)
+			}
 		}
 	}
 

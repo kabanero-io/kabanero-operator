@@ -95,6 +95,12 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	err = reconcileFeaturedCollections(ctx, instance, r.client)
+	if err != nil {
+		fmt.Println("Error in reconcile featured collections: ", err)
+		return reconcile.Result{}, err
+	}
+
 	err = reconcile_tekton(ctx, instance, r.client)
 	if err != nil {
 		fmt.Println("Error in reconcile tekton: ", err)
