@@ -14,4 +14,4 @@ spec:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: experimental
-      url: https://github.com/kabanero-io/kabanero-collection/blob/master/experimental
+      url: https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml

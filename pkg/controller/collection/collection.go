@@ -6,6 +6,18 @@ type CollectionV1Index struct {
 	Collections map[string][]IndexedCollectionV1 `yaml:"projects,omitempty"`
 }
 
+// Convenience function which iterates over the complex Collections structure
+func (c *CollectionV1Index) ListCollections() []IndexedCollectionV1 {
+	all := make([]IndexedCollectionV1, 0)
+	for _, v := range c.Collections {
+		for _, colRef := range v {
+			all = append(all, colRef)
+		}
+	}
+
+	return all
+}
+
 type IndexedCollectionV1 struct {
 	Created        string   `yaml:"created,omitempty"`
 	Description    string   `yaml:"description,omitempty"`

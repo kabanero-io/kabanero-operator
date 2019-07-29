@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func resolveIndex(url string) (*CollectionV1Index, error) {
+func ResolveIndex(url string) (*CollectionV1Index, error) {
 	if !strings.HasSuffix(url, "/index.yaml") {
 		url = url + "/index.yaml"
 	}
@@ -38,7 +38,31 @@ func resolveIndex(url string) (*CollectionV1Index, error) {
 	return &index, nil
 }
 
-func resolveCollection(urls ...string) (*CollectionV1, error) {
+func SearchCollection(collectionName string, index *CollectionV1Index) (*CollectionV1, error) {
+	//Locate the desired collection in the index
+	var collectionRef *IndexedCollectionV1
+	for _, collectionList := range index.Collections {
+		for _, _collectionRef := range collectionList {
+			if _collectionRef.Name == collectionName {
+				collectionRef = &_collectionRef
+			}
+		}
+	}
+
+	if collectionRef == nil {
+		//The collection referenced in the Collection resource has no match in the index
+		return nil, nil
+	}
+
+	collection, err := ResolveCollection(collectionRef.CollectionUrls...)
+	if err != nil {
+		return nil, err
+	}
+
+	return collection, nil
+}
+
+func ResolveCollection(urls ...string) (*CollectionV1, error) {
 	for _, url := range urls {
 		if strings.HasSuffix(url, "tar.gz") {
 			panic("No implementation for collection archives")
