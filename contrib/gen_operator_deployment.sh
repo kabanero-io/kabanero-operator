@@ -1,18 +1,30 @@
-# This script generates metadata for fully deploying the Kabanero operator along with it's requirements.
-# Generated metadata name: kabanero-operator.yaml.
-# Generated metadata location: ../deply/releases/<version>.
-# Where <version> is provided by the user, and it is the Kabanero operator version for which the 
-# metadata is being created.
+#!/bin/bash
 #--------------------------------------------------------------------------------------------------------
+# This script generates metadata for fully deploying the Kabanero operator along with it's requirements.
+#
+# Generated File: deploy/kabanero-operators.yaml.
+#
+# Usage: 
+# ./gen_operator_deployment.sh [IMAGE]
+#
+# Where [IMAGE] is the complete image name, and it is optional. If [IMAGE] is not specified, the 
+# kabanero operator deployment image is not updated. 
+#
+# Example: 
+# ./gen_operator_deployment.sh kabanero/kabanero-operator:x.y.z
+#--------------------------------------------------------------------------------------------------------
+
+# Find we are running on MAC.
+MAC_EXEC=false
+macos=Darwin
+if [ "$(uname)" == "Darwin" ]; then
+   MAC_EXEC=true
+fi
 
 # Iterates over a single resource metadata yaml and appends the kabanero namspace if needed.
 # Inputs:
 # $1: Temporary file containing a single resource yaml.
 # $2: A boolean value stating whether or not the function should add yaml resource delimiters (---).
-# NOTES:
-#  MAC users. Replace: sed -i '/^[ ]\{0\}metadata:/a \\ \ namespace: kabanero' $1
-#             sed -i '' e '/^[ ]\{0\}metadata:/a \
-#             \ \ namespace: kabanero' $1
 add_kabanero_namespace () {
    foundMetadata=false
    if [ -s $1 ]; then
@@ -53,7 +65,12 @@ add_kabanero_namespace () {
             anyRootEntryRegx='^[ ]{0}[a-zA-Z]+'
             if [[ $foundMetadata == true && $line =~ $anyRootEntryRegx ]]; then
                if [[ "$(grep -q '\s\{2\}namespace:' rootMetadataEntry.tmp)" -eq 0 ]]; then
-                  sed -i '/^[ ]\{0\}metadata:/a \\ \ namespace: kabanero' $1
+                  if [[ $MAC_EXEC == true ]]; then
+                     sed -i '' -e '/^[ ]\{0\}metadata:/a \
+                         \ \ namespace: kabanero' $1
+                  else
+                     sed -i '/^[ ]\{0\}metadata:/a \\ \ namespace: kabanero' $1
+                  fi
                fi
 
                foundMetadata=false
@@ -65,7 +82,12 @@ add_kabanero_namespace () {
             rm rootMetadataEntry.tmp
          fi
       else
-         sed -i '/^[ ]\{0\}metadata:/a \\ \ namespace: kabanero' $1
+         if [[ $MAC_EXEC == true ]]; then
+            sed -i '' -e '/^[ ]\{0\}metadata:/a \
+               \ \ namespace: kabanero' $1
+         else
+            sed -i '/^[ ]\{0\}metadata:/a \\ \ namespace: kabanero' $1
+         fi
       fi
 
       cat $1 >> $DEST_FILE;
@@ -84,23 +106,12 @@ add_kabanero_namespace () {
 #------
 # Main.
 #------
+BASE_DIR=$(dirname $0)
+DEST_DIR=$BASE_DIR/../deploy
+DEST_FILE=$DEST_DIR/kabanero-operators.yaml
+DEST_FILE_TMP=$DEST_DIR/kabanero-operators.yaml.tmp
+DEST_FILE_BKUP=$DEST_DIR/kabanero-operators.yaml.bkup
 
-# Ask for user input.
-echo Please enter the kabanero operator version:
-read version
-
-# Basic input validation. Check for empty strings input or no input.
-if [[ -z ${version// } ]]; then
-   printf '%s\n' "Invalid input. Please provide a valid version."
-   exit 1
-fi
-
-# Start processing the request.
-DEST_DIR=../deploy/releases/$version
-mkdir -p $DEST_DIR
-DEST_FILE=$DEST_DIR/kabanero-operator.yaml
-DEST_FILE_TMP=$DEST_DIR/kabanero-operator.yaml.tmp
-DEST_FILE_BKUP=$DEST_DIR/kabanero-operator.yaml.bkup
 # Remove the existing destination file if it exists
 if [ -f $DEST_FILE ]; then
    cp $DEST_FILE $DEST_FILE_BKUP
@@ -117,12 +128,13 @@ metadata:
 EOF
 
 # Add all needed yaml files.
-cat ../deploy/dependencies.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
-cat ../deploy/crds/kabanero_v1alpha1_kabanero_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
-cat ../deploy/service_account.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
-cat ../deploy/operator.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP; echo
-cat ../deploy/role.yaml >> $DEST_FILE_TMP;  echo "---" >> $DEST_FILE_TMP;
-cat ../deploy/role_binding.yaml >> $DEST_FILE_TMP
+cat $DEST_DIR/dependencies.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
+cat $DEST_DIR/crds/kabanero_v1alpha1_kabanero_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
+cat $DEST_DIR/crds/kabanero_v1alpha1_collection_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
+cat $DEST_DIR/service_account.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
+cat $DEST_DIR/operator.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP; echo
+cat $DEST_DIR/role.yaml >> $DEST_FILE_TMP;  echo "---" >> $DEST_FILE_TMP;
+cat $DEST_DIR/role_binding.yaml >> $DEST_FILE_TMP
 
 # Add the kabanero namespace to the resources in DEST_FILE_TMP. 
 # Process multiple entries ending in '---'.
@@ -131,7 +143,7 @@ addseparator=true
 while read -r line; do
   if [[ $line == "---" ]]; then
      add_kabanero_namespace resource.yaml.tmp $addseparator
- else
+  else
      echo $line >> resource.yaml.tmp
   fi
 done < "$DEST_FILE_TMP"
@@ -145,6 +157,15 @@ if [ -s resource.yaml.tmp ]; then
    done < resource.yaml.tmp
 fi
 
+# Update the operator deployment image entry if one was supplied.
+if [ ! -z "$1" ]; then
+   if [[ $MAC_EXEC == true ]]; then
+      sed -i '' -e "s!image: kabanero-operator:latest!image: $1!g" $DEST_FILE
+   else
+      sed -i "s!image: kabanero-operator:latest!image: $1!g" $DEST_FILE
+   fi
+fi
+
 # Cleanup.
 if [ -f $DEST_FILE_BKUP ]; then
    rm $DEST_FILE_BKUP
@@ -153,4 +174,4 @@ fi
 rm $DEST_FILE_TMP
 
 # Issue completion message.
-echo 'Completed execution. File location used: ' $DEST_FILE
+echo 'Completed execution. Destination file: ' $DEST_FILE
