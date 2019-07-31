@@ -114,10 +114,23 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 							Format: "",
 						},
 					},
+					"activeAssets": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.RepositoryAssetStatus"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.RepositoryAssetStatus"},
 	}
 }
 

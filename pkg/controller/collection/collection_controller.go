@@ -175,34 +175,84 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	return reconcile.Result{}, nil
 }
 
+// Check if the asset read from a manifest is equal to the asset in the status
+// object.  They are equal if they have the same name, or if the name is
+// nil, if the URLs are equal.
+func assetMatch(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset AssetManifest) bool {
+	if len(asset.Name) == 0 {
+		return asset.Url == assetStatus.Url
+	}
+
+	return asset.Name == assetStatus.Name
+}
+
+func updateResouceDigest(status *kabanerov1alpha1.CollectionStatus, asset AssetManifest) {
+	log.Info(fmt.Sprintf("Updating status for resource %v", asset.Name))
+	
+	// First find the asset in the Collection status.
+	for index, curAssetStatus := range status.ActiveAssets {
+		if assetMatch(curAssetStatus, asset) {
+			// We found it - update the digest
+			status.ActiveAssets[index].Digest = asset.Digest
+			return
+		}
+	}
+
+	// If the asset was not found, create a status for it
+	status.ActiveAssets = append(status.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Name, asset.Url, asset.Digest})
+}
+
 func activate(collectionResource *kabanerov1alpha1.Collection, collection *CollectionV1, c client.Client) error {
 	manifest := collection.Manifest
 
 	for _, asset := range manifest.Assets {
 		if asset.Type == "kubernetes-resource" {
-			log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
-
-			m, err := mf.NewManifest(asset.Url, false, c)
-			if err != nil {
-				return err
+			// If the asset has a digest, see if the digest has changed.  Don't bother updating anything
+			// if the digest is the same.
+			log.Info(fmt.Sprintf("Checking digest for asset %v", asset.Url))
+			applyAsset := true
+			if len(asset.Digest) > 0 {
+				for _, assetStatus := range collectionResource.Status.ActiveAssets {
+					if (assetMatch(assetStatus, asset) && (assetStatus.Digest == asset.Digest)) {
+						// The digest is equal - don't apply the asset.
+						log.Info(fmt.Sprintf("Digest has not changed %v", asset.Digest))
+						applyAsset = false
+						break
+					}
+				}
 			}
 
-			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+			if applyAsset {
+				log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
 
-			err = m.Transform(func(u *unstructured.Unstructured) error {
-				u.SetNamespace(collectionResource.GetNamespace())
-				return nil
-			})
-			if err != nil {
-				return err
-			}
+				m, err := mf.NewManifest(asset.Url, false, c)
+				if err != nil {
+					return err
+				}
 
-			err = m.ApplyAll()
-			if err != nil {
-				log.Error(err, "Error installing the resource", "resource", asset.Url)
+				log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+				err = m.Transform(func(u *unstructured.Unstructured) error {
+					u.SetNamespace(collectionResource.GetNamespace())
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+
+				err = m.ApplyAll()
+				if err != nil {
+					log.Error(err, "Error installing the resource", "resource", asset.Url)
+				} else {
+					// Update the digest for this resource in the status
+					updateResouceDigest(&collectionResource.Status, asset)
+				}
 			}
 		}
 	}
+
+	// Update the status of the Collection object to reflect the version we applied.
+	collectionResource.Status.ActiveVersion = manifest.Version;
 
 	return nil
 }
