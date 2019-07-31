@@ -145,11 +145,20 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			}
 
 			_collection, err := SearchCollection(collectionName, index)
-			r_log.Error(err, "Could not search the provided index")
+			if err != nil {
+				r_log.Error(err, "Could not search the provided index")
+			}
 			if _collection != nil {
 				collection = _collection
 			}
 		}
+                if collection != nil {
+                        err := activate(c, collection, r.client)
+                        if err != nil {
+                                return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+                        }
+                        return reconcile.Result{}, nil
+                }
 	}
 
 	//If not found, search the default
