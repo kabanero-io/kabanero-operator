@@ -5,7 +5,7 @@ IMAGE ?= kabanero-operator:latest
 # Computed repository name (no tag) including repository host/path reference
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 
-.PHONY: build deploy build-image push-image
+.PHONY: build deploy build-image docker-login push-image
 
 build:
 	go install ./cmd/manager
@@ -14,6 +14,9 @@ build-image: generate
 	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
+
+docker-login:
+	if [ ! -z "$(DOCKER_USERNAME)" ]; then echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin || true; fi
 
 push-image:
 ifneq "$(IMAGE)" "kabanero-operator:latest"

@@ -16,23 +16,22 @@ before_install:
 - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - export TRAVIS_BUILD_DIR=$HOME/gopath/src/github.com/kabanero-io/kabanero-operator
 - cd ${HOME}/gopath/src/github.com/kabanero-io/kabanero-operator
-- if [ ! -z \"$DOCKER_USERNAME\" ]; then docker login --username $DOCKER_USERNAME --password-stdin < $DOCKER_PASSWORD || true; fi
 
 script:
-- make
-- make build-image
+- make V=1
+- make V=1 build-image
 
 before_deploy:
 - .travis/prepare_release.sh
 
 deploy:
 - provider: script
-  script: make push-image
+  script: make V=1 docker-login push-image
   on:
      tags: true
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
 - provider: script
-  script: make push-image
+  script: make V=1 docker-login push-image
   on:
      branch: master
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
