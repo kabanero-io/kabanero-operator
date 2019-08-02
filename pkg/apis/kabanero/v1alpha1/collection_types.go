@@ -21,6 +21,8 @@ type RepositoryAssetStatus struct {
 	Name string `json:"assetName,omitempty"`
 	Url string `json:"url,omitempty"`
 	Digest string `json:"assetDigest,omitempty"`
+	Status string `json:"status,omitempty"`
+	StatusMessage string `json:"statusMessage,omitempty"`
 }
 
 // CollectionStatus defines the observed state of Collection
