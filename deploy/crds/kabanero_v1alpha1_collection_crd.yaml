@@ -38,6 +38,21 @@ spec:
           type: object
         status:
           properties:
+            activeAssets:
+              items:
+                properties:
+                  assetDigest:
+                    type: string
+                  assetName:
+                    type: string
+                  status:
+                    type: string
+                  statusMessage:
+                    type: string
+                  url:
+                    type: string
+                type: object
+              type: array
             activeDigest:
               type: string
             activeVersion:

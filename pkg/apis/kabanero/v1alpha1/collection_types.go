@@ -15,11 +15,22 @@ type CollectionSpec struct {
 	Version       string `json:"version,omitempty"`
 }
 
+// RepositoryAssetStatus defines the observed state of a single asset
+// in a respository, in the collection.
+type RepositoryAssetStatus struct {
+	Name string `json:"assetName,omitempty"`
+	Url string `json:"url,omitempty"`
+	Digest string `json:"assetDigest,omitempty"`
+	Status string `json:"status,omitempty"`
+	StatusMessage string `json:"statusMessage,omitempty"`
+}
+
 // CollectionStatus defines the observed state of Collection
 // +k8s:openapi-gen=true
 type CollectionStatus struct {
 	ActiveVersion string `json:"activeVersion,omitempty"`
 	ActiveDigest  string `json:"activeDigest,omitempty"`
+	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

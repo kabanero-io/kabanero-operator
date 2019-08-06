@@ -5,7 +5,7 @@ import (
 )
 
 func TestResolveIndex(t *testing.T) {
-	index, err := resolveIndex("https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental")
+	index, err := ResolveIndex("https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestResolveIndex(t *testing.T) {
 }
 
 func TestResolveCollection(t *testing.T) {
-	collection, err := resolveCollection("https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/java-microprofile-0.2.1/collection.yaml")
+	collection, err := ResolveCollection("https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/java-microprofile-0.2.1/collection.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
