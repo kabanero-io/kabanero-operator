@@ -38,6 +38,7 @@ generate:
 	operator-sdk generate openapi
 
 install:
+	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
 	kubectl apply -f deploy/crds/
 	
 deploy: 
@@ -45,13 +46,14 @@ deploy:
 
 ifeq "$(IMAGE)" "kabanero-operator:latest"
 	# No image pull policy for local image
-	sed -i '' -e 's!imagePullPolicy: Always!imagePullPolicy: Never!' deploy/operator.yaml
+	sed -i.bak -e 's!imagePullPolicy: Always!imagePullPolicy: Never!' deploy/operator.yaml
 else
 	# Substitute current image name
-	sed -i '' -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
+	sed -i.bak -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
 endif
-
-	kubectl -n kabanero apply -f deploy/
+	rm deploy/operator.yaml.bak
+	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
+	kubectl apply -f deploy/
 
 dependencies: 
 ifeq (, $(shell which dep))
