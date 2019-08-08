@@ -3,6 +3,8 @@ package kabaneroplatform
 import (
 	"context"
 	_ "fmt"
+
+	"github.com/blang/semver"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -10,6 +12,28 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// Finds the highest version (semver) of the collection with the given name, in the provided
+// list of collections.  The caller has verified that the list contains at least one collection
+// with the given name.
+func findMaxVersionCollectionWithName(collections []*collection.CollectionV1, name string) string {
+
+	highestVersion, _ := semver.Make("0.0.0")
+
+	for _, candidate := range collections {
+		if candidate.Manifest.Name == name {
+			candidateVersion, err := semver.ParseTolerant(candidate.Manifest.Version)
+			if err == nil { // TODO: log error?
+				if candidateVersion.Compare(highestVersion) > 0 {
+					highestVersion = candidateVersion
+				} 
+			}
+		}
+	}
+
+	return highestVersion.String()
+}
+
 
 func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
 	//Resolve the collections which are currently featured across the various indexes
@@ -28,7 +52,8 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 		collectionResource := &kabanerov1alpha1.Collection{}
 		err := cl.Get(ctx, name, collectionResource)
 		if errors.IsNotFound(err) {
-			//Not found, so create
+			// Not found, so create.  Need to create at the highest supported
+			// version found in the repositories.
 			collectionResource = &kabanerov1alpha1.Collection{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      c.Manifest.Name,
@@ -36,7 +61,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 				},
 				Spec: kabanerov1alpha1.CollectionSpec{
 					Name:    c.Manifest.Name,
-					Version: c.Manifest.Version,
+					Version: findMaxVersionCollectionWithName(featured, c.Manifest.Name),
 				},
 			}
 			err := cl.Create(ctx, collectionResource)

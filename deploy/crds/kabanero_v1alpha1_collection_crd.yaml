@@ -57,6 +57,12 @@ spec:
               type: string
             activeVersion:
               type: string
+            availableLocation:
+              type: string
+            availableVersion:
+              type: string
+            statusMessage:
+              type: string
           type: object
   version: v1alpha1
   versions:
