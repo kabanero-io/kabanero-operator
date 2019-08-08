@@ -17,7 +17,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 	if err != nil {
 		return err
 	}
-
+	ownerIsController := true
 	for _, c := range featured {
 		//For each collection, assure that a corresponding resource exists
 		name := types.NamespacedName{
@@ -33,6 +33,15 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      c.Manifest.Name,
 					Namespace: k.GetNamespace(),
+					OwnerReferences: []metav1.OwnerReference{
+						metav1.OwnerReference{
+							APIVersion:           k.TypeMeta.APIVersion,
+							Kind:                 k.TypeMeta.Kind,
+							Name:                 k.ObjectMeta.Name,
+							UID:                  k.ObjectMeta.UID,
+							Controller:           &ownerIsController,
+						},
+					},
 				},
 				Spec: kabanerov1alpha1.CollectionSpec{
 					Name:    c.Manifest.Name,
