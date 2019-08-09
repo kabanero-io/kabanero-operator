@@ -345,10 +345,11 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 
 			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
-			err = m.Transform(func(u *unstructured.Unstructured) error {
-				u.SetNamespace(collectionResource.GetNamespace())
-				return nil
-			})
+			transforms := []mf.Transformer{
+				mf.InjectNamespace(collectionResource.GetNamespace()),
+			}
+
+			err = m.Transform(transforms...)
 			if err != nil {
 				log.Error(err, errorMessage, "resource", asset.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
