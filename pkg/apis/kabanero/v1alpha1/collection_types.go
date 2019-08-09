@@ -31,6 +31,9 @@ type CollectionStatus struct {
 	ActiveVersion string `json:"activeVersion,omitempty"`
 	ActiveDigest  string `json:"activeDigest,omitempty"`
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
+	AvailableVersion string `json:"availableVersion,omitempty"`
+	AvailableLocation string `json:"availableLocation,omitempty"`
+	StatusMessage string `json:"statusMessage,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

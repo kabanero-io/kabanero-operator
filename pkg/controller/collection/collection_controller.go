@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/blang/semver"
 	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -101,6 +102,8 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	// Resolve the kabanero instance
+	// TODO: issue #92, when repo is added to the Collection, there will be no need for the Kabanero
+	//       object here.
 	var k *kabanerov1alpha1.Kabanero
 	l := kabanerov1alpha1.KabaneroList{}
 	err = r.client.List(context.Background(), &client.ListOptions{}, &l)
@@ -141,8 +144,42 @@ func failedAssets(status kabanerov1alpha1.CollectionStatus) bool {
 	return false
 }
 
+// Finds the collection with the highest semver.  Caller has validated that resolvedCollection
+// contains at least one collection.
+func findMaxVersionCollection(collections []resolvedCollection) *resolvedCollection {
+	log.Info(fmt.Sprintf("findMaxVersionCollection: processing %v collections", len(collections)))
+
+	var maxCollection *resolvedCollection = nil
+	maxVersion, _ := semver.Make("0.0.0")
+
+	for i, _ := range collections {
+		curVersion, err := semver.ParseTolerant(collections[i].collection.Manifest.Version)
+		if err == nil {
+			if curVersion.Compare(maxVersion) > 0 {
+				maxCollection = &collections[i]
+				maxVersion = curVersion
+			}
+		} else {
+			log.Info(fmt.Sprintf("findMaxVersionCollection: invalid semver " + collections[i].collection.Manifest.Version))
+		}
+	}
+
+	// It's possible we didn't find a valid semver, in which case we'd return nil.
+	return maxCollection
+}
+
+
+// Used internally by ReconcileCollection to store matching collections
+type resolvedCollection struct {
+	collection CollectionV1
+	repositoryUrl string
+}
+
 func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection, k *kabanerov1alpha1.Kabanero) (reconcile.Result, error) {
 	r_log := log.WithValues("Request.Namespace", c.GetNamespace()).WithValues("Request.Name", c.GetName())
+
+	// Clear the status message, we'll generate a new one if necessary
+	c.Status.StatusMessage = ""
 
 	//The collection name can be either the spec.name or the resource name. The
 	//spec.name has precedence
@@ -154,52 +191,88 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	}
 	r_log = r_log.WithValues("Collection.Name", collectionName)
 
-	//Retreive the remote index
-	var collection *CollectionV1
-	if k.Spec.Collections.Repositories != nil && len(k.Spec.Collections.Repositories) > 0 {
-		for _, repo := range k.Spec.Collections.Repositories {
-			index, err := r.indexResolver(repo.Url)
-			if err != nil {
-				return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-			}
+	// Retreive all matching collection names from all remote indexes.  If none were specified,
+	// use the default.
+	var matchingCollections []resolvedCollection
+	repositories := k.Spec.Collections.Repositories
+	if len(repositories) == 0 {
+		default_url := "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml"
+		repositories = append(repositories, kabanerov1alpha1.RepositoryConfig{Name: "default", Url: default_url})
+	}
+	
+	for _, repo := range repositories {
+		index, err := r.indexResolver(repo.Url)
+		if err != nil {
+			// TODO: Issue #92, should just search the repository where the colleciton was loaded initially.
+			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+		}
 
-			_collection, err := SearchCollection(collectionName, index)
-			if err != nil {
-				r_log.Error(err, "Could not search the provided index")
+		// Search for all versions of the collection in this repository index.
+		_collections, err := SearchCollection(collectionName, index)
+		if err != nil {
+			r_log.Error(err, "Could not search the provided index")
+		}
+
+		// Build out the list of all collections across all repository indexes
+		for _, collection := range _collections {
+			matchingCollections = append(matchingCollections, resolvedCollection{collection: collection, repositoryUrl: repo.Url})
+		}
+	}
+
+	// We have a list of all collections that match the name.  We'll use this list to see
+	// if we have one at the requested version, as well as find the one at the highest level
+	// to inform the user if an upgrade is available.
+	if len(matchingCollections) > 0 {
+		specVersion, semverErr := semver.ParseTolerant(c.Spec.Version)
+		if (semverErr == nil) {
+			// Search for the highest version.  Update the Status field if one is found that
+			// is higher than the requested version.  This will only work if the Spec.Version adheres
+			// to the semver standard.
+			upgradeCollection := findMaxVersionCollection(matchingCollections)
+			if upgradeCollection != nil {
+				// The upgrade collection semver is valid, we tested it in findMaxVersionCollection
+				upgradeVersion, _ := semver.ParseTolerant(upgradeCollection.collection.Manifest.Version)
+				if upgradeVersion.Compare(specVersion) > 0 {
+					c.Status.AvailableVersion = upgradeCollection.collection.Manifest.Version
+					c.Status.AvailableLocation = upgradeCollection.repositoryUrl
+				} else {
+					// The spec version is the same or higher than the collection versions
+					c.Status.AvailableVersion = ""
+					c.Status.AvailableLocation = ""
+				}
+			} else {
+				// None of the collections versions adher to semver standards
+				c.Status.AvailableVersion = ""
+				c.Status.AvailableLocation = ""
 			}
-			if _collection != nil {
-				collection = _collection
+		} else {
+			r_log.Error(semverErr, "Could not determine upgrade availability for collection " + collectionName)
+		}
+		
+		// Search for the correct version.  The list may have duplicates, we're just searching for
+		// the first match.
+		for _, matchingCollection := range matchingCollections {
+			if matchingCollection.collection.Manifest.Version == c.Spec.Version {
+				err := activate(c, &matchingCollection.collection, r.client)
+				if err != nil {
+					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+				}
+				return reconcile.Result{}, nil
 			}
 		}
-                if collection != nil {
-                        err := activate(c, collection, r.client)
-                        if err != nil {
-                                return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-                        }
-                        return reconcile.Result{}, nil
-                }
+
+		// No collection with a matching version could be found. Update the status
+		// message so the user understands that the version they want is not available.
+		c.Status.StatusMessage = "The requested version of the collection (" + c.Spec.Version + ") is not available."
+
+		return reconcile.Result{}, nil
 	}
 
-	//If not found, search the default
-	//TODO: incorporate this default into a webhook
-	default_url := "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml"
-	index, err := r.indexResolver(default_url)
-	if err != nil {
-		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	// No version of the collection could be found.  If there is no active version, update
+	// the status message so the user knows that something needs to be done.
+	if c.Status.ActiveVersion == "" {
+		c.Status.StatusMessage = "No version of the collection is available."
 	}
-	collection, err = SearchCollection(collectionName, index)
-	if err != nil {
-		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-	}
-	if collection == nil {
-		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, fmt.Errorf("Collection could not be found")
-	}
-
-	err = activate(c, collection, r.client)
-	if err != nil {
-		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-	}
-
 	return reconcile.Result{}, nil
 }
 
@@ -245,7 +318,62 @@ func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, asset AssetMan
 
 func activate(collectionResource *kabanerov1alpha1.Collection, collection *CollectionV1, c client.Client) error {
 	manifest := collection.Manifest
-	
+
+	// Detect if the version is changing from the active version.  If it is, we need to clean up the
+	// assets from the previous version.
+	if (collectionResource.Status.ActiveVersion != "") && (collectionResource.Status.ActiveVersion != manifest.Version) {
+		// Our version change strategy is going to be as follows:
+		// 1) Attempt to load all of the known artifacts.  Any failure, status message and punt.
+		// 2) Delete the artifacts.  If something goes wrong here, the state of the collection is unknown.
+		type transformedRemoteManifest struct {
+			m mf.Manifest
+			assetUrl string
+		}
+		
+		var transformedManifests []transformedRemoteManifest
+		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + manifest.Version
+		
+		for _, asset := range collectionResource.Status.ActiveAssets {
+			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
+
+			m, err := mf.NewManifest(asset.Url, false, c)
+			if err != nil {
+				log.Error(err, errorMessage, "resource", asset.Url)
+				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+				return nil // Forces status to be updated
+			}
+
+			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+			err = m.Transform(func(u *unstructured.Unstructured) error {
+				u.SetNamespace(collectionResource.GetNamespace())
+				return nil
+			})
+			if err != nil {
+				log.Error(err, errorMessage, "resource", asset.Url)
+				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+				return nil // Forces status to be updated
+			}
+
+			// Queue the resolved manifest to be deleted in the next step.
+			transformedManifests = append(transformedManifests, transformedRemoteManifest{m, asset.Url})
+		}
+
+		// Now delete the manifests
+		for _, transformedManifest := range transformedManifests {
+		  err := transformedManifest.m.DeleteAll()
+			if err != nil {
+				// It's hard to know what the state of things is now... log the error.
+				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
+			}
+		}
+
+		// Indicate there is not currently an active version of this collection.
+		collectionResource.Status.ActiveVersion = ""
+		collectionResource.Status.ActiveAssets = nil
+	}
+
+	// Now apply the new version
 	for _, asset := range manifest.Assets {
 		if asset.Type == "kubernetes-resource" {
 			// If the asset has a digest, see if the digest has changed.  Don't bother updating anything
@@ -298,6 +426,6 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 
 	// Update the status of the Collection object to reflect the version we applied.
 	collectionResource.Status.ActiveVersion = manifest.Version;
-
+	
 	return nil
 }

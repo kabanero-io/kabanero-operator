@@ -67,7 +67,7 @@ func TestAssetNotMatchNoName(t *testing.T) {
 
 // Test that a new status is created for an asset that was not present in the status
 func TestUpdateAssetStatusNotExist(t *testing.T) {
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", nil}
+	var status = kabanerov1alpha1.CollectionStatus{}
 	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
 
 	updateAssetStatus(&status, sampleAsset, "");
@@ -101,7 +101,7 @@ func TestUpdateAssetStatusNotExist(t *testing.T) {
 // Test that a status is updated with a new digest
 func TestUpdateAssetStatus(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}}
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", sampleAssetStatus}
+	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
 	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
 
 	updateAssetStatus(&status, sampleAsset, "");
@@ -135,7 +135,7 @@ func TestUpdateAssetStatus(t *testing.T) {
 // Test that a previous asset failure can be resolved in the status.
 func TestUpdateAssetStatusFromFailure(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "failed", StatusMessage: "some error"}}
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", sampleAssetStatus}
+	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
 	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
 
 	updateAssetStatus(&status, sampleAsset, "");
@@ -169,7 +169,7 @@ func TestUpdateAssetStatusFromFailure(t *testing.T) {
 // Test that a previous active asset can be updated with a failure
 func TestUpdateAssetStatusToFailure(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}}
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", sampleAssetStatus}
+	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
 	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
 
 	errorMessage := "some failure happened"
@@ -204,7 +204,7 @@ func TestUpdateAssetStatusToFailure(t *testing.T) {
 // Test that failed assets are detected in the Collection instance status
 func TestFailedAssets(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}, {Name: "myOtherAsset", Url: "http://myotherurl.com", Digest: "2345", Status: "failed"}}
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", sampleAssetStatus}
+	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
 
 	if failedAssets(status) == false {
 		t.Fatal("Should be one failed asset in the status")
@@ -214,7 +214,7 @@ func TestFailedAssets(t *testing.T) {
 // Test that no failed assets are detected in the Collection instance status
 func TestNoFailedAssets(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}, {Name: "myOtherAsset", Url: "http://myotherurl.com", Digest: "2345", Status: "active"}}
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", sampleAssetStatus}
+	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
 
 	if failedAssets(status) {
 		t.Fatal("Should be no failed asset in the status")
@@ -224,9 +224,98 @@ func TestNoFailedAssets(t *testing.T) {
 // Test that an empty status yields no failed assets
 func TestNoFailedAssetsEmptyStatus(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{}
-	var status = kabanerov1alpha1.CollectionStatus{"0.0.1", "abcd", sampleAssetStatus}
+	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
 
 	if failedAssets(status) {
 		t.Fatal("Should be no failed asset in the status")
+	}
+}
+
+// Test that I can find the max version of a collection
+func TestFindMaxVersionCollection(t *testing.T) {
+
+	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.0.1"}}
+	collection2 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.0.2"}}
+	
+	var collections []resolvedCollection
+	collections = append(collections, resolvedCollection{collection: collection1})
+	collections = append(collections, resolvedCollection{collection: collection2})
+	
+	maxCollection := findMaxVersionCollection(collections)
+
+	if maxCollection == nil {
+		t.Fatal("Did not find a max version")
+	}
+
+	if maxCollection.collection.Manifest.Version != "0.0.2" {
+		t.Fatal("Returned max version (" + maxCollection.collection.Manifest.Version + ") was not 0.0.2")
+	}
+}
+
+// Test that I can find the max version of a collection when there is only 1 collection
+func TestFindMaxVersionCollectionOne(t *testing.T) {
+
+	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.0.1"}}
+	
+	var collections []resolvedCollection
+	collections = append(collections, resolvedCollection{collection: collection1})
+	
+	maxCollection := findMaxVersionCollection(collections)
+
+	if maxCollection == nil {
+		t.Fatal("Did not find a max version")
+	}
+
+	if maxCollection.collection.Manifest.Version != "0.0.1" {
+		t.Fatal("Returned max version (" + maxCollection.collection.Manifest.Version + ") was not 0.0.1")
+	}
+}
+
+// Test that I do not find a max version with no input collections.  Technically this is an invalid case.
+func TestFindMaxVersionCollectionEmpty(t *testing.T) {
+
+	var collections []resolvedCollection
+	maxCollection := findMaxVersionCollection(collections)
+
+	if maxCollection != nil {
+		t.Fatal("Should not have found a max version.")
+	}
+}
+
+// Test that I can specify just a major.minor semver (invalid) and still be OK
+func TestFindMaxVersionCollectionMajorMinor(t *testing.T) {
+
+	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.1"}}
+	collection2 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.2"}}
+	
+	var collections []resolvedCollection
+	collections = append(collections, resolvedCollection{collection: collection1})
+	collections = append(collections, resolvedCollection{collection: collection2})
+	
+	maxCollection := findMaxVersionCollection(collections)
+
+	if maxCollection == nil {
+		t.Fatal("Did not find a max version")
+	}
+
+	if maxCollection.collection.Manifest.Version != "0.2" {
+		t.Fatal("Returned max version (" + maxCollection.collection.Manifest.Version + ") was not 0.2")
+	}
+}
+
+// Test that if I just have invalid semvers, I don't find a max version.
+func TestFindMaxVersionCollectionInvalidSemver(t *testing.T) {
+
+	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "blah"}}
+	collection2 := CollectionV1{Manifest: CollectionV1Manifest{Version: "5nope"}}
+	
+	var collections []resolvedCollection
+	collections = append(collections, resolvedCollection{collection: collection1})
+	collections = append(collections, resolvedCollection{collection: collection2})
+	
+	maxCollection := findMaxVersionCollection(collections)
+
+	if maxCollection != nil {
+		t.Fatal("Should not have found a max version (" + maxCollection.collection.Manifest.Version + ")")
 	}
 }

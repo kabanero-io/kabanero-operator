@@ -38,28 +38,37 @@ func ResolveIndex(url string) (*CollectionV1Index, error) {
 	return &index, nil
 }
 
-func SearchCollection(collectionName string, index *CollectionV1Index) (*CollectionV1, error) {
+// Return all resolved collections in the index matching the given name.
+func SearchCollection(collectionName string, index *CollectionV1Index) ([]CollectionV1, error) {
 	//Locate the desired collection in the index
-	var collectionRef *IndexedCollectionV1
+	var collectionRefs []IndexedCollectionV1
 	for _, collectionList := range index.Collections {
 		for _, _collectionRef := range collectionList {
 			if _collectionRef.Name == collectionName {
-				collectionRef = &_collectionRef
+				collectionRefs = append(collectionRefs, _collectionRef)
 			}
 		}
 	}
 
-	if collectionRef == nil {
+	if len(collectionRefs) == 0 {
 		//The collection referenced in the Collection resource has no match in the index
 		return nil, nil
 	}
 
-	collection, err := ResolveCollection(collectionRef.CollectionUrls...)
-	if err != nil {
-		return nil, err
+	var collections []CollectionV1
+	for _, collectionRef := range collectionRefs {
+		collection, err := ResolveCollection(collectionRef.CollectionUrls...)
+		if err != nil {
+			// TODO: somehow get this error back to the caller, but keep looking at other refs...
+			return nil, err
+		}
+
+		if collection != nil {
+			collections = append(collections, *collection)
+		}
 	}
 
-	return collection, nil
+	return collections, nil
 }
 
 func ResolveCollection(urls ...string) (*CollectionV1, error) {
