@@ -49,8 +49,14 @@ func TestReconcileFeaturedCollections(t *testing.T) {
 	collection_index_url := "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml"
 
 	k := &kabanerov1alpha1.Kabanero{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "kabanero.io/v1alpha1",
+			Kind:       "Kabanero",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
+			Name:      "kabanero",
+			UID:       "12345",
 		},
 		Spec: kabanerov1alpha1.KabaneroSpec{
 			Collections: kabanerov1alpha1.InstanceCollectionConfig{

@@ -9,7 +9,6 @@ import (
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -274,10 +273,12 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 
 				log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
-				err = m.Transform(func(u *unstructured.Unstructured) error {
-					u.SetNamespace(collectionResource.GetNamespace())
-					return nil
-				})
+				transforms := []mf.Transformer{
+					mf.InjectOwner(collectionResource),
+					mf.InjectNamespace(collectionResource.GetNamespace()),
+				}
+
+				err = m.Transform(transforms... )
 				if err != nil {
 					return err
 				}
