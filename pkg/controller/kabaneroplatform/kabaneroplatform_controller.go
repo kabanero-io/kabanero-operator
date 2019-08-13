@@ -107,32 +107,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	//Reconcile KNative Eventing
-	{
-		subr, err := NewKNativeEventingReconciler(r.client)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		err = subr.Reconcile(ctx, instance)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
-	//Reconcile KNative Serve
-	{
-		subr, err := NewKNativeServingReconciler(r.client)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		err = subr.Reconcile(ctx, instance)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
 	//Save the status update
 	err = r.client.Status().Update(ctx, instance)
 	if err != nil {
