@@ -1,10 +1,5 @@
 package collection
 
-type CollectionV1Index struct {
-	ApiVersion  string                           `yaml:"apiVersion,omitempty"`
-	Generated   string                           `yaml:"generated,omitempty"`
-	Collections map[string][]IndexedCollectionV1 `yaml:"projects,omitempty"`
-}
 
 // Convenience function which iterates over the complex Collections structure
 func (c *CollectionV1Index) ListCollections() []IndexedCollectionV1 {

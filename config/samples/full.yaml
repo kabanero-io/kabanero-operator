@@ -10,7 +10,7 @@ spec:
   collections: 
     # A list of those repositories which are searched for collections
     repositories: 
-    - name: experimental
-      url: https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml
+    - name: incubator
+      url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml
       # Activates a default set of collections
       activateDefaultCollections: true 

@@ -7,10 +7,20 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"regexp"
 )
 
 func ResolveIndex(url string) (*CollectionV1Index, error) {
-	if !strings.HasSuffix(url, "/index.yaml") {
+//	if !strings.HasSuffix(url, "/index.yaml") {
+//		url = url + "/index.yaml"
+//	}
+	
+	// user may specify url to yaml file or directory
+	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url) 
+	if err != nil {
+		return nil, err
+	}
+	if !matched {
 		url = url + "/index.yaml"
 	}
 
@@ -71,6 +81,26 @@ func SearchCollection(collectionName string, index *CollectionV1Index) ([]Collec
 	return collections, nil
 }
 
+
+// Return all resolved collections in the index matching the given name.
+func SearchCollectionV2(collectionName string, index *CollectionV1Index) ([]IndexedCollectionV2, error) {
+	//Locate the desired collection in the index
+	var collectionRefs []IndexedCollectionV2
+	
+	for _, collectionRef := range index.CollectionsV2 {
+		if collectionRef.Id == collectionName {
+			collectionRefs = append(collectionRefs, collectionRef)
+		}
+	}
+
+	if len(collectionRefs) == 0 {
+		//The collection referenced in the Collection resource has no match in the index
+		return nil, nil
+	}
+
+	return collectionRefs, nil
+}
+
 func ResolveCollection(urls ...string) (*CollectionV1, error) {
 	for _, url := range urls {
 		if strings.HasSuffix(url, "tar.gz") {
@@ -110,3 +140,19 @@ func ResolveCollection(urls ...string) (*CollectionV1, error) {
 
 	return nil, nil
 }
+
+
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

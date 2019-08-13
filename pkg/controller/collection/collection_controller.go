@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+//	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var log = logf.Log.WithName("controller_collection")
@@ -152,10 +153,21 @@ func findMaxVersionCollection(collections []resolvedCollection) *resolvedCollect
 	log.Info(fmt.Sprintf("findMaxVersionCollection: processing %v collections", len(collections)))
 
 	var maxCollection *resolvedCollection = nil
+	var err error = nil
 	maxVersion, _ := semver.Make("0.0.0")
+	curVersion, _ := semver.Make("0.0.0")
 
 	for i, _ := range collections {
-		curVersion, err := semver.ParseTolerant(collections[i].collection.Manifest.Version)
+		
+		switch {
+		//v1
+		case collections[i].collection.Manifest.Version != "":
+			curVersion, err = semver.ParseTolerant(collections[i].collection.Manifest.Version)
+		//v2
+		case collections[i].collectionv2.Version != "":
+			curVersion, err = semver.ParseTolerant(collections[i].collectionv2.Version)
+		}
+
 		if err == nil {
 			if curVersion.Compare(maxVersion) > 0 {
 				maxCollection = &collections[i]
@@ -215,8 +227,11 @@ func (r *ReconcileCollection) ensureCollectionHasOwner(c *kabanerov1alpha1.Colle
 
 // Used internally by ReconcileCollection to store matching collections
 type resolvedCollection struct {
+	//v1
 	collection CollectionV1
 	repositoryUrl string
+	//v2
+	collectionv2 IndexedCollectionV2
 }
 
 func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection, k *kabanerov1alpha1.Kabanero) (reconcile.Result, error) {
@@ -254,19 +269,37 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo.Url)
 		if err != nil {
-			// TODO: Issue #92, should just search the repository where the colleciton was loaded initially.
+			// TODO: Issue #92, should just search the repository where the collection was loaded initially.
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
 
-		// Search for all versions of the collection in this repository index.
-		_collections, err := SearchCollection(collectionName, index)
-		if err != nil {
-			r_log.Error(err, "Could not search the provided index")
-		}
+		// Handle Index Collection version
+		switch apiVersion := index.ApiVersion; apiVersion {
+		case "v1":
+			// Search for all versions of the collection in this repository index.
+			_collections, err := SearchCollection(collectionName, index)
+			if err != nil {
+				r_log.Error(err, "Could not search the provided index")
+			}
 
-		// Build out the list of all collections across all repository indexes
-		for _, collection := range _collections {
-			matchingCollections = append(matchingCollections, resolvedCollection{collection: collection, repositoryUrl: repo.Url})
+			// Build out the list of all collections across all repository indexes
+			for _, collection := range _collections {
+				matchingCollections = append(matchingCollections, resolvedCollection{collection: collection, repositoryUrl: repo.Url})
+			}
+		case "v2":
+			// Search for all versions of the collection in this repository index.
+			_collections, err := SearchCollectionV2(collectionName, index)
+			if err != nil {
+				r_log.Error(err, "Could not search the provided index")
+			}
+			
+			// Build out the list of all collections across all repository indexes
+			for _, collection := range _collections {
+				matchingCollections = append(matchingCollections, resolvedCollection{collectionv2: collection})
+			}
+
+		default: 
+			fmt.Sprintf("Index is unsupported version: %s", apiVersion)
 		}
 	}
 
@@ -303,8 +336,18 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		// Search for the correct version.  The list may have duplicates, we're just searching for
 		// the first match.
 		for _, matchingCollection := range matchingCollections {
-			if matchingCollection.collection.Manifest.Version == c.Spec.Version {
+			switch {
+			//v1
+			case matchingCollection.collection.Manifest.Version == c.Spec.Version:
 				err := activate(c, &matchingCollection.collection, r.client)
+				if err != nil {
+					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+				}
+				return reconcile.Result{}, nil
+			//v2
+			case matchingCollection.collectionv2.Version == c.Spec.Version:
+				//need a v2 activate
+				err := activatev2(c, &matchingCollection.collectionv2, r.client)
 				if err != nil {
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
@@ -338,6 +381,17 @@ func assetMatch(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset AssetM
 	return asset.Name == assetStatus.Name
 }
 
+// Check if the asset read from a manifest is equal to the asset in the status
+// object.  They are equal if they have the same name, or if the name is
+// nil, if the URLs are equal.
+func assetMatchv2(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset IndexedPipelinesV2) bool {
+	if len(asset.Id) == 0 {
+		return asset.Url == assetStatus.Url
+	}
+
+	return asset.Id == assetStatus.Name
+}
+
 // Some asset status states
 const asset_active_status = "active"
 const asset_failed_status = "failed"
@@ -365,6 +419,31 @@ func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, asset AssetMan
 
 	// If the asset was not found, create a status for it
 	status.ActiveAssets = append(status.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Name, asset.Url, asset.Digest, assetStatus, assetStatusMessage})
+}
+
+func updateAssetStatusv2(status *kabanerov1alpha1.CollectionStatus, asset IndexedPipelinesV2, message string) {
+	log.Info(fmt.Sprintf("Updating status for asset %v", asset.Id))
+
+	// Assume that if there is a message, it's an error condition
+	assetStatusMessage := message
+	assetStatus := asset_active_status
+	if len(assetStatusMessage) > 0 {
+		assetStatus = asset_failed_status
+	}
+	
+	// First find the asset in the Collection status.
+	for index, curAssetStatus := range status.ActiveAssets {
+		if assetMatchv2(curAssetStatus, asset) {
+			// We found it - update the digest and asset status.
+			status.ActiveAssets[index].Digest = asset.Sha256
+			status.ActiveAssets[index].Status = assetStatus
+			status.ActiveAssets[index].StatusMessage = assetStatusMessage
+			return
+		}
+	}
+
+	// If the asset was not found, create a status for it
+	status.ActiveAssets = append(status.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Id, asset.Url, asset.Sha256, assetStatus, assetStatusMessage})
 }
 
 func activate(collectionResource *kabanerov1alpha1.Collection, collection *CollectionV1, c client.Client) error {
@@ -479,5 +558,148 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	// Update the status of the Collection object to reflect the version we applied.
 	collectionResource.Status.ActiveVersion = manifest.Version;
 	
+	return nil
+}
+
+
+
+// Create a Manifest from unstructured, rather than path/url
+//type Manifest struct {
+//	mf.Manifest
+//	Resources []unstructured.Unstructured
+//	client    client.Client
+//}
+
+//func NewManifest(resources []unstructured.Unstructured, client client.Client) (Manifest, error) {
+//	return Manifest{Resources: resources, client: client}, nil
+//}
+
+
+func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *IndexedCollectionV2, c client.Client) error {
+
+	// Detect if the version is changing from the active version.  If it is, we need to clean up the
+	// assets from the previous version.
+	if (collectionResource.Status.ActiveVersion != "") && (collectionResource.Status.ActiveVersion != collection.Version) {
+		// Our version change strategy is going to be as follows:
+		// 1) Attempt to load all of the known artifacts.  Any failure, status message and punt.
+		// 2) Delete the artifacts.  If something goes wrong here, the state of the collection is unknown.
+		
+		type transformedRemoteManifest struct {
+			m mf.Manifest
+			assetUrl string
+		}
+		
+		var transformedManifests []transformedRemoteManifest
+		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
+		
+		for _, asset := range collectionResource.Status.ActiveAssets {
+			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
+
+			m, err := mf.NewManifest(asset.Url, false, c)
+			if err != nil {
+				log.Error(err, errorMessage, "resource", asset.Url)
+				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+				return nil // Forces status to be updated
+			}
+
+			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+			transforms := []mf.Transformer{
+				mf.InjectNamespace(collectionResource.GetNamespace()),
+			}
+
+			err = m.Transform(transforms...)
+			if err != nil {
+				log.Error(err, errorMessage, "resource", asset.Url)
+				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+				return nil // Forces status to be updated
+			}
+
+			// Queue the resolved manifest to be deleted in the next step.
+			transformedManifests = append(transformedManifests, transformedRemoteManifest{m, asset.Url})
+		}
+
+		// Now delete the manifests
+		for _, transformedManifest := range transformedManifests {
+		  err := transformedManifest.m.DeleteAll()
+			if err != nil {
+				// It's hard to know what the state of things is now... log the error.
+				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
+			}
+		}
+
+		// Indicate there is not currently an active version of this collection.
+		collectionResource.Status.ActiveVersion = ""
+		collectionResource.Status.ActiveAssets = nil
+	}
+
+	// Now apply the new version
+	for _, asset := range collection.Pipelines {
+		// If the asset has a digest, see if the digest has changed.  Don't bother updating anything
+		// if the digest is the same and the asset is active.
+		log.Info(fmt.Sprintf("Checking digest for asset %v", asset.Url))
+		applyAsset := true
+		if len(asset.Sha256) > 0 {
+			for _, assetStatus := range collectionResource.Status.ActiveAssets {
+				if (assetMatchv2(assetStatus, asset) && (assetStatus.Digest == asset.Sha256) && (assetStatus.Status == asset_active_status)) {
+					// The digest is equal and the asset is active - don't apply the asset.
+					log.Info(fmt.Sprintf("Digest has not changed %v", asset.Sha256))
+					applyAsset = false
+					break
+				}
+			}
+		}
+
+		if applyAsset {
+			log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
+
+			// Retrieve manifests as unstructured
+			manifests, err := GetManifests(asset.Url)
+			if err != nil {
+				return err
+			}
+			
+
+			// Construct dummy Manifest and client, due to client being private struct field
+			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
+			if err != nil {
+				return err
+			}
+
+			// Assign the real manifests
+			m.Resources = manifests
+
+			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+			transforms := []mf.Transformer{
+				mf.InjectOwner(collectionResource),
+				mf.InjectNamespace(collectionResource.GetNamespace()),
+			}
+
+			err = m.Transform(transforms... )
+			if err != nil {
+				return err
+			}
+			
+			for _, spec := range m.Resources {
+				log.Info(fmt.Sprintf("iterate resources: %v", spec))
+			}
+
+			err = m.ApplyAll()
+			if err != nil {
+				// Update the asset status with the error message
+				log.Error(err, "Error installing the resource", "resource", asset.Url)
+				updateAssetStatusv2(&collectionResource.Status, asset, err.Error())
+			} else {
+				// Update the digest for this asset in the status
+				updateAssetStatusv2(&collectionResource.Status, asset, "")
+			}
+
+		}
+	}
+
+	// Update the status of the Collection object to reflect the version we applied.
+	collectionResource.Status.ActiveVersion = collection.Version;
+
 	return nil
 }
