@@ -85,6 +85,16 @@ spec:
       group: kabanero.io
       description: Kabanero Collection
       displayName: Kabanero Collection
+      resources:
+        - kind: Pipeline
+          name: ''
+          version: v1alpha1
+        - kind: Task
+          name: ''
+          version: v1alpha1
+        - kind: ServiceAccount
+          name: ''
+          version: v1
     - kind: Kabanero
       name: kabaneros.kabanero.io
       version: v1alpha1
@@ -92,6 +102,9 @@ spec:
       description: Kabanero Platform
       displayName: Kabanero
       resources:
+      - kind: Collection
+        name: ''
+        version: v1alpha1
       - kind: ConfigMap
         name: ""
         version: v1
