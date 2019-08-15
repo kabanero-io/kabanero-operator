@@ -87,8 +87,8 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 func featuredCollections(k *kabanerov1alpha1.Kabanero) ([]*collection.CollectionV1, error) {
 	var collections []*collection.CollectionV1
 
-	if k.Spec.Collections.EnableFeatured {
-		for _, r := range k.Spec.Collections.Repositories {
+	for _, r := range k.Spec.Collections.Repositories {
+		if r.ActivateDefaultCollections {
 			index, err := collection.ResolveIndex(r.Url)
 			if err != nil {
 				return nil, err
