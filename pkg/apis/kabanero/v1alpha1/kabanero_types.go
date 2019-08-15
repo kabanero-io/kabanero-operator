@@ -24,13 +24,13 @@ type KabaneroSpec struct {
 }
 
 type InstanceCollectionConfig struct {
-	EnableFeatured bool               `json:"enableFeatured,omitempty"`
 	Repositories   []RepositoryConfig `json:"repositories,omitempty"`
 }
 
 type RepositoryConfig struct {
 	Name string `json:"name,omitempty"`
 	Url  string `json:"url,omitempty"`
+	ActivateDefaultCollections bool `json:"activateDefaultCollections,omitempty"`
 }
 
 type TektonCustomizationSpec struct {

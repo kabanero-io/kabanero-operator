@@ -8,10 +8,9 @@ spec:
   version: 0.0.1
 
   collections: 
-    # Installs a default set of collections
-    enableFeatured: true
-
     # A list of those repositories which are searched for collections
     repositories: 
     - name: experimental
       url: https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml
+      # Activates a default set of collections
+      activateDefaultCollections: true 

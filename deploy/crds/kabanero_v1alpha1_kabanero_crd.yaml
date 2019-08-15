@@ -31,11 +31,11 @@ spec:
           properties:
             collections:
               properties:
-                enableFeatured:
-                  type: boolean
                 repositories:
                   items:
                     properties:
+                      activateDefaultCollections:
+                        type: boolean
                       name:
                         type: string
                       url:
