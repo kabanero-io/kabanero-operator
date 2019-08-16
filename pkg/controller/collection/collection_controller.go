@@ -10,7 +10,9 @@ import (
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -168,6 +170,48 @@ func findMaxVersionCollection(collections []resolvedCollection) *resolvedCollect
 	return maxCollection
 }
 
+func (r *ReconcileCollection) ensureCollectionHasOwner(c *kabanerov1alpha1.Collection, k *kabanerov1alpha1.Kabanero) error {
+	foundKabanero := false
+	ownerReferences := c.GetOwnerReferences()
+	if ownerReferences != nil {
+		for _, ownerRef :=  range ownerReferences {
+			if ownerRef.Kind == "Kabanero" {
+				if ownerRef.UID == k.ObjectMeta.UID {
+					foundKabanero = true
+				}
+			}
+		}
+	}
+	if !foundKabanero {
+		// Get kabanero instance. Input one does not have APIVersion or Kind. 
+		ownerIsController := true
+		kInstance := &kabanerov1alpha1.Kabanero{}
+		name := types.NamespacedName{
+			Name:      k.ObjectMeta.Name,
+			Namespace: c.GetNamespace(),
+		}
+		err := r.client.Get(context.Background(), name, kInstance)
+		if err != nil {
+			return err
+		}
+
+		// Make kabanero the owner of the collection
+		ownerRef := metav1.OwnerReference{
+			APIVersion: kInstance.TypeMeta.APIVersion,
+			Kind:       kInstance.TypeMeta.Kind,
+			Name:       kInstance.ObjectMeta.Name,
+			UID:        kInstance.ObjectMeta.UID,
+			Controller: &ownerIsController,
+		}
+		c.SetOwnerReferences(append(c.GetOwnerReferences(), ownerRef))
+		err = r.client.Update(context.Background(), c)
+		if err != nil {
+			return err
+		}
+		log.Info("Updated collection owner")
+	}
+	return nil
+}
 
 // Used internally by ReconcileCollection to store matching collections
 type resolvedCollection struct {
@@ -190,6 +234,13 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		collectionName = c.Name
 	}
 	r_log = r_log.WithValues("Collection.Name", collectionName)
+
+	// A collection created by the CLI might not have kabanero as the owner.
+	// In that case we want to make kabanero the owner
+	err := r.ensureCollectionHasOwner(c, k)
+	if err != nil {
+		r_log.Error(err, "Could not make kabanero the owner of the collection")
+	}
 
 	// Retreive all matching collection names from all remote indexes.  If none were specified,
 	// use the default.

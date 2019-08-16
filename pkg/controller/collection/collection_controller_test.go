@@ -21,10 +21,23 @@ func TestIt(t *testing.T) {
 	}}
 
 	c := &kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{Name: "java-microprofile"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "java-microprofile",
+			UID:  "1",
+                        OwnerReferences: []metav1.OwnerReference{
+				metav1.OwnerReference{
+					APIVersion: "a/1",
+					Kind: "Kabanero",
+					Name: "kabanero",
+					UID:  "1",
+				},
+			},
+		},
 	}
 
-	k := &kabanerov1alpha1.Kabanero{}
+	k := &kabanerov1alpha1.Kabanero{
+		ObjectMeta: metav1.ObjectMeta{UID: "1"},
+	}
 
 	r.ReconcileCollection(c, k)
 }
