@@ -49,7 +49,7 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - tekton.dev
+  - operator.tekton.dev
   resources:
   - '*'
   verbs:

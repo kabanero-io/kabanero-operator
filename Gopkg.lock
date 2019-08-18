@@ -248,6 +248,19 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:4d7cb4a80c941824472da4b52de752882d0403a461c7a2cf1b965156edce126d"
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/flags",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "NT"
+  revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+
+[[projects]]
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
   packages = ["."]
@@ -359,6 +372,24 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:5df41911fd0a84bcb7943ae1f08e4cdc1fead94e164be5953e02f79d923453aa"
+  name = "github.com/knative/pkg"
+  packages = ["apis"]
+  pruneopts = "NT"
+  revision = "12ee58e32cc8bfaaf88b057be003611e6b7d867d"
+
+[[projects]]
+  digest = "1:da9cf24571b12b7de7d7641a8d3a149042861a2a8dbb3c019b66159e6fdc2c78"
+  name = "github.com/knative/serving-operator"
+  packages = [
+    "pkg/apis",
+    "pkg/apis/serving/v1alpha1",
+  ]
+  pruneopts = "NT"
+  revision = "e30377b852ff5da19c0a34988aab761392bec176"
+
+[[projects]]
+  branch = "master"
   digest = "1:782fb677791a7fe7b5b8e637bcf695efb13950ce09e3e8e3b1cf21c57649be7c"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -400,6 +431,24 @@
   pruneopts = "NT"
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
+
+[[projects]]
+  digest = "1:00c85a3a90bb32e1d111a12d6be21dff0cefde69f9bbabc2124050b77ec744c9"
+  name = "github.com/openshift-knative/knative-eventing-operator"
+  packages = [
+    "pkg/apis",
+    "pkg/apis/eventing/v1alpha1",
+  ]
+  pruneopts = "NT"
+  revision = "21d76bf5e4b8961e9aaed51c949a0bc775bdfd27"
+  version = "v0.6.0"
+
+[[projects]]
+  digest = "1:5184989f45163d251cb7644798bbbead001f13febbacaa981efaf6df7fcd0589"
+  name = "github.com/openshift/tektoncd-pipeline-operator"
+  packages = ["pkg/apis/operator/v1alpha1"]
+  pruneopts = "NT"
+  revision = "fe9d3d9993d493cc8681085643e73b1b3f7c909b"
 
 [[projects]]
   branch = "master"
@@ -863,9 +912,11 @@
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/api/validation",
     "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
+    "pkg/apis/meta/v1/validation",
     "pkg/apis/meta/v1beta1",
     "pkg/conversion",
     "pkg/conversion/queryparams",
@@ -1055,6 +1106,14 @@
   revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5df41911fd0a84bcb7943ae1f08e4cdc1fead94e164be5953e02f79d923453aa"
+  name = "knative.dev/pkg"
+  packages = ["kmp"]
+  pruneopts = "NT"
+  revision = "12ee58e32cc8bfaaf88b057be003611e6b7d867d"
+
+[[projects]]
   digest = "1:06035489efbd51ccface65fc878ceeb849aba05b2f9443c8993f363fc96e80ac"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
@@ -1120,6 +1179,11 @@
     "github.com/blang/semver",
     "github.com/go-openapi/spec",
     "github.com/jcrossley3/manifestival",
+    "github.com/knative/serving-operator/pkg/apis",
+    "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
+    "github.com/openshift-knative/knative-eventing-operator/pkg/apis",
+    "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1",
+    "github.com/openshift/tektoncd-pipeline-operator/pkg/apis/operator/v1alpha1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
@@ -1132,11 +1196,11 @@
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/client-go/plugin/pkg/client/auth",
+    "k8s.io/client-go/tools/clientcmd",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",

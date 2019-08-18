@@ -1,53 +1,61 @@
-                                                         Apache License 2.0
-github.com/PuerkitoBio/purell                            BSD 3-clause "New" or "Revised" License
-github.com/PuerkitoBio/urlesc                            BSD 3-clause "New" or "Revised" License (96%)
-github.com/appscode/jsonpatch                            Apache License 2.0
-github.com/beorn7/perks/quantile                         MIT License (98%)
-github.com/blang/semver                                  MIT License
-github.com/davecgh/go-spew/spew                          ISC License (98%)
-github.com/emicklei/go-restful/log                       MIT License
-github.com/go-logr/logr                                  Apache License 2.0
-github.com/go-logr/zapr                                  Apache License 2.0
-github.com/go-openapi/jsonpointer                        Apache License 2.0
-github.com/go-openapi/jsonreference                      Apache License 2.0
-github.com/go-openapi/spec                               Apache License 2.0
-github.com/go-openapi/swag                               Apache License 2.0
-github.com/gogo/protobuf                                 BSD 3-clause "New" or "Revised" License (91%)
-github.com/golang/groupcache/lru                         Apache License 2.0
-github.com/golang/protobuf                               BSD 3-clause "New" or "Revised" License (96%)
-github.com/google/btree                                  Apache License 2.0
-github.com/google/gofuzz                                 Apache License 2.0
-github.com/google/uuid                                   BSD 3-clause "New" or "Revised" License (96%)
-github.com/googleapis/gnostic                            Apache License 2.0
-github.com/gregjones/httpcache/diskcache                 MIT License (98%)
-github.com/hashicorp/golang-lru/simplelru                Mozilla Public License 2.0
-github.com/jcrossley3/manifestival                       Apache License 2.0
-github.com/json-iterator/go                              MIT License
-github.com/mailru/easyjson                               MIT License (98%)
-github.com/matttproud/golang_protobuf_extensions/pbutil  Apache License 2.0
-github.com/modern-go/concurrent                          Apache License 2.0
-github.com/modern-go/reflect2                            Apache License 2.0
-github.com/pborman/uuid                                  BSD 3-clause "New" or "Revised" License (96%)
-github.com/peterbourgon/diskv                            MIT License (98%)
-github.com/prometheus/client_golang/prometheus           Apache License 2.0
-github.com/prometheus/client_model/go                    Apache License 2.0
-github.com/prometheus/common                             Apache License 2.0
-github.com/prometheus/procfs/internal/fs                 Apache License 2.0
-go.uber.org/atomic                                       MIT License (98%)
-go.uber.org/multierr                                     MIT License (98%)
-go.uber.org/zap                                          MIT License (98%)
-golang.org/x/crypto/ssh/terminal                         BSD 3-clause "New" or "Revised" License (96%)
-golang.org/x/net                                         BSD 3-clause "New" or "Revised" License (96%)
-golang.org/x/oauth2/internal                             BSD 3-clause "New" or "Revised" License (96%)
-golang.org/x/sys/unix                                    BSD 3-clause "New" or "Revised" License (96%)
-golang.org/x/text                                        BSD 3-clause "New" or "Revised" License (96%)
-golang.org/x/time/rate                                   BSD 3-clause "New" or "Revised" License (96%)
-gopkg.in/inf.v0                                          BSD 3-clause "New" or "Revised" License (97%)
-gopkg.in/yaml.v2                                         Apache License 2.0
-k8s.io/api                                               Apache License 2.0
-k8s.io/apimachinery                                      Apache License 2.0
-k8s.io/client-go                                         Apache License 2.0
-k8s.io/klog                                              Apache License 2.0
-k8s.io/kube-openapi/pkg                                  Apache License 2.0
-sigs.k8s.io/controller-runtime/pkg                       Apache License 2.0
-sigs.k8s.io/yaml                                         ? (BSD 3-clause "New" or "Revised" License, 83%)
+                                                                                   Apache License 2.0
+github.com/PuerkitoBio/purell                                                      BSD 3-clause "New" or "Revised" License
+github.com/PuerkitoBio/urlesc                                                      BSD 3-clause "New" or "Revised" License (96%)
+github.com/appscode/jsonpatch                                                      Apache License 2.0
+github.com/beorn7/perks/quantile                                                   MIT License (98%)
+github.com/blang/semver                                                            MIT License
+github.com/davecgh/go-spew/spew                                                    ISC License (98%)
+github.com/emicklei/go-restful/log                                                 MIT License
+github.com/go-logr/logr                                                            Apache License 2.0
+github.com/go-logr/zapr                                                            Apache License 2.0
+github.com/go-openapi/jsonpointer                                                  Apache License 2.0
+github.com/go-openapi/jsonreference                                                Apache License 2.0
+github.com/go-openapi/spec                                                         Apache License 2.0
+github.com/go-openapi/swag                                                         Apache License 2.0
+github.com/gogo/protobuf                                                           BSD 3-clause "New" or "Revised" License (91%)
+github.com/golang/groupcache/lru                                                   Apache License 2.0
+github.com/golang/protobuf                                                         BSD 3-clause "New" or "Revised" License (96%)
+github.com/google/btree                                                            Apache License 2.0
+github.com/google/go-cmp/cmp/internal                                              BSD 3-clause "New" or "Revised" License (96%)
+github.com/google/gofuzz                                                           Apache License 2.0
+github.com/google/uuid                                                             BSD 3-clause "New" or "Revised" License (96%)
+github.com/googleapis/gnostic                                                      Apache License 2.0
+github.com/gregjones/httpcache/diskcache                                           MIT License (98%)
+github.com/hashicorp/golang-lru/simplelru                                          Mozilla Public License 2.0
+github.com/imdario/mergo                                                           BSD 3-clause "New" or "Revised" License (96%)
+github.com/jcrossley3/manifestival                                                 Apache License 2.0
+github.com/json-iterator/go                                                        MIT License
+github.com/knative/pkg/apis                                                        Apache License 2.0
+github.com/knative/serving-operator/pkg/apis/serving/v1alpha1                      Apache License 2.0
+github.com/mailru/easyjson                                                         MIT License (98%)
+github.com/matttproud/golang_protobuf_extensions/pbutil                            Apache License 2.0
+github.com/modern-go/concurrent                                                    Apache License 2.0
+github.com/modern-go/reflect2                                                      Apache License 2.0
+github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1  Apache License 2.0
+github.com/openshift/tektoncd-pipeline-operator/pkg/apis/operator/v1alpha1         Apache License 2.0
+github.com/pborman/uuid                                                            BSD 3-clause "New" or "Revised" License (96%)
+github.com/peterbourgon/diskv                                                      MIT License (98%)
+github.com/prometheus/client_golang/prometheus                                     Apache License 2.0
+github.com/prometheus/client_model/go                                              Apache License 2.0
+github.com/prometheus/common                                                       Apache License 2.0
+github.com/prometheus/procfs/internal/fs                                           Apache License 2.0
+github.com/spf13/pflag                                                             BSD 3-clause "New" or "Revised" License (96%)
+go.uber.org/atomic                                                                 MIT License (98%)
+go.uber.org/multierr                                                               MIT License (98%)
+go.uber.org/zap                                                                    MIT License (98%)
+golang.org/x/crypto/ssh/terminal                                                   BSD 3-clause "New" or "Revised" License (96%)
+golang.org/x/net                                                                   BSD 3-clause "New" or "Revised" License (96%)
+golang.org/x/oauth2/internal                                                       BSD 3-clause "New" or "Revised" License (96%)
+golang.org/x/sys/unix                                                              BSD 3-clause "New" or "Revised" License (96%)
+golang.org/x/text                                                                  BSD 3-clause "New" or "Revised" License (96%)
+golang.org/x/time/rate                                                             BSD 3-clause "New" or "Revised" License (96%)
+gopkg.in/inf.v0                                                                    BSD 3-clause "New" or "Revised" License (97%)
+gopkg.in/yaml.v2                                                                   Apache License 2.0
+k8s.io/api                                                                         Apache License 2.0
+k8s.io/apimachinery                                                                Apache License 2.0
+k8s.io/client-go                                                                   Apache License 2.0
+k8s.io/klog                                                                        Apache License 2.0
+k8s.io/kube-openapi/pkg                                                            Apache License 2.0
+knative.dev/pkg/kmp                                                                Apache License 2.0
+sigs.k8s.io/controller-runtime/pkg                                                 Apache License 2.0
+sigs.k8s.io/yaml                                                                   ? (BSD 3-clause "New" or "Revised" License, 83%)

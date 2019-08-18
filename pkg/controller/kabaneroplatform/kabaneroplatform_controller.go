@@ -2,20 +2,20 @@ package kabaneroplatform
 
 import (
 	"context"
-
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	"fmt"
+	"time"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"fmt"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"github.com/kabanero-io/kabanero-operator/version"
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
@@ -101,14 +101,47 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	//Save the status update
-	err = r.client.Status().Update(ctx, instance)
+	// Determine the status of the kabanero operator instance and set it.
+	isReady, err := processStatus(instance, r.client, ctx)
 	if err != nil {
-		fmt.Println("Error updating the status", err)
 		return reconcile.Result{}, err
 	}
 
-	// Pod already exists - don't requeue
-	//reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.GetNamespace(), "Pod.Name", found.GetName())
+	// If all resoruce dependencies are not in the ready state, reconcile again in 60 seconds.
+	if !isReady {
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	}
+        
 	return reconcile.Result{}, nil
+}
+
+// Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.
+// If all resource dependencies are in the ready state, the kabanero instance's readiness state
+// is set to true. Otherwise, it is set to false.
+func processStatus(k *kabanerov1alpha1.Kabanero, c client.Client, ctx context.Context) (bool, error) {
+	errorMessage := "One or more resource dependencies are not ready."
+	k.Status.KabaneroInstance.Version = version.Version
+	k.Status.KabaneroInstance.Ready = "False"
+
+	// Gather the status of all resource dependencies.
+	isTektonReady, _ := getTektonStatus(k,c);
+	isKnativeEventingReady, _ := getKnativeServingStatus(k,c)
+	isKnativeServingReady, _ := getKnativeEventingStatus(k,c)
+
+	// Populate the kabanero instance's the overall status.
+	isKabaneroReady := isTektonReady && isKnativeEventingReady && isKnativeServingReady
+	if (isKabaneroReady ) {
+		k.Status.KabaneroInstance.ErrorMessage = ""
+		k.Status.KabaneroInstance.Ready = "True"
+	} else {
+		k.Status.KabaneroInstance.ErrorMessage = errorMessage
+	}
+
+	// Update the kabanero instance status.
+	err := c.Status().Update(ctx, k)
+	if err != nil {
+		fmt.Println("Error updating the status.", err)
+	}
+
+	return isKabaneroReady, err
 }

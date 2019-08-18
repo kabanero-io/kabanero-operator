@@ -55,6 +55,20 @@ required = [
   name = "sigs.k8s.io/controller-runtime"
   version = "=v0.1.10"
 
+[[override]]
+  name = "github.com/openshift-knative/knative-eventing-operator"
+  version = "=v0.6.0"
+
+[[override]]
+  name = "github.com/knative/serving-operator"
+  # revision (PR #45) version 0.6.0.
+  revision = "e30377b852ff5da19c0a34988aab761392bec176"
+
+[[override]]
+  name = "github.com/openshift/tektoncd-pipeline-operator"
+  # revision (PR #84) version 0.5.2.
+  revision = "fe9d3d9993d493cc8681085643e73b1b3f7c909b"
+
 [[constraint]]
   name = "github.com/operator-framework/operator-sdk"
   # The version rule is used for a specific release and the master branch for in between releases.
