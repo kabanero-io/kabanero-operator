@@ -101,12 +101,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	err = reconcile_tekton(ctx, instance, r.client)
-	if err != nil {
-		fmt.Println("Error in reconcile tekton: ", err)
-		return reconcile.Result{}, err
-	}
-
 	//Save the status update
 	err = r.client.Status().Update(ctx, instance)
 	if err != nil {
