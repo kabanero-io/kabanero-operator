@@ -16,7 +16,7 @@ spec:
       containers:
         - name: knative-eventing-operator
           # Replace this with the built image name
-          image: quay.io/openshift-knative/knative-eventing-operator:v0.7.0
+          image: quay.io/openshift-knative/knative-eventing-operator:v0.6.0
           command:
           - knative-eventing-operator
           imagePullPolicy: Always
@@ -222,8 +222,10 @@ spec:
       serviceAccountName: knative-serving-operator
       containers:
         - name: knative-serving-operator
-          image: quay.io/openshift-knative/knative-serving-operator:v0.7.0
-          imagePullPolicy: IfNotPresent
+          image: quay.io/openshift-knative/knative-serving-operator:v0.6.0
+          command:
+          - knative-serving-operator
+          imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -429,6 +431,329 @@ spec:
     storage: true
 ---
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: knative-sources
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: controller-manager
+  namespace: knative-sources
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventing-sources-controller
+rules:
+- apiGroups:
+  - sources.eventing.knative.dev
+  resources:
+  - githubsources
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - sources.eventing.knative.dev
+  resources:
+  - containersources
+  - containersources/status
+  - containersources/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - sources.eventing.knative.dev
+  resources:
+  - githubsources/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - sources.eventing.knative.dev
+  resources:
+  - githubsources/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - serving.knative.dev
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - eventing.knative.dev
+  resources:
+  - eventtypes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-sources-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: eventing-sources-controller
+subjects:
+- kind: ServiceAccount
+  name: controller-manager
+  namespace: knative-sources
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-sources-addressable-resolver
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: addressable-resolver
+subjects:
+- kind: ServiceAccount
+  name: controller-manager
+  namespace: knative-sources
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    eventing.knative.dev/source: "true"
+    knative.dev/crd-install: "true"
+  name: githubsources.sources.eventing.knative.dev
+spec:
+  group: sources.eventing.knative.dev
+  names:
+    categories:
+    - all
+    - knative
+    - eventing
+    - sources
+    kind: GitHubSource
+    plural: githubsources
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            accessToken:
+              properties:
+                secretKeyRef:
+                  type: object
+              type: object
+            eventTypes:
+              items:
+                enum:
+                - check_suite
+                - commit_comment
+                - create
+                - delete
+                - deployment
+                - deployment_status
+                - fork
+                - gollum
+                - installation
+                - integration_installation
+                - issue_comment
+                - issues
+                - label
+                - member
+                - membership
+                - milestone
+                - organization
+                - org_block
+                - page_build
+                - ping
+                - project_card
+                - project_column
+                - project
+                - public
+                - pull_request
+                - pull_request_review
+                - pull_request_review_comment
+                - push
+                - release
+                - repository
+                - status
+                - team
+                - team_add
+                - watch
+                type: string
+              minItems: 1
+              type: array
+            ownerAndRepository:
+              minLength: 1
+              type: string
+            secretToken:
+              properties:
+                secretKeyRef:
+                  type: object
+              type: object
+            serviceAccountName:
+              type: string
+            sink:
+              type: object
+          required:
+          - ownerAndRepository
+          - eventTypes
+          - accessToken
+          - secretToken
+          type: object
+        status:
+          properties:
+            conditions:
+              items:
+                properties:
+                  lastTransitionTime:
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  severity:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - type
+                - status
+                type: object
+              type: array
+            sinkUri:
+              type: string
+            webhookIDKey:
+              type: string
+          type: object
+  version: v1alpha1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: controller
+  namespace: knative-sources
+spec:
+  ports:
+  - port: 443
+  selector:
+    control-plane: controller-manager
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: controller-manager
+  namespace: knative-sources
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  serviceName: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - env:
+        - name: GH_RA_IMAGE
+          value: gcr.io/knative-releases/github.com/knative/eventing-sources/cmd/github_receive_adapter@sha256:b5d6e12d16d16c6c42ae3d4325a1ef3a8a129dfc97740aa28000c0867edfc4ff
+        image: gcr.io/knative-releases/github.com/knative/eventing-sources/cmd/manager@sha256:99cf1f559f74ae97f271632697ed6e78a3fdd88a155632a57341b0dd6eab6581
+        name: manager
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1000Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+      serviceAccountName: controller-manager
+      terminationGracePeriodSeconds: 10
+
+---
+---
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -446,20 +771,20 @@ spec:
     spec:
       serviceAccountName: openshift-pipelines-operator
       containers:
-        - name: openshift-pipelines-operator
-          image: quay.io/openshift-pipeline/openshift-pipelines-operator:v0.4.0-1
-          command:
-          - openshift-pipelines-operator
-          imagePullPolicy: Always
-          env:
-            - name: WATCH_NAMESPACE
-              value: ""
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "openshift-pipelines-operator"
+      - name: openshift-pipelines-operator
+        image: quay.io/openshift-pipeline/openshift-pipelines-operator:v0.5.0
+        command:
+        - openshift-pipelines-operator
+        imagePullPolicy: Always
+        env:
+        - name: WATCH_NAMESPACE
+          value: ""
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OPERATOR_NAME
+          value: "openshift-pipelines-operator"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -510,13 +835,6 @@ rules:
   - get
   - create
   - delete
-- apiGroups:
-  - tekton.dev
-  resources:
-  - '*'
-  - installs
-  verbs:
-  - '*'
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -616,6 +934,18 @@ rules:
   - update
   - delete
   - use
+- apiGroups:
+  - operator.tekton.dev
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - tekton.dev
+  resources:
+  - '*'
+  verbs:
+  - '*'
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -640,52 +970,71 @@ metadata:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: installs.tekton.dev
+  name: config.operator.tekton.dev
 spec:
-  group: tekton.dev
+  group: operator.tekton.dev
   names:
-    kind: Install
-    listKind: InstallList
-    plural: installs
-    singular: install
-  scope: Namespaced
+    kind: Config
+    listKind: ConfigList
+    plural: config
+    singular: config
+  scope: Cluster
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
       properties:
         apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
           type: string
         kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
         spec:
+          properties:
+            targetNamespace:
+              description: namespace where OpenShift pipelines will be installed
+              type: string
+          required:
+          - targetNamespace
           type: object
         status:
           properties:
-            resources:
-              description: The resources applied
+            conditions:
+              description: installation status sorted in reverse chronological order
               items:
-                type: string
+                properties:
+                  code:
+                    description: Code indicates the status of installation of pipeline resources.
+                    type: string
+                  details:
+                    description: Additional details about the Code
+                    type: string
+                  version:
+                    description: The version of tekton pipelines
+                    type: string
+                required:
+                - code
+                - version
+                type: object
               type: array
-            version:
-              type: string
-          required:
-          - resources
-          - version
           type: object
+  additionalPrinterColumns:
+  - JSONPath: ".status.conditions[0].code"
+    name: status
+    type: string
   version: v1alpha1
   versions:
   - name: v1alpha1
     served: true
     storage: true
+---
+apiVersion: operator.tekton.dev/v1alpha1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  targetNamespace: openshift-pipelines
 ---
 ---
 kind: ClusterRole
