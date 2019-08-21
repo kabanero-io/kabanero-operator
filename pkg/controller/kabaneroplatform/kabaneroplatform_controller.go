@@ -16,6 +16,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"github.com/kabanero-io/kabanero-operator/version"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	mf "github.com/jcrossley3/manifestival"
 )
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
@@ -114,6 +115,12 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	err = reconcileKabaneroCli(ctx, instance, r.client)
+	if err != nil {
+		fmt.Println("Error in reconcile Kabanero CLI: ", err)
+		return reconcile.Result{}, err
+	}
+
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(instance, r.client, ctx)
 	if err != nil {
@@ -126,6 +133,27 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
         
 	return reconcile.Result{}, nil
+}
+
+func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
+	// Deploy the Kabanero CLI
+	filename := "config/reconciler/kabanero-cli.yaml"
+	m, err := mf.NewManifest(filename, true, cl)
+	if err != nil {
+		return err
+	}
+
+	transforms := []mf.Transformer{
+		mf.InjectOwner(k),
+		mf.InjectNamespace(k.GetNamespace()),
+	}
+
+	err = m.Transform(transforms...)
+	if err != nil {
+		return err
+	}
+
+	return m.ApplyAll()
 }
 
 // Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kabanero-cli
+spec:
+  selector:
+    matchLabels:
+      app: kabanero-cli
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kabanero-cli
+    spec:
+      serviceAccountName: kabanero-cli
+      containers:
+        - name: kabanero-cli
+          # Replace this with the built image name
+          image: open-liberty:microProfile3-java8-openj9
+          ports:
+          - containerPort: 9443
+          imagePullPolicy: Always
+          env:
+            - name: KABANERO_CLI_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-cli
+spec:
+  selector:
+    app: kabanero-cli
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 9443
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kabanero-cli
+spec:
+  to:
+    kind: Service
+    name: kabanero-cli
+  tls:
+    termination: passthrough
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-cli
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - kabanero-cli
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-cli
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-cli
+subjects:
+- kind: ServiceAccount
+  name: kabanero-cli
+roleRef:
+  kind: Role
+  name: kabanero-cli
+  apiGroup: rbac.authorization.k8s.io
