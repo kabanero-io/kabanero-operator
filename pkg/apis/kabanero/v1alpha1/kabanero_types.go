@@ -52,6 +52,7 @@ type KabaneroStatus struct {
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
+	Cli CliStatus `json:"cli,omitempty"`
 }
 
 type KabaneroInstanceStatus struct {
@@ -76,6 +77,12 @@ type KnativeServingStatus struct {
         Ready string `json:"ready,omitempty"`
         ErrorMessage string `json:"errorMessage,omitempty"`
         Version string `json:"version,omitempty"`
+}
+
+type CliStatus struct {
+	Ready string `json:"ready, omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

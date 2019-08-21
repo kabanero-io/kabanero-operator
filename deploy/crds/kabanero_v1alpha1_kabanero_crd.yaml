@@ -3,6 +3,22 @@ kind: CustomResourceDefinition
 metadata:
   name: kabaneros.kabanero.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.kabaneroInstance.version
+    description: Kabanero operator instance version.
+    name: Version
+    type: string
+  - JSONPath: .status.kabaneroInstance.ready
+    description: Kabanero operator instance readiness status. The status is directly
+      correlated to the availability of the operator's resources dependencies.
+    name: Ready
+    type: string
   group: kabanero.io
   names:
     kind: Kabanero
@@ -12,19 +28,6 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
-  additionalPrinterColumns:
-    - JSONPath: .metadata.creationTimestamp
-      description: CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
-      name: Age
-      type: date
-    - JSONPath: .status.kabaneroInstance.version
-      description: Kabanero operator instance version.
-      name: Version
-      type: string
-    - JSONPath: .status.kabaneroInstance.ready
-      description: Kabanero operator instance readiness status. The status is directly correlated to the availability of the operator's resources dependencies.
-      name: Ready
-      type: string
   validation:
     openAPIV3Schema:
       properties:
@@ -68,6 +71,15 @@ spec:
           type: object
         status:
           properties:
+            cli:
+              properties:
+                errorMessage:
+                  type: string
+                hostnames:
+                  items:
+                    type: string
+                  type: array
+              type: object
             kabaneroInstance:
               description: Kabanero operator instance readiness status. The status
                 is directly correlated to the availability of resources dependencies.
