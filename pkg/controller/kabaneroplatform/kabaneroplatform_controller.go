@@ -100,6 +100,12 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		fmt.Println("Error in reconcile featured collections: ", err)
 		return reconcile.Result{}, err
 	}
+	
+	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
+	if err != nil {
+		fmt.Println("Error in reconcile featured collections V2: ", err)
+		return reconcile.Result{}, err
+	}
 
 	//Save the status update
 	err = r.client.Status().Update(ctx, instance)

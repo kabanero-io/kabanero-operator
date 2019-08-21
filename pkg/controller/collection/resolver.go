@@ -140,19 +140,3 @@ func ResolveCollection(urls ...string) (*CollectionV1, error) {
 
 	return nil, nil
 }
-
-
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
