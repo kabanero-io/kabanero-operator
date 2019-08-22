@@ -243,6 +243,8 @@ spec:
           verbs:
           - get
           - create
+          - list
+          - update
         - apiGroups:
           - apps
           resources:
@@ -250,6 +252,10 @@ spec:
           - replicasets
           verbs:
           - get
+          - create
+          - delete
+          - list
+          - watch
         - apiGroups:
           - monitoring.coreos.com
           resources:
@@ -291,6 +297,15 @@ spec:
           verbs:
           - get
           - create
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          verbs:
+          - get
+          - list
+          - create
+          - delete
         serviceAccountName: kabanero-operator
     strategy: deployment
   installModes:

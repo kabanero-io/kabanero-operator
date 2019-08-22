@@ -20,6 +20,8 @@ rules:
   verbs:
   - get
   - create
+  - list
+  - update
 - apiGroups:
   - apps
   resources:
@@ -27,9 +29,10 @@ rules:
   - replicasets
   verbs:
   - get
-  - list
   - create
   - delete
+  - list
+  - watch
 - apiGroups:
   - monitoring.coreos.com
   resources:

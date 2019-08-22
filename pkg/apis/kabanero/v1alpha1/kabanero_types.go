@@ -52,7 +52,12 @@ type KabaneroStatus struct {
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
+	
+	// CLI readiness status.
 	Cli CliStatus `json:"cli,omitempty"`
+
+	// Kabanero Landing page readiness status.
+	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
 }
 
 type KabaneroInstanceStatus struct {
@@ -83,6 +88,12 @@ type CliStatus struct {
 	Ready string `json:"ready, omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Hostnames []string `json:"hostnames,omitempty"`
+}
+
+type KabaneroLandingPageStatus struct {
+        Ready string `json:"ready,omitempty"`
+        ErrorMessage string `json:"errorMessage,omitempty"`
+        Version string `json:"version,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

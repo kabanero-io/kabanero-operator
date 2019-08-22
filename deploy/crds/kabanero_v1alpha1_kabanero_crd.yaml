@@ -3,6 +3,15 @@ kind: CustomResourceDefinition
 metadata:
   name: kabaneros.kabanero.io
 spec:
+  group: kabanero.io
+  names:
+    kind: Kabanero
+    listKind: KabaneroList
+    plural: kabaneros
+    singular: kabanero
+  scope: Namespaced
+  subresources:
+    status: {}
   additionalPrinterColumns:
   - JSONPath: .metadata.creationTimestamp
     description: CreationTimestamp is a timestamp representing the server time when
@@ -19,15 +28,6 @@ spec:
       correlated to the availability of the operator's resources dependencies.
     name: Ready
     type: string
-  group: kabanero.io
-  names:
-    kind: Kabanero
-    listKind: KabaneroList
-    plural: kabaneros
-    singular: kabanero
-  scope: Namespaced
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -72,6 +72,7 @@ spec:
         status:
           properties:
             cli:
+              description: CLI readiness status.
               properties:
                 errorMessage:
                   type: string
@@ -103,6 +104,16 @@ spec:
               type: object
             knativeServing:
               description: Knative serving instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            landing:
+              description: Kabanero Landing page readiness status.
               properties:
                 errorMessage:
                   type: string
