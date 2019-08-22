@@ -14,20 +14,35 @@ metadata:
     support: IBM
     alm-examples: |-
       [
-         {
-            "apiVersion":"kabanero.io/v1alpha1",
-            "kind":"Kabanero",
-            "metadata":{
-               "name":"example-kabanero"
-            },
-            "spec":{
-               "version":"0.0.1",
-               "tekton":{
-                 "disabled":false,
-                 "version":"0.3.1"
-               }
+        {
+          "apiVersion": "kabanero.io/v1alpha1",
+          "kind": "Kabanero",
+          "metadata": {
+            "name": "kabanero"
+          },
+          "spec": {
+            "version": "0.0.1",
+            "collections": {
+              "repositories": [
+                {
+                  "name": "experimental",
+                  "url": "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml",
+                  "activateDefaultCollections": true
+                }
+              ]
             }
-         }
+          }
+        },
+        {
+          "apiVersion": "kabanero.io/v1alpha1",
+          "kind": "Collection",
+          "metadata": {
+            "name": "java-microprofile"
+          },
+          "spec": {
+            "version": "1.0.0"
+          }
+        }
       ]
 spec:
   # TODO: minKubeVersion 1.12 is invalid when used with  server version (1.11.0+d4cacc0)
@@ -140,11 +155,26 @@ spec:
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
       statusDescriptors:
-        - description: Tekton status.
-          displayName: Tekton Status
-          path: tekton.status
+        - description: Kabanero operator readiness status.
+          displayName: Kabanero Readiness
+          path: kabaneroInstance.ready
           x-descriptors:
-            - 'urn:alm:descriptor:io.kubernetes.phase'
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Kantive eventing readiness status.
+          displayName: Knative Eventing Readiness
+          path: knativeEventing.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Knative serving readiness status.
+          displayName: Knative Serving Readiness
+          path: knativeServing.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Tekton readiness status.
+          displayName: Tekton Readiness
+          path: tekton.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
     required:
     - name: knativeservings.serving.knative.dev
       version: v1alpha1
@@ -242,7 +272,7 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - tekton.dev
+          - operator.tekton.dev
           resources:
           - '*'
           verbs:
