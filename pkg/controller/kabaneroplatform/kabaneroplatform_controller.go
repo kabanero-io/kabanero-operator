@@ -107,6 +107,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	//Reconcile the appsody operator
+	err = reconcile_appsody(ctx, instance, r.client)
+	if err != nil {
+		fmt.Println("Error in reconcile appsody: ", err)
+		return reconcile.Result{}, err
+	}
+
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(instance, r.client, ctx)
 	if err != nil {
