@@ -25,8 +25,8 @@ metadata:
             "collections": {
               "repositories": [
                 {
-                  "name": "experimental",
-                  "url": "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml",
+                  "name": "incubator",
+                  "url": "https://github.com/kabanero-io/collections/releases/download/v0.1.0/kabanero-index.yaml",
                   "activateDefaultCollections": true
                 }
               ]
