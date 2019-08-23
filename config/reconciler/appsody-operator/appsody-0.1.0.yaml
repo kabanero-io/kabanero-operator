@@ -126,8 +126,6 @@ spec:
                   type: string
                 volumeClaimTemplate:
                   type: object
-              required:
-              - mountPath
               type: object
             volumeMounts:
               items:
@@ -163,9 +161,9 @@ spec:
                 type: object
               type: array
           type: object
-  version: v1alpha1
+  version: v1beta1
   versions:
-  - name: v1alpha1
+  - name: v1beta1
     served: true
     storage: true
 ---
