@@ -258,13 +258,15 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	}
 
 	// Retreive all matching collection names from all remote indexes.  If none were specified,
-	// use the default.
+	// update the status and return.
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
-	if len(repositories) == 0 {
-		default_url := "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml"
-		repositories = append(repositories, kabanerov1alpha1.RepositoryConfig{Name: "default", Url: default_url})
-	}
+        if len(repositories) == 0 {
+		r_log.Info(fmt.Sprintf("No repositories specified in collection (%s)",collectionName))
+                c.Status.StatusMessage = "No repositories specified in collection (" + collectionName + ")."
+
+                return reconcile.Result{}, nil
+        }
 	
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo.Url)
