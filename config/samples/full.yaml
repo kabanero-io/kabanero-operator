@@ -11,6 +11,6 @@ spec:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/v0.1.0/kabanero-index.yaml
       # Activates a default set of collections
       activateDefaultCollections: true 
