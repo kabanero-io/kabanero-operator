@@ -108,6 +108,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 							Format: "",
 						},
 					},
+					"activeLocation": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"activeDigest": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
