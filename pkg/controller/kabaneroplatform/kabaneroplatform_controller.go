@@ -114,8 +114,15 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	//Reconcile the appsody operator
 	err = reconcile_appsody(ctx, instance, r.client)
+        if err != nil {
+                fmt.Println("Error in reconcile appsody: ", err)
+                return reconcile.Result{}, err
+        }
+	
+	// Deploy the kabanero landing page
+	err = deployLandingPage(instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile appsody: ", err)
+		fmt.Println("Error deploying the kabanero landing page.", err)
 		return reconcile.Result{}, err
 	}
 
@@ -162,7 +169,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 }
 
 // Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.
-// If all resource dependencies are in the ready state, the kabanero instance's readiness state
+// If all resource dependencies are in the ready state, the kabanero instance's readiness status
 // is set to true. Otherwise, it is set to false.
 func processStatus(k *kabanerov1alpha1.Kabanero, c client.Client, ctx context.Context, reqLogger logr.Logger) (bool, error) {
 	errorMessage := "One or more resource dependencies are not ready."
@@ -173,10 +180,11 @@ func processStatus(k *kabanerov1alpha1.Kabanero, c client.Client, ctx context.Co
 	isTektonReady, _ := getTektonStatus(k,c);
 	isKnativeEventingReady, _ := getKnativeServingStatus(k,c)
 	isKnativeServingReady, _ := getKnativeEventingStatus(k,c)
-	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger);
-	
-	// Populate the kabanero instance's the overall status.
-	isKabaneroReady := isTektonReady && isKnativeEventingReady && isKnativeServingReady && isCliRouteReady
+	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger)
+        isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k,c)	
+
+	// Set the overall status.
+	isKabaneroReady := isTektonReady && isKnativeEventingReady && isKnativeServingReady && isCliRouteReady && isKabaneroLandingReady
 	if (isKabaneroReady ) {
 		k.Status.KabaneroInstance.ErrorMessage = ""
 		k.Status.KabaneroInstance.Ready = "True"

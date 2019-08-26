@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-landing
+spec:
+  selector:
+    app: kabanero-landing
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 9443
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kabanero-landing
+spec:
+  to:
+    kind: Service
+    name: kabanero-landing
+  tls:
+    termination: passthrough
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-landing
