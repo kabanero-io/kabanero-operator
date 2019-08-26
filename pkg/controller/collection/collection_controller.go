@@ -2,6 +2,7 @@ package collection
 
 import (
 	"context"
+        me "errors"
 	"fmt"
 	"time"
 
@@ -258,14 +259,16 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	}
 
 	// Retreive all matching collection names from all remote indexes.  If none were specified,
-	// update the status and return.
+	// build and log an error and return.
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
         if len(repositories) == 0 {
-		r_log.Info(fmt.Sprintf("No repositories specified in collection (%s)",collectionName))
-                c.Status.StatusMessage = "No repositories specified in collection (" + collectionName + ")."
+                err = me.New(fmt.Sprintf("No repositories were configured in the Kabanero instance"))
+                r_log.Error(err, "Could not continue without any repositories")
 
-                return reconcile.Result{}, nil
+                // Update the status message so the user knows that something needs to be done.
+                c.Status.StatusMessage = "Could not find any configured repositories."
+                return reconcile.Result{Requeue: false, RequeueAfter: 60 * time.Second}, err
         }
 	
 	for _, repo := range repositories {
