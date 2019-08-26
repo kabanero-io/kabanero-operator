@@ -261,10 +261,15 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroStatus(ref common.ReferenceCallba
 							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonStatus"),
 						},
 					},
+					"cli": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CliStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeServingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeServingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonStatus"},
 	}
 }

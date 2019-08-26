@@ -433,6 +433,14 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:8bc8f43d2332d035857c92581df240f247c287629d5f60c751df609f9b6215c5"
+  name = "github.com/openshift/api"
+  packages = ["route/v1"]
+  pruneopts = "NT"
+  revision = "0d921e363e951d89f583292c60d013c318df64dc"
+  version = "v3.9.0"
+
+[[projects]]
   digest = "1:00c85a3a90bb32e1d111a12d6be21dff0cefde69f9bbabc2124050b77ec744c9"
   name = "github.com/openshift-knative/knative-eventing-operator"
   packages = [
@@ -1181,6 +1189,7 @@
     "github.com/jcrossley3/manifestival",
     "github.com/knative/serving-operator/pkg/apis",
     "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
+    "github.com/openshift/api/route/v1",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1",
     "github.com/openshift/tektoncd-pipeline-operator/pkg/apis/operator/v1alpha1",
@@ -1199,6 +1208,7 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/client-go/plugin/pkg/client/auth",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/code-generator/cmd/client-gen",
