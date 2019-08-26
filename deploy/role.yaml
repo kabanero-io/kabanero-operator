@@ -20,6 +20,8 @@ rules:
   verbs:
   - get
   - create
+  - list
+  - update
 - apiGroups:
   - apps
   resources:
@@ -27,6 +29,10 @@ rules:
   - replicasets
   verbs:
   - get
+  - create
+  - delete
+  - list
+  - watch
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -95,13 +101,25 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
+  - roles
   - clusterroles
   verbs:
   - '*'
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
+  - rolebindings
   - clusterrolebindings
   verbs:
   - get
   - create
+  - delete
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - get
+  - list
+  - create
+  - delete

@@ -444,6 +444,14 @@
   version = "v0.6.0"
 
 [[projects]]
+  digest = "1:8bc8f43d2332d035857c92581df240f247c287629d5f60c751df609f9b6215c5"
+  name = "github.com/openshift/api"
+  packages = ["route/v1"]
+  pruneopts = "NT"
+  revision = "0d921e363e951d89f583292c60d013c318df64dc"
+  version = "v3.9.0"
+
+[[projects]]
   digest = "1:5184989f45163d251cb7644798bbbead001f13febbacaa981efaf6df7fcd0589"
   name = "github.com/openshift/tektoncd-pipeline-operator"
   packages = ["pkg/apis/operator/v1alpha1"]
@@ -1177,12 +1185,14 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
+    "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
     "github.com/jcrossley3/manifestival",
     "github.com/knative/serving-operator/pkg/apis",
     "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1",
+    "github.com/openshift/api/route/v1",
     "github.com/openshift/tektoncd-pipeline-operator/pkg/apis/operator/v1alpha1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
@@ -1193,13 +1203,18 @@
     "github.com/shurcooL/vfsgen",
     "github.com/spf13/pflag",
     "gopkg.in/yaml.v2",
+    "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/yaml",
+    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/plugin/pkg/client/auth",
+    "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
