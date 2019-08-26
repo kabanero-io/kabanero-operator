@@ -44,6 +44,7 @@ func ResolveIndex(url string) (*CollectionV1Index, error) {
 	if err != nil {
 		return nil, err
 	}
+	index.Url = url
 
 	return &index, nil
 }

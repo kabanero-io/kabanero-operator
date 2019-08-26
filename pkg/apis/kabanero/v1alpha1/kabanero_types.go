@@ -52,6 +52,12 @@ type KabaneroStatus struct {
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
+	
+	// CLI readiness status.
+	Cli CliStatus `json:"cli,omitempty"`
+
+	// Kabanero Landing page readiness status.
+	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
 }
 
 type KabaneroInstanceStatus struct {
@@ -73,6 +79,18 @@ type KnativeEventingStatus struct {
 }
 
 type KnativeServingStatus struct {
+        Ready string `json:"ready,omitempty"`
+        ErrorMessage string `json:"errorMessage,omitempty"`
+        Version string `json:"version,omitempty"`
+}
+
+type CliStatus struct {
+	Ready string `json:"ready, omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Hostnames []string `json:"hostnames,omitempty"`
+}
+
+type KabaneroLandingPageStatus struct {
         Ready string `json:"ready,omitempty"`
         ErrorMessage string `json:"errorMessage,omitempty"`
         Version string `json:"version,omitempty"`
