@@ -231,15 +231,34 @@ func schema_pkg_apis_kabanero_v1beta1_KabaneroStatus(ref common.ReferenceCallbac
 			SchemaProps: spec.SchemaProps{
 				Description: "KabaneroStatus defines the observed state of Kabanero",
 				Properties: map[string]spec.Schema{
+					"kabaneroInstance": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kabanero operator instance readiness status. The status is directly correlated to the availability of resources dependencies.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroInstanceStatus"),
+						},
+					},
+					"knativeEventing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Knative eventing instance readiness status.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeEventingStatus"),
+						},
+					},
+					"knativeServing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Knative serving instance readiness status.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeServingStatus"),
+						},
+					},
 					"tekton": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonStatus"),
+							Description: "Tekton instance readiness status.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeServingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonStatus"},
 	}
 }

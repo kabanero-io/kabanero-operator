@@ -7,6 +7,10 @@ spec:
   # can be overriden individually as well
   version: 0.0.1
 
+  namespaces:
+    -namespace
+    -namespace2
+
   collections: 
     # A list of those repositories which are searched for collections
     repositories: 

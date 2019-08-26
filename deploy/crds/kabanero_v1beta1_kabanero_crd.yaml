@@ -31,11 +31,11 @@ spec:
           properties:
             collections:
               properties:
-                enableFeatured:
-                  type: boolean
                 repositories:
                   items:
                     properties:
+                      activateDefault:
+                        type: boolean
                       name:
                         type: string
                       url:
@@ -45,8 +45,8 @@ spec:
               type: object
             tekton:
               properties:
-                enabled:
-                  type: boolean
+                enable:
+                  type: string
                 version:
                   type: string
               type: object
@@ -55,9 +55,45 @@ spec:
           type: object
         status:
           properties:
-            tekton:
+            kabaneroInstance:
+              description: Kabanero operator instance readiness status. The status
+                is directly correlated to the availability of resources dependencies.
               properties:
-                status:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            knativeEventing:
+              description: Knative eventing instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            knativeServing:
+              description: Knative serving instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            tekton:
+              description: Tekton instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
                   type: string
               type: object
           type: object

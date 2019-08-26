@@ -18,23 +18,23 @@ type KabaneroSpec struct {
 
 	Version string `json:"version,omitempty"`
 
-	CollectionConfig InstanceCollectionConfig `json:"collections,omitempty"`
+	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
-	Repositories   []RepositoryConfig `json:"repositories,omitempty"`
+	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
 
 type RepositoryConfig struct {
-	Name string `json:"name,omitempty"`
-	Url  string `json:"url,omitempty"`
-	ActivateDefaultCollections bool `json:"activateDefault,omitempty"`
+	Name                       string `json:"name,omitempty"`
+	Url                        string `json:"url,omitempty"`
+	ActivateDefaultCollections bool   `json:"activateDefaultCollections,omitempty"`
 }
 
 type TektonCustomizationSpec struct {
-	Enable string   `json:"enable,omitempty"`
+	Enable  string `json:"enable,omitempty"`
 	Version string `json:"version,omitempty"`
 }
 
@@ -55,24 +55,24 @@ type KabaneroStatus struct {
 }
 
 type KabaneroInstanceStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 type TektonStatus struct {
-	Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 type KnativeEventingStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 type KnativeServingStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
