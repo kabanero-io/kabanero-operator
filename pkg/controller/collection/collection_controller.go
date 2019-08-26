@@ -2,6 +2,7 @@ package collection
 
 import (
 	"context"
+        me "errors"
 	"fmt"
 	"time"
 
@@ -258,13 +259,17 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	}
 
 	// Retreive all matching collection names from all remote indexes.  If none were specified,
-	// use the default.
+	// build and log an error and return.
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
-	if len(repositories) == 0 {
-		default_url := "https://github.com/kabanero-io/collections/releases/download/v0.1.0/kabanero-index.yaml"
-		repositories = append(repositories, kabanerov1alpha1.RepositoryConfig{Name: "default", Url: default_url})
-	}
+  if len(repositories) == 0 {
+          err = me.New(fmt.Sprintf("No repositories were configured in the Kabanero instance"))
+          r_log.Error(err, "Could not continue without any repositories")
+
+          // Update the status message so the user knows that something needs to be done.
+          c.Status.StatusMessage = "Could not find any configured repositories."
+          return reconcile.Result{Requeue: false, RequeueAfter: 60 * time.Second}, err
+  }
 	
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo.Url)
