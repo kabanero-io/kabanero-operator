@@ -29,6 +29,7 @@ type RepositoryAssetStatus struct {
 // +k8s:openapi-gen=true
 type CollectionStatus struct {
 	ActiveVersion string `json:"activeVersion,omitempty"`
+	ActiveLocation string `json:"activeLocation,omitempty"`
 	ActiveDigest  string `json:"activeDigest,omitempty"`
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 	AvailableVersion string `json:"availableVersion,omitempty"`

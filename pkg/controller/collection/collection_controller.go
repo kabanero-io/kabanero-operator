@@ -262,17 +262,15 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
 	if len(repositories) == 0 {
-		default_url := "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/index.yaml"
+		default_url := "https://github.com/kabanero-io/collections/releases/download/v0.1.0/kabanero-index.yaml"
 		repositories = append(repositories, kabanerov1alpha1.RepositoryConfig{Name: "default", Url: default_url})
 	}
 	
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo.Url)
 		if err != nil {
-			// TODO: Issue #92, should just search the repository where the collection was loaded initially.
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
-
 		// Handle Index Collection version
 		switch apiVersion := index.ApiVersion; apiVersion {
 		case "v1":
@@ -295,7 +293,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			
 			// Build out the list of all collections across all repository indexes
 			for _, collection := range _collections {
-				matchingCollections = append(matchingCollections, resolvedCollection{collectionv2: collection})
+				matchingCollections = append(matchingCollections, resolvedCollection{collectionv2: collection, repositoryUrl: repo.Url})
 			}
 
 		default: 
@@ -315,15 +313,30 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			upgradeCollection := findMaxVersionCollection(matchingCollections)
 			if upgradeCollection != nil {
 				// The upgrade collection semver is valid, we tested it in findMaxVersionCollection
-				upgradeVersion, _ := semver.ParseTolerant(upgradeCollection.collection.Manifest.Version)
-				if upgradeVersion.Compare(specVersion) > 0 {
-					c.Status.AvailableVersion = upgradeCollection.collection.Manifest.Version
-					c.Status.AvailableLocation = upgradeCollection.repositoryUrl
-				} else {
-					// The spec version is the same or higher than the collection versions
-					c.Status.AvailableVersion = ""
-					c.Status.AvailableLocation = ""
+				upgradeVersion, _ := semver.Make("0.0.0")
+				switch {
+				//v1
+				case upgradeCollection.collection.Manifest.Version != "":
+					upgradeVersion, _ = semver.ParseTolerant(upgradeCollection.collection.Manifest.Version)
+					if upgradeVersion.Compare(specVersion) > 0 {
+						c.Status.AvailableVersion = upgradeCollection.collection.Manifest.Version
+						c.Status.AvailableLocation = upgradeCollection.repositoryUrl
+					} else {
+						c.Status.AvailableVersion = ""
+						c.Status.AvailableLocation = ""
+					}
+				//v2
+				case upgradeCollection.collectionv2.Version != "":
+					upgradeVersion, _ = semver.ParseTolerant(upgradeCollection.collectionv2.Version)
+					if upgradeVersion.Compare(specVersion) > 0 {
+						c.Status.AvailableVersion = upgradeCollection.collectionv2.Version
+						c.Status.AvailableLocation = upgradeCollection.repositoryUrl
+					} else {
+						c.Status.AvailableVersion = ""
+						c.Status.AvailableLocation = ""
+					}
 				}
+				
 			} else {
 				// None of the collections versions adher to semver standards
 				c.Status.AvailableVersion = ""
@@ -343,6 +356,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 				if err != nil {
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
+				c.Status.ActiveLocation = matchingCollection.repositoryUrl
 				return reconcile.Result{}, nil
 			//v2
 			case matchingCollection.collectionv2.Version == c.Spec.Version:
@@ -351,6 +365,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 				if err != nil {
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
+				c.Status.ActiveLocation = matchingCollection.repositoryUrl
 				return reconcile.Result{}, nil
 			}
 		}
@@ -595,12 +610,25 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 		for _, asset := range collectionResource.Status.ActiveAssets {
 			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
 
-			m, err := mf.NewManifest(asset.Url, false, c)
+			// Retrieve manifests as unstructured
+			manifests, err := GetManifests(asset.Url)
 			if err != nil {
 				log.Error(err, errorMessage, "resource", asset.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
 				return nil // Forces status to be updated
 			}
+			
+
+			// Construct dummy Manifest and client, due to client being private struct field
+			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
+			if err != nil {
+				log.Error(err, errorMessage, "resource", asset.Url)
+				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+				return nil // Forces status to be updated
+			}
+
+			// Assign the real manifests
+			m.Resources = manifests
 
 			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
