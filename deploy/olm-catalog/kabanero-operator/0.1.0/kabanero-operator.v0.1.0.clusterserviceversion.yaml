@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: kabanero-operator.v0.0.1
+  name: kabanero-operator.v0.1.0
   namespace: placeholder
   annotations:
     capabilities: Basic Install
@@ -21,7 +21,7 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.0.1",
+            "version": "0.1.0",
             "collections": {
               "repositories": [
                 {
@@ -40,7 +40,7 @@ metadata:
             "name": "java-microprofile"
           },
           "spec": {
-            "version": "1.0.0"
+            "version": "0.0.2"
           }
         }
       ]
@@ -49,7 +49,7 @@ spec:
   minKubeVersion: 1.11.0
   apiservicedefinitions: {}
   maturity: alpha
-  version: 0.0.1
+  version: 0.1.0
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
@@ -186,9 +186,9 @@ spec:
       kind: KnativeEventing
       displayName: Knative Eventing
       description: Knative Eventing
-    - name: installs.tekton.dev
+    - name: config.operator.tekton.dev
       version: v1alpha1
-      kind: Install
+      kind: Config
       displayName: OpenShift Pipelines Install
       description: OpenShift Pipelines using Tekton
   install:
