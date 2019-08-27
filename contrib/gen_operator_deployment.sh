@@ -129,8 +129,8 @@ EOF
 
 # Add all needed yaml files.
 cat $DEST_DIR/dependencies.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
-cat $DEST_DIR/crds/kabanero_v1alpha1_kabanero_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
-cat $DEST_DIR/crds/kabanero_v1alpha1_collection_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
+cat $DEST_DIR/crds/kabanero_kabanero_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
+cat $DEST_DIR/crds/kabanero_collection_crd.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
 cat $DEST_DIR/service_account.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP
 cat $DEST_DIR/operator.yaml >> $DEST_FILE_TMP; echo "---" >> $DEST_FILE_TMP; echo
 cat $DEST_DIR/role.yaml >> $DEST_FILE_TMP;  echo "---" >> $DEST_FILE_TMP;

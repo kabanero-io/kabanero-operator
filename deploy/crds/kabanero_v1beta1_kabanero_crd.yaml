@@ -34,7 +34,7 @@ spec:
                 repositories:
                   items:
                     properties:
-                      activateDefault:
+                      activateDefaultCollections:
                         type: boolean
                       name:
                         type: string
