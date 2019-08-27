@@ -39,7 +39,8 @@ generate:
 
 install:
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
-	kubectl apply -f deploy/crds/
+	kubectl apply -f deploy/crds/kabanero_kabanero_crd.yaml
+	kubectl apply -f deploy/crds/kabanero_collection_crd.yaml
 	
 deploy: 
 	kubectl create namespace kabanero || true

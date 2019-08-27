@@ -19,7 +19,7 @@ spec:
           image: kabanero-operator:latest
           command:
           - kabanero-operator
-          imagePullPolicy: Always
+          imagePullPolicy: Never
           env:
             - name: WATCH_NAMESPACE
               value: ""
