@@ -31,6 +31,7 @@ type RepositoryConfig struct {
 	Name                       string `json:"name,omitempty"`
 	Url                        string `json:"url,omitempty"`
 	ActivateDefaultCollections bool   `json:"activateDefaultCollections,omitempty"`
+	SkipCertVerification       bool   `json:"skipCertVerification,omitempty"`
 }
 
 type TektonCustomizationSpec struct {
@@ -38,7 +39,7 @@ type TektonCustomizationSpec struct {
 	Version string `json:"version,omitempty"`
 }
 
-// KabaneroStatus defines the observed state of Kabanero
+// KabaneroStatus defines the observed state of the Kabanero instance
 // +k8s:openapi-gen=true
 type KabaneroStatus struct {
 	// Kabanero operator instance readiness status. The status is directly correlated to the availability of resources dependencies.
@@ -52,6 +53,12 @@ type KabaneroStatus struct {
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
+	
+	// CLI readiness status.
+	Cli CliStatus `json:"cli,omitempty"`
+
+	// Kabanero Landing page readiness status.
+	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
 }
 
 type KabaneroInstanceStatus struct {
@@ -59,17 +66,32 @@ type KabaneroInstanceStatus struct {
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`
 }
+
 type TektonStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`
 }
+
 type KnativeEventingStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`
 }
+
 type KnativeServingStatus struct {
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
+}
+
+type CliStatus struct {
+	Ready        string `json:"ready, omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Hostnames    []string `json:"hostnames,omitempty"`
+}
+
+type KabaneroLandingPageStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`

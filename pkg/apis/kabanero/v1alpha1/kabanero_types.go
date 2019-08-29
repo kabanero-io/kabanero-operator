@@ -31,6 +31,7 @@ type RepositoryConfig struct {
 	Name string `json:"name,omitempty"`
 	Url  string `json:"url,omitempty"`
 	ActivateDefaultCollections bool `json:"activateDefaultCollections,omitempty"`
+	SkipCertVerification bool `json:"skipCertVerification,omitempty"`
 }
 
 type TektonCustomizationSpec struct {

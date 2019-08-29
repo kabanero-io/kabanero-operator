@@ -45,11 +45,10 @@ install:
 deploy: 
 	kubectl create namespace kabanero || true
 
-ifeq "$(IMAGE)" "kabanero-operator:latest"
-	# No image pull policy for local image
-	sed -i.bak -e 's!imagePullPolicy: Always!imagePullPolicy: Never!' deploy/operator.yaml
-else
-	# Substitute current image name
+ifneq "$(IMAGE)" "kabanero-operator:latest"
+	# By default there is no image pull policy for local image. However, for other images
+	# substitute current image name, and update the pull policy to always pull images.
+	sed -i.bak -e 's!imagePullPolicy: Never!imagePullPolicy: Always!' deploy/operator.yaml
 	sed -i.bak -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
 endif
 	rm deploy/operator.yaml.bak

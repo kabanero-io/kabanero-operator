@@ -1,6 +1,7 @@
 package collection
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v2"
@@ -8,13 +9,12 @@ import (
 	"net/http"
 	"strings"
 	"regexp"
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 )
 
-func ResolveIndex(url string) (*CollectionV1Index, error) {
-//	if !strings.HasSuffix(url, "/index.yaml") {
-//		url = url + "/index.yaml"
-//	}
-	
+func ResolveIndex(repoConf kabanerov1alpha1.RepositoryConfig) (*CollectionV1Index, error) {
+	url := repoConf.Url
+
 	// user may specify url to yaml file or directory
 	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url) 
 	if err != nil {
@@ -24,15 +24,31 @@ func ResolveIndex(url string) (*CollectionV1Index, error) {
 		url = url + "/index.yaml"
 	}
 
+	// Build the request.
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("Could not resolve the index: %v", url))
+	// Drive the request. Certificate validation is not disabled by default.
+	skipCertVerify := repoConf.SkipCertVerification
+	client := http.DefaultClient
+	if skipCertVerify {
+		config := &tls.Config{InsecureSkipVerify: skipCertVerify,}	
+		transport := &http.Transport{TLSClientConfig: config}
+        	client = &http.Client{Transport: transport}
 	}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return nil,err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("Could not resolve the index: %v. Http status code: %v", url, resp.StatusCode))
+	}
+
 	r := resp.Body
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -50,7 +66,7 @@ func ResolveIndex(url string) (*CollectionV1Index, error) {
 }
 
 // Return all resolved collections in the index matching the given name.
-func SearchCollection(collectionName string, index *CollectionV1Index) ([]CollectionV1, error) {
+func SearchCollection(repoConf kabanerov1alpha1.RepositoryConfig, collectionName string, index *CollectionV1Index) ([]CollectionV1, error) {
 	//Locate the desired collection in the index
 	var collectionRefs []IndexedCollectionV1
 	for _, collectionList := range index.Collections {
@@ -68,7 +84,7 @@ func SearchCollection(collectionName string, index *CollectionV1Index) ([]Collec
 
 	var collections []CollectionV1
 	for _, collectionRef := range collectionRefs {
-		collection, err := ResolveCollection(collectionRef.CollectionUrls...)
+		collection, err := ResolveCollection(repoConf, collectionRef.CollectionUrls...)
 		if err != nil {
 			// TODO: somehow get this error back to the caller, but keep looking at other refs...
 			return nil, err
@@ -102,7 +118,7 @@ func SearchCollectionV2(collectionName string, index *CollectionV1Index) ([]Inde
 	return collectionRefs, nil
 }
 
-func ResolveCollection(urls ...string) (*CollectionV1, error) {
+func ResolveCollection(repoConf kabanerov1alpha1.RepositoryConfig, urls ...string) (*CollectionV1, error) {
 	for _, url := range urls {
 		if strings.HasSuffix(url, "tar.gz") {
 			panic("No implementation for collection archives")
@@ -115,11 +131,31 @@ func ResolveCollection(urls ...string) (*CollectionV1, error) {
 			}
 		}
 
+		// Build the request.
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
 			return nil, err
 		}
-		resp, err := http.DefaultClient.Do(req)
+
+		// Drive the request. Certificate validation is not disabled by default.
+		skipCertVerify := repoConf.SkipCertVerification
+		client := http.DefaultClient
+		if skipCertVerify {
+			config := &tls.Config{InsecureSkipVerify: skipCertVerify,}
+			transport := &http.Transport{TLSClientConfig: config}
+			client = &http.Client{Transport: transport}
+		}
+
+		resp, err := client.Do(req)
+
+        	if err != nil {
+			return nil,err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.New(fmt.Sprintf("Could not resolve collection: %v. Http status code: %v", url, resp.StatusCode))
+		}
+
 		r := resp.Body
 		b, err := ioutil.ReadAll(r)
 		if err != nil {
