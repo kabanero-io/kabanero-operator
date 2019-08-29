@@ -8,9 +8,7 @@ import (
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	yaml "gopkg.in/yaml.v2"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,15 +61,11 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 		return err
 	}
 
-	// Gather Kabanero operator ownerReference information.
-	ownerRef, err := getOwnerReference(k, c)
-	if err != nil {
-		return err
-	}
-
 	// Create a Deployment. The landing application requires knowledge of the landingURL
 	// post route creation.
-	err = createDeployment(k, clientset, c, landingURL, ownerRef)
+	image := landingImage + ":" + landingImageTag
+	env := []corev1.EnvVar{{Name:  "LANDING_URL",	Value: landingURL	}}
+	err = createDeployment(k, clientset, c, "kabanero-landing", image, env, nil, kllog)
 	if err != nil {
 		return err
 	}
@@ -119,136 +113,6 @@ func getLandingURL(k *kabanerov1alpha1.Kabanero, config *restclient.Config) (str
 	kllog.Info(fmt.Sprintf("getLandingURL: URL: %v", landingURL))
 
 	return landingURL, err
-}
-
-// Retrieves an OwnerRereference object populated with the Kabanero operator information.
-func getOwnerReference(k *kabanerov1alpha1.Kabanero, c client.Client) (metav1.OwnerReference, error) {
-	ownerIsController := true
-	kInstance := &kabanerov1alpha1.Kabanero{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      k.ObjectMeta.Name,
-		Namespace: k.ObjectMeta.Namespace}, kInstance)
-
-	if err != nil {
-		return metav1.OwnerReference{}, err
-	}
-
-	ownerRef := metav1.OwnerReference{
-		APIVersion: kInstance.TypeMeta.APIVersion,
-		Kind:       kInstance.TypeMeta.Kind,
-		Name:       kInstance.ObjectMeta.Name,
-		UID:        kInstance.ObjectMeta.UID,
-		Controller: &ownerIsController,
-	}
-
-	kllog.Info(fmt.Sprintf("getOwnerReference: OwnerReference: %v", ownerRef))
-
-	return ownerRef, err
-}
-
-// Creates and deploys a Deployment resource.
-//
-// apiVersion: apps/v1
-// kind: Deployment
-// metadata:
-//   name: kabanero-landing
-// spec:
-//   selector:
-//     matchLabels:
-//       app: kabanero-landing
-//   replicas: 1
-//   template:
-//     metadata:
-//       labels:
-//         app: kabanero-landing
-//     spec:
-//       serviceAccountName: kabanero-landing
-//       containers:
-//         - name: kabanero-landing
-//           image: kabanero/landing:0.0.1
-//           imagePullPolicy: Always
-//           ports:
-//             - containerPort: 9443
-//           env:
-//             - name: LANDING_URL
-//               value: <FILL_IN>>
-//
-func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Clientset, c client.Client, landingURL string, ownerRef metav1.OwnerReference) error {
-	// Check if the Deployment resource already exists.
-	dInstance := &appsv1.Deployment{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      "kabanero-landing",
-		Namespace: k.ObjectMeta.Namespace}, dInstance)
-
-	if err == nil {
-		return nil
-	} else {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-	}
-
-	// The Deployment resource does not exist. Create it.
-	cl := clientset.AppsV1().Deployments(k.ObjectMeta.Namespace)
-
-	var repCount int32 = 1
-	image := landingImage + ":" + landingImageTag
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kabanero-landing",
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: ownerRef.APIVersion,
-					Kind:       ownerRef.Kind,
-					Name:       ownerRef.Name,
-					UID:        ownerRef.UID,
-					Controller: ownerRef.Controller,
-				},
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &repCount,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "kabanero-landing",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "kabanero-landing",
-					},
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: "kabanero-landing",
-					Containers: []corev1.Container{
-						{
-							Name:            "kabanero-landing",
-							Image:           image,
-							ImagePullPolicy: "Always",
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 9443,
-								},
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "LANDING_URL",
-									Value: landingURL,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	kllog.Info(fmt.Sprintf("createDeployment: Deployment for create: %v", deployment))
-
-	_, err = cl.Create(deployment)
-
-	return err
 }
 
 // Adds customizations to the OpenShift web console.
