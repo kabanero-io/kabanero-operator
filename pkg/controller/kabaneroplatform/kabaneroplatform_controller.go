@@ -177,6 +177,7 @@ func processStatus(k *kabanerov1alpha1.Kabanero, c client.Client, ctx context.Co
 	k.Status.KabaneroInstance.Ready = "False"
 
 	// Gather the status of all resource dependencies.
+	isAppsodyReady, _ := getAppsodyStatus(k, c, reqLogger)
 	isTektonReady, _ := getTektonStatus(k,c);
 	isKnativeEventingReady, _ := getKnativeServingStatus(k,c)
 	isKnativeServingReady, _ := getKnativeEventingStatus(k,c)
@@ -184,7 +185,7 @@ func processStatus(k *kabanerov1alpha1.Kabanero, c client.Client, ctx context.Co
         isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k,c)	
 
 	// Set the overall status.
-	isKabaneroReady := isTektonReady && isKnativeEventingReady && isKnativeServingReady && isCliRouteReady && isKabaneroLandingReady
+	isKabaneroReady := isTektonReady && isKnativeEventingReady && isKnativeServingReady && isCliRouteReady && isKabaneroLandingReady && isAppsodyReady
 	if (isKabaneroReady ) {
 		k.Status.KabaneroInstance.ErrorMessage = ""
 		k.Status.KabaneroInstance.Ready = "True"
