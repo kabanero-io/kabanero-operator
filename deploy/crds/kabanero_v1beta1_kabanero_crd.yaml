@@ -71,6 +71,8 @@ spec:
                     type: object
                   type: array
               type: object
+            githubOrganization:
+              type: string
             landing:
               properties:
                 enable:

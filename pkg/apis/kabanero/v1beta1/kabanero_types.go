@@ -17,7 +17,7 @@ type KabaneroSpec struct {
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
 	Version string `json:"version,omitempty"`
-
+	GithubOrganization string `json:"githubOrganization,omitempty"`
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
