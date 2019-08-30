@@ -22,3 +22,6 @@ rm operator_v1alpha1_config_cr.yaml
 
 sed -i.bak 's/namespace: openshift-operators/namespace: kabanero/g' $DEST
 rm $DEST.bak
+
+sed -i.bak 's/name: name\.must\.be-cluster/name: cluster/g' $DEST
+rm $DEST.bak

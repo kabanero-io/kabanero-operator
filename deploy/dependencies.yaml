@@ -441,7 +441,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: controller-manager
-  namespace: knative-sources
+  namespace: kabanero
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -564,7 +564,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: knative-sources
+  namespace: kabanero
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -577,7 +577,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: controller-manager
-  namespace: knative-sources
+  namespace: kabanero
 
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -710,7 +710,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: controller
-  namespace: knative-sources
+  namespace: kabanero
 spec:
   ports:
   - port: 443
@@ -724,7 +724,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: controller-manager
-  namespace: knative-sources
+  namespace: kabanero
 spec:
   selector:
     matchLabels:
@@ -772,7 +772,7 @@ spec:
       serviceAccountName: openshift-pipelines-operator
       containers:
       - name: openshift-pipelines-operator
-        image: quay.io/openshift-pipeline/openshift-pipelines-operator:v0.5.0
+        image: quay.io/openshift-pipeline/openshift-pipelines-operator:v0.5.2
         command:
         - openshift-pipelines-operator
         imagePullPolicy: Always

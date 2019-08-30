@@ -17,3 +17,6 @@ BASEURL=https://github.com/knative/eventing-contrib/releases/download/${RELEASE}
 curl -f -L $BASEURL/${GITHUB_SOURCE} -o ${GITHUB_SOURCE}
 cat ${GITHUB_SOURCE} >> $DEST; echo "---" >> $DEST
 rm ${GITHUB_SOURCE}
+
+sed -i.bak 's/namespace: knative-sources/namespace: kabanero/g' $DEST
+rm $DEST.bak
