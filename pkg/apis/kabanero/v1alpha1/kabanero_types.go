@@ -59,6 +59,9 @@ type KabaneroStatus struct {
 
 	// Kabanero Landing page readiness status.
 	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
+	
+	// Appsody instance readiness status.
+	Appsody AppsodyStatus `json:"appsody,omitempty"`
 }
 
 type KabaneroInstanceStatus struct {
@@ -95,6 +98,11 @@ type KabaneroLandingPageStatus struct {
         Ready string `json:"ready,omitempty"`
         ErrorMessage string `json:"errorMessage,omitempty"`
         Version string `json:"version,omitempty"`
+}
+
+type AppsodyStatus struct {
+	Ready string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

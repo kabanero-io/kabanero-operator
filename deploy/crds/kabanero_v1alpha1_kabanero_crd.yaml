@@ -73,6 +73,14 @@ spec:
           type: object
         status:
           properties:
+            appsody:
+              description: Appsody instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+              type: object
             cli:
               description: CLI readiness status.
               properties:
