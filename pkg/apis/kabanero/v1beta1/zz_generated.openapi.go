@@ -267,10 +267,16 @@ func schema_pkg_apis_kabanero_v1beta1_KabaneroStatus(ref common.ReferenceCallbac
 							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroLandingPageStatus"),
 						},
 					},
+					"appsody": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Appsody instance readiness status.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.AppsodyStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroLandingPageStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeServingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.AppsodyStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroLandingPageStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KnativeServingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonStatus"},
 	}
 }

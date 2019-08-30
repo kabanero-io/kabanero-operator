@@ -53,6 +53,14 @@ spec:
             type: object
           status:
             properties:
+              appsody:
+                description: Appsody instance readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                type: object
               cli:
                 description: CLI readiness status.
                 properties:
@@ -163,6 +171,14 @@ spec:
             type: object
           status:
             properties:
+              appsody:
+                description: Appsody instance readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                type: object
               cli:
                 description: CLI readiness status.
                 properties:
@@ -172,7 +188,6 @@ spec:
                     items:
                       type: string
                     type: array
-                type: object
               kabaneroInstance:
                 description: Kabanero operator instance readiness status. The status
                   is directly correlated to the availability of resources dependencies.
