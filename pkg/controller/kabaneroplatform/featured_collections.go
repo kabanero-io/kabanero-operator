@@ -2,7 +2,6 @@ package kabaneroplatform
 
 import (
 	"context"
-	_ "fmt"
 	"github.com/blang/semver"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
@@ -162,13 +161,13 @@ func featuredCollections(k *kabanerov1alpha1.Kabanero) ([]*collection.Collection
 
 	for _, r := range k.Spec.Collections.Repositories {
 		if r.ActivateDefaultCollections {
-			index, err := collection.ResolveIndex(r.Url)
+			index, err := collection.ResolveIndex(r)
 			if err != nil {
 				return nil, err
 			}
 
 			for _, c := range index.ListCollections() {
-				c, err := collection.ResolveCollection(c.CollectionUrls...)
+				c, err := collection.ResolveCollection(r, c.CollectionUrls...)
 				if err != nil {
 					return nil, err
 				}
@@ -187,7 +186,7 @@ func featuredCollectionsV2(k *kabanerov1alpha1.Kabanero) ([]*collection.IndexedC
 
 	for _, r := range k.Spec.Collections.Repositories {
 		if r.ActivateDefaultCollections {
-			index, err := collection.ResolveIndex(r.Url)
+			index, err := collection.ResolveIndex(r)
 			if err != nil {
 				return nil, err
 			}

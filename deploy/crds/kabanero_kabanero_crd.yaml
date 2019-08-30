@@ -34,6 +34,8 @@ spec:
                           type: boolean
                         name:
                           type: string
+                        skipCertVerification:
+                          type: boolean
                         url:
                           type: string
                       type: object
@@ -142,6 +144,8 @@ spec:
                           type: boolean
                         name:
                           type: string
+                        skipCertVerification:
+                          type: boolean
                         url:
                           type: string
                       type: object
@@ -159,6 +163,16 @@ spec:
             type: object
           status:
             properties:
+              cli:
+                description: CLI readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  hostnames:
+                    items:
+                      type: string
+                    type: array
+                type: object
               kabaneroInstance:
                 description: Kabanero operator instance readiness status. The status
                   is directly correlated to the availability of resources dependencies.
@@ -190,6 +204,16 @@ spec:
                   version:
                     type: string
                 type: object
+              landing:
+                description: Kabanero Landing page readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
               tekton:
                 description: Tekton instance readiness status.
                 properties:
@@ -211,3 +235,19 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.kabaneroInstance.version
+    description: Kabanero operator instance version.
+    name: Version
+    type: string
+  - JSONPath: .status.kabaneroInstance.ready
+    description: Kabanero operator instance readiness status. The status is directly
+      correlated to the availability of the operator's resources dependencies.
+    name: Ready
+    type: string
