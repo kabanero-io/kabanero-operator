@@ -56,19 +56,22 @@ func DecodeManifests(archive []byte, collectionName string) ([]unstructured.Unst
 			//Buffer the document for further processing
 			b := make([]byte, header.Size)
 			_, err := tarReader.Read(b)
+			if err != nil {
+				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
+			}
 
 			//Apply the Kabanero yaml directive processor
 			s := &DirectiveProcessor{}
 			b, err = s.Render(b, map[string]interface{}{"CollectionName": collectionName})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
 
 			decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(b))
 			out := unstructured.Unstructured{}
 			err = decoder.Decode(&out)
 			if err != nil {
-				fmt.Sprintf("Error decoding %v", header.Name)
+				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
 			manifests = append(manifests, out)
 		}
