@@ -7,7 +7,7 @@ import (
 )
 
 func TestIt(t *testing.T) {
-	r := &ReconcileCollection{indexResolver: func(url string) (*CollectionV1Index, error) {
+	r := &ReconcileCollection{indexResolver: func(kabanerov1alpha1.RepositoryConfig) (*CollectionV1Index, error) {
 		return &CollectionV1Index{
 			Collections: map[string][]IndexedCollectionV1{
 				"java-microprofile": []IndexedCollectionV1{
