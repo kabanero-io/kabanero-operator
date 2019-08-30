@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-        me "errors"
+	me "errors"
 	"fmt"
 	"time"
 
@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-//	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var log = logf.Log.WithName("controller_collection")
@@ -75,7 +74,7 @@ type ReconcileCollection struct {
 	scheme *runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
-	indexResolver func(string) (*CollectionV1Index, error)
+	indexResolver func(kabanerov1alpha1.RepositoryConfig) (*CollectionV1Index, error)
 }
 
 // Reconcile reads that state of the cluster for a Collection object and makes changes based on the state read
@@ -272,7 +271,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
   }
 	
 	for _, repo := range repositories {
-		index, err := r.indexResolver(repo.Url)
+		index, err := r.indexResolver(repo)
 		if err != nil {
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
@@ -280,7 +279,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		switch apiVersion := index.ApiVersion; apiVersion {
 		case "v1":
 			// Search for all versions of the collection in this repository index.
-			_collections, err := SearchCollection(collectionName, index)
+			_collections, err := SearchCollection(repo, collectionName, index)
 			if err != nil {
 				r_log.Error(err, "Could not search the provided index")
 			}
