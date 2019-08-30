@@ -50,21 +50,22 @@ func DecodeManifests(archive []byte, collectionName string) ([]unstructured.Unst
 
 		//For now skip manifest.yaml, rather than utilizing it as the index of the archive
 		switch {
-		case header.Name == "./manifest.yaml":
+		case header.Name == "manifest.yaml" || strings.HasSuffix(header.Name, "/manifest.yaml"):
 			break
 		case strings.HasSuffix(header.Name, ".yaml"):
 			//Buffer the document for further processing
 			b := make([]byte, header.Size)
-			_, err := tarReader.Read(b)
-			if err != nil {
-				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
+			i, err := tarReader.Read(b)
+			//An EOF error is normal, as long as bytes read > 0
+			if err == io.EOF && i == 0 || err != nil && err != io.EOF {
+				return nil, fmt.Errorf("Error reading archive %v: %v", header.Name, err.Error())
 			}
 
 			//Apply the Kabanero yaml directive processor
 			s := &DirectiveProcessor{}
 			b, err = s.Render(b, map[string]interface{}{"CollectionName": collectionName})
 			if err != nil {
-				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
+				return nil, fmt.Errorf("Error processing directives %v: %v", header.Name, err.Error())
 			}
 
 			decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(b))
