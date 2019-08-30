@@ -1,13 +1,18 @@
 package kabaneroplatform
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
@@ -50,18 +55,56 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 		return err
 	}
 
-	// Create the deployment manually as we have to fill in some env vars.
-	image := "kabanero/kabanero-command-line-services:0.1.0"
-	env := []corev1.EnvVar{{Name:  "KABANERO_CLI_NAMESPACE",	Value: k.GetNamespace()	}}
-	if len(k.Spec.GithubOrganization) > 0 {
-		env = append(env, corev1.EnvVar{Name:  "KABANERO_CLI_GROUP", Value: k.Spec.GithubOrganization})
+	// If there is a role binding config map, delete it (previous version)
+	err = destroyRoleBindingConfigMap(k, cl, reqLogger)
+	if err != nil {
+		return err
 	}
-	// Need to construct this the long way due to anonymous fields
-	configMapOptional := false
-	configMapEnvSource := corev1.ConfigMapEnvSource{Optional: &configMapOptional}
-	configMapEnvSource.Name = "kabanero-cli-role-config"
-	envFrom := []corev1.EnvFromSource{{ConfigMapRef: &configMapEnvSource}}
-	err = createDeployment(k, clientset, cl, "kabanero-cli", image, env, envFrom, reqLogger)
+
+	// Create the AES encryption key secret, if we don't already have one
+	err = createEncryptionKeySecret(k, cl, reqLogger)
+	if err != nil {
+		return err
+	}
+	
+	// Create the deployment manually as we have to fill in some env vars.
+	image := "kabanero/kabanero-command-line-services:0.1.1-rc.1"
+	env := []corev1.EnvVar{{Name:  "KABANERO_CLI_NAMESPACE",	Value: k.GetNamespace()	}}
+
+	// The CLI wants to know the Github organization name, if it was provided
+	if len(k.Spec.Github.Organization) > 0 {
+		env = append(env, corev1.EnvVar{Name:  "KABANERO_CLI_GROUP", Value: k.Spec.Github.Organization})
+	}
+
+	// The CLI wants to know which teams to bind to the admin role
+	if (len(k.Spec.Github.Teams) > 0) && (len(k.Spec.Github.Organization) > 0)  {
+		// Build a list of fully qualified team names
+		var teamList string = ""
+		for _, team := range k.Spec.Github.Teams {
+			if len(teamList) > 0 {
+				teamList = teamList + ","
+			}
+			teamList = teamList + team + "@" + k.Spec.Github.Organization
+		}
+		env = append(env, corev1.EnvVar{Name: "teamsInGroup_admin", Value: teamList})
+	}
+
+	// Export the github API URL, if it's set.
+	if len(k.Spec.Github.ApiUrl) > 0 {
+		env = append(env, corev1.EnvVar{Name: "KABANERO_GITHUB_API_URL", Value: k.Spec.Github.ApiUrl})
+	}
+	
+	// Tell the CLI where the AES encryption key secret is
+	keyOptional := false
+	aesSecretKeySelector := corev1.SecretKeySelector{}
+	aesSecretKeySelector.Name = "kabanero-cli-aes-encryption-key-secret"
+	aesSecretKeySelector.Key = "AESEncryptionKey"
+	aesSecretKeySelector.Optional = &keyOptional
+	aesSecretKeySource := corev1.EnvVarSource{SecretKeyRef: &aesSecretKeySelector}
+	env = append(env, corev1.EnvVar{Name: "AESEncryptionKey", ValueFrom: &aesSecretKeySource})
+	
+	// Go ahead and make or update the deployment object
+	err = createDeployment(k, clientset, cl, "kabanero-cli", image, env, nil, reqLogger)
 	if err != nil {
 		return err
 	}
@@ -122,4 +165,80 @@ func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger) (boo
 	}
 
 	return true, nil
+}
+
+// Deletes the role binding config map which may have existed in a prior version
+func destroyRoleBindingConfigMap(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+
+	// Check if the ConfigMap resource already exists.
+	cmInstance := &corev1.ConfigMap{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      "kabanero-cli-role-config",
+		Namespace: k.ObjectMeta.Namespace}, cmInstance)
+
+	if err != nil {
+		if errors.IsNotFound(err) == false {
+			return err
+		}
+
+		// Not found.  Beautiful.
+		return nil
+	}
+
+	// Need to delete it.
+	reqLogger.Info(fmt.Sprintf("Attempting to delete CLI role binding config map: %v", cmInstance))
+	err = c.Delete(context.TODO(), cmInstance)
+	
+	return err
+}
+
+// Creates the secret containing the AES encryption key used by the CLI.
+func createEncryptionKeySecret(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+	secretName := "kabanero-cli-aes-encryption-key-secret"
+	
+	// Check if the Secret already exists.
+	secretInstance := &corev1.Secret{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      secretName,
+		Namespace: k.ObjectMeta.Namespace}, secretInstance)
+
+	if err != nil {
+		if errors.IsNotFound(err) == false {
+			return err
+		}
+
+		// Not found.  Make a new one.
+		var ownerRef metav1.OwnerReference
+		ownerRef, err = getOwnerReference(k, c, reqLogger)
+		if err != nil {
+			return err
+		}
+
+		secretInstance := &corev1.Secret{}
+		secretInstance.ObjectMeta.Name = secretName
+		secretInstance.ObjectMeta.Namespace = k.ObjectMeta.Namespace
+		secretInstance.ObjectMeta.OwnerReferences = append(secretInstance.ObjectMeta.OwnerReferences, ownerRef)
+
+		// Generate a 64 character random value
+		possibleChars := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()-=_+")
+		maxVal := big.NewInt(int64(len(possibleChars)))
+		var buf bytes.Buffer
+		for i := 0; i < 64; i++ {
+			curInt, randErr := rand.Int(rand.Reader, maxVal)
+			if randErr != nil {
+				return randErr
+			}
+			// Convert int to char
+			buf.WriteByte(possibleChars[curInt.Int64()])
+		}
+
+		secretMap := make(map[string]string)
+		secretMap["AESEncryptionKey"] = buf.String()
+		secretInstance.StringData = secretMap
+
+		reqLogger.Info(fmt.Sprintf("Attempting to create the CLI AES Encryption key secret"))
+		err = c.Create(context.TODO(), secretInstance)
+	}
+	
+	return err
 }

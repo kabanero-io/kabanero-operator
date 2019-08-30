@@ -66,8 +66,17 @@ spec:
                       type: object
                     type: array
                 type: object
-              githubOrganization:
-                type: string
+              github:
+                properties:
+                  apiUrl:
+                    type: string
+                  organization:
+                    type: string
+                  teams:
+                    items:
+                      type: string
+                    type: array
+                type: object
               kappnav:
                 properties:
                   enable:
@@ -229,8 +238,15 @@ spec:
                       type: object
                     type: array
                 type: object
-              githubOrganization:
-                type: string
+              github:
+                properties:
+                  apiUrl:
+                    type: string
+                  organization:
+                    type: string
+                  team:
+                    type: string
+                type: object
               landing:
                 properties:
                   enable:

@@ -121,9 +121,7 @@ func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Client
 	// consider re-applying all the fields in case someone hand-edited the
 	// deployment object in an incompatible way.
 	dInstance.Spec.Template.Spec.Containers[0].Env = env
-	if envFrom != nil {
-		dInstance.Spec.Template.Spec.Containers[0].EnvFrom = envFrom
-	}
+	dInstance.Spec.Template.Spec.Containers[0].EnvFrom = envFrom
 
 	if deploymentExists == false {
 		reqLogger.Info(fmt.Sprintf("createDeployment: Deployment for create: %v", dInstance))

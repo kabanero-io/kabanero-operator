@@ -17,7 +17,7 @@ type KabaneroSpec struct {
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
 	Version string `json:"version,omitempty"`
-	GithubOrganization string `json:"githubOrganization,omitempty"`
+	Github GithubConfig `json:"github,omitempty"`
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
@@ -33,6 +33,16 @@ type KabaneroSpec struct {
 
 type InstanceCollectionConfig struct {
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
+}
+
+// This represents the Github information (public or GHE) where
+// the organization and teams managing the collections live.  Members
+// of the specified team in the specified organization will have admin
+// authority in the Kabanero CLI.
+type GithubConfig struct {
+	Organization string `json:"organization,omitempty"`
+	Teams []string `json:"teams,omitempty"`
+	ApiUrl string `json:"apiUrl,omitempty"`
 }
 
 type RepositoryConfig struct {
