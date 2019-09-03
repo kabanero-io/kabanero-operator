@@ -127,12 +127,12 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	// Force a requeue if there are failed assets.  These should be retried, and since
 	// they are hosted outside of Kubernetes, the controller will not see when they
 	// are updated.
-	if (failedAssets(instance.Status) && (rr.Requeue == false)) {
+	if failedAssets(instance.Status) && (rr.Requeue == false) {
 		reqLogger.Info("Forcing requeue due to failed assets in the Collection")
 		rr.Requeue = true
 		rr.RequeueAfter = 60 * time.Second
 	}
-	
+
 	return rr, err
 }
 
@@ -158,7 +158,7 @@ func findMaxVersionCollection(collections []resolvedCollection) *resolvedCollect
 	curVersion, _ := semver.Make("0.0.0")
 
 	for i, _ := range collections {
-		
+
 		switch {
 		//v1
 		case collections[i].collection.Manifest.Version != "":
@@ -186,7 +186,7 @@ func (r *ReconcileCollection) ensureCollectionHasOwner(c *kabanerov1alpha1.Colle
 	foundKabanero := false
 	ownerReferences := c.GetOwnerReferences()
 	if ownerReferences != nil {
-		for _, ownerRef :=  range ownerReferences {
+		for _, ownerRef := range ownerReferences {
 			if ownerRef.Kind == "Kabanero" {
 				if ownerRef.UID == k.ObjectMeta.UID {
 					foundKabanero = true
@@ -195,7 +195,7 @@ func (r *ReconcileCollection) ensureCollectionHasOwner(c *kabanerov1alpha1.Colle
 		}
 	}
 	if !foundKabanero {
-		// Get kabanero instance. Input one does not have APIVersion or Kind. 
+		// Get kabanero instance. Input one does not have APIVersion or Kind.
 		ownerIsController := true
 		kInstance := &kabanerov1alpha1.Kabanero{}
 		name := types.NamespacedName{
@@ -228,7 +228,7 @@ func (r *ReconcileCollection) ensureCollectionHasOwner(c *kabanerov1alpha1.Colle
 // Used internally by ReconcileCollection to store matching collections
 type resolvedCollection struct {
 	//v1
-	collection CollectionV1
+	collection    CollectionV1
 	repositoryUrl string
 	//v2
 	collectionv2 IndexedCollectionV2
@@ -261,15 +261,15 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	// build and log an error and return.
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
-  if len(repositories) == 0 {
-          err = me.New(fmt.Sprintf("No repositories were configured in the Kabanero instance"))
-          r_log.Error(err, "Could not continue without any repositories")
+	if len(repositories) == 0 {
+		err = me.New(fmt.Sprintf("No repositories were configured in the Kabanero instance"))
+		r_log.Error(err, "Could not continue without any repositories")
 
-          // Update the status message so the user knows that something needs to be done.
-          c.Status.StatusMessage = "Could not find any configured repositories."
-          return reconcile.Result{Requeue: false, RequeueAfter: 60 * time.Second}, err
-  }
-	
+		// Update the status message so the user knows that something needs to be done.
+		c.Status.StatusMessage = "Could not find any configured repositories."
+		return reconcile.Result{Requeue: false, RequeueAfter: 60 * time.Second}, err
+	}
+
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo)
 		if err != nil {
@@ -294,13 +294,13 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			if err != nil {
 				r_log.Error(err, "Could not search the provided index")
 			}
-			
+
 			// Build out the list of all collections across all repository indexes
 			for _, collection := range _collections {
 				matchingCollections = append(matchingCollections, resolvedCollection{collectionv2: collection, repositoryUrl: repo.Url})
 			}
 
-		default: 
+		default:
 			fmt.Sprintf("Index is unsupported version: %s", apiVersion)
 		}
 	}
@@ -310,7 +310,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	// to inform the user if an upgrade is available.
 	if len(matchingCollections) > 0 {
 		specVersion, semverErr := semver.ParseTolerant(c.Spec.Version)
-		if (semverErr == nil) {
+		if semverErr == nil {
 			// Search for the highest version.  Update the Status field if one is found that
 			// is higher than the requested version.  This will only work if the Spec.Version adheres
 			// to the semver standard.
@@ -340,16 +340,16 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 						c.Status.AvailableLocation = ""
 					}
 				}
-				
+
 			} else {
 				// None of the collections versions adher to semver standards
 				c.Status.AvailableVersion = ""
 				c.Status.AvailableLocation = ""
 			}
 		} else {
-			r_log.Error(semverErr, "Could not determine upgrade availability for collection " + collectionName)
+			r_log.Error(semverErr, "Could not determine upgrade availability for collection "+collectionName)
 		}
-		
+
 		// Search for the correct version.  The list may have duplicates, we're just searching for
 		// the first match.
 		for _, matchingCollection := range matchingCollections {
@@ -424,7 +424,7 @@ func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, asset AssetMan
 	if len(assetStatusMessage) > 0 {
 		assetStatus = asset_failed_status
 	}
-	
+
 	// First find the asset in the Collection status.
 	for index, curAssetStatus := range status.ActiveAssets {
 		if assetMatch(curAssetStatus, asset) {
@@ -449,7 +449,7 @@ func updateAssetStatusv2(status *kabanerov1alpha1.CollectionStatus, asset Indexe
 	if len(assetStatusMessage) > 0 {
 		assetStatus = asset_failed_status
 	}
-	
+
 	// First find the asset in the Collection status.
 	for index, curAssetStatus := range status.ActiveAssets {
 		if assetMatchv2(curAssetStatus, asset) {
@@ -475,13 +475,13 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		// 1) Attempt to load all of the known artifacts.  Any failure, status message and punt.
 		// 2) Delete the artifacts.  If something goes wrong here, the state of the collection is unknown.
 		type transformedRemoteManifest struct {
-			m mf.Manifest
+			m        mf.Manifest
 			assetUrl string
 		}
-		
+
 		var transformedManifests []transformedRemoteManifest
 		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + manifest.Version
-		
+
 		for _, asset := range collectionResource.Status.ActiveAssets {
 			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
 
@@ -511,7 +511,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 
 		// Now delete the manifests
 		for _, transformedManifest := range transformedManifests {
-		  err := transformedManifest.m.DeleteAll()
+			err := transformedManifest.m.DeleteAll()
 			if err != nil {
 				// It's hard to know what the state of things is now... log the error.
 				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
@@ -532,7 +532,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			applyAsset := true
 			if len(asset.Digest) > 0 {
 				for _, assetStatus := range collectionResource.Status.ActiveAssets {
-					if (assetMatch(assetStatus, asset) && (assetStatus.Digest == asset.Digest) && (assetStatus.Status == asset_active_status)) {
+					if assetMatch(assetStatus, asset) && (assetStatus.Digest == asset.Digest) && (assetStatus.Status == asset_active_status) {
 						// The digest is equal and the asset is active - don't apply the asset.
 						log.Info(fmt.Sprintf("Digest has not changed %v", asset.Digest))
 						applyAsset = false
@@ -556,7 +556,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 					mf.InjectNamespace(collectionResource.GetNamespace()),
 				}
 
-				err = m.Transform(transforms... )
+				err = m.Transform(transforms...)
 				if err != nil {
 					return err
 				}
@@ -575,12 +575,10 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	}
 
 	// Update the status of the Collection object to reflect the version we applied.
-	collectionResource.Status.ActiveVersion = manifest.Version;
-	
+	collectionResource.Status.ActiveVersion = manifest.Version
+
 	return nil
 }
-
-
 
 // Create a Manifest from unstructured, rather than path/url
 //type Manifest struct {
@@ -593,7 +591,6 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 //	return Manifest{Resources: resources, client: client}, nil
 //}
 
-
 func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *IndexedCollectionV2, c client.Client) error {
 
 	// Detect if the version is changing from the active version.  If it is, we need to clean up the
@@ -602,26 +599,25 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 		// Our version change strategy is going to be as follows:
 		// 1) Attempt to load all of the known artifacts.  Any failure, status message and punt.
 		// 2) Delete the artifacts.  If something goes wrong here, the state of the collection is unknown.
-		
+
 		type transformedRemoteManifest struct {
-			m mf.Manifest
+			m        mf.Manifest
 			assetUrl string
 		}
-		
+
 		var transformedManifests []transformedRemoteManifest
 		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
-		
+
 		for _, asset := range collectionResource.Status.ActiveAssets {
 			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
 
 			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url)
+			manifests, err := GetManifests(asset.Url, collection.Name)
 			if err != nil {
 				log.Error(err, errorMessage, "resource", asset.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
 				return nil // Forces status to be updated
 			}
-			
 
 			// Construct dummy Manifest and client, due to client being private struct field
 			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
@@ -653,7 +649,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 
 		// Now delete the manifests
 		for _, transformedManifest := range transformedManifests {
-		  err := transformedManifest.m.DeleteAll()
+			err := transformedManifest.m.DeleteAll()
 			if err != nil {
 				// It's hard to know what the state of things is now... log the error.
 				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
@@ -673,7 +669,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 		applyAsset := true
 		if len(asset.Sha256) > 0 {
 			for _, assetStatus := range collectionResource.Status.ActiveAssets {
-				if (assetMatchv2(assetStatus, asset) && (assetStatus.Digest == asset.Sha256) && (assetStatus.Status == asset_active_status)) {
+				if assetMatchv2(assetStatus, asset) && (assetStatus.Digest == asset.Sha256) && (assetStatus.Status == asset_active_status) {
 					// The digest is equal and the asset is active - don't apply the asset.
 					log.Info(fmt.Sprintf("Digest has not changed %v", asset.Sha256))
 					applyAsset = false
@@ -686,11 +682,10 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
 
 			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url)
+			manifests, err := GetManifests(asset.Url, collection.Name)
 			if err != nil {
 				return err
 			}
-			
 
 			// Construct dummy Manifest and client, due to client being private struct field
 			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
@@ -708,30 +703,29 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 				mf.InjectNamespace(collectionResource.GetNamespace()),
 			}
 
-			err = m.Transform(transforms... )
+			err = m.Transform(transforms...)
 			if err != nil {
 				return err
 			}
-			
+
 			for _, spec := range m.Resources {
-				log.Info(fmt.Sprintf("iterate resources: %v", spec))
-			}
+				log.Info(fmt.Sprintf("Applying resource: %v", spec))
 
-			err = m.ApplyAll()
-			if err != nil {
-				// Update the asset status with the error message
-				log.Error(err, "Error installing the resource", "resource", asset.Url)
-				updateAssetStatusv2(&collectionResource.Status, asset, err.Error())
-			} else {
-				// Update the digest for this asset in the status
-				updateAssetStatusv2(&collectionResource.Status, asset, "")
+				err := m.Apply(&spec)
+				if err != nil {
+					// Update the asset status with the error message
+					log.Error(err, "Error installing the resource", "resource", asset.Url)
+					updateAssetStatusv2(&collectionResource.Status, asset, err.Error())
+				} else {
+					// Update the digest for this asset in the status
+					updateAssetStatusv2(&collectionResource.Status, asset, "")
+				}
 			}
-
 		}
 	}
 
 	// Update the status of the Collection object to reflect the version we applied.
-	collectionResource.Status.ActiveVersion = collection.Version;
+	collectionResource.Status.ActiveVersion = collection.Version
 
 	return nil
 }
