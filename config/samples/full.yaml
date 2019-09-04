@@ -5,12 +5,12 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: 0.1.0
+  version: 0.1.1
 
   collections: 
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/v0.1.0/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/v0.1.1/kabanero-index.yaml
       # Activates a default set of collections
       activateDefaultCollections: true 
