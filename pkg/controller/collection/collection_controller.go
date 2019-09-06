@@ -659,6 +659,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 		// Indicate there is not currently an active version of this collection.
 		collectionResource.Status.ActiveVersion = ""
 		collectionResource.Status.ActiveAssets = nil
+		collectionResource.Status.Images = nil
 	}
 
 	// Now apply the new version
@@ -726,6 +727,16 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 
 	// Update the status of the Collection object to reflect the version we applied.
 	collectionResource.Status.ActiveVersion = collection.Version
+
+	// Update the status of the Collection object to reflect the images used
+	var statusImages []kabanerov1alpha1.Image
+	for _, image := range collection.Images {
+		var statusImage kabanerov1alpha1.Image
+		statusImage.Id = image.Id
+		statusImage.Image = image.Image
+		statusImages = append(statusImages, statusImage)
+	}
+	collectionResource.Status.Images = statusImages
 
 	return nil
 }
