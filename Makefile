@@ -61,6 +61,10 @@ ifeq (, $(shell which dep))
 endif
 	dep ensure
 
+	# Remove some creative commons licensed tests/samples
+	rm vendor/golang.org/x/net/http2/h2demo/tmpl.go
+	rm -r vendor/golang.org/x/text/internal/testtext
+
 # Requires https://github.com/pmezard/licenses
 dependency-report: 
 	go get -u github.com/pmezard/licenses
