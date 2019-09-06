@@ -21,22 +21,30 @@ type KabaneroSpec struct {
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
+
+	Kappnav KappnavCustomizationSpec `json:"kappnav,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
-	Repositories   []RepositoryConfig `json:"repositories,omitempty"`
+	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
 
 type RepositoryConfig struct {
-	Name string `json:"name,omitempty"`
-	Url  string `json:"url,omitempty"`
-	ActivateDefaultCollections bool `json:"activateDefaultCollections,omitempty"`
-	SkipCertVerification bool `json:"skipCertVerification,omitempty"`
+	Name                       string `json:"name,omitempty"`
+	Url                        string `json:"url,omitempty"`
+	ActivateDefaultCollections bool   `json:"activateDefaultCollections,omitempty"`
+	SkipCertVerification       bool   `json:"skipCertVerification,omitempty"`
 }
 
+// TektonCustomizationSpec defines customization entries for Tekton
 type TektonCustomizationSpec struct {
 	Disabled bool   `json:"disabled,omitempty"`
 	Version  string `json:"version,omitempty"`
+}
+
+// KappnavCustomizationSpec defines customization entries for Kubernetes Application Navigator
+type KappnavCustomizationSpec struct {
+	Enable bool `json:"enable,omitempty"`
 }
 
 // KabaneroStatus defines the observed state of the Kabanero instance
@@ -53,56 +61,73 @@ type KabaneroStatus struct {
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
-	
+
 	// CLI readiness status.
 	Cli CliStatus `json:"cli,omitempty"`
 
 	// Kabanero Landing page readiness status.
 	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
-	
+
 	// Appsody instance readiness status.
 	Appsody AppsodyStatus `json:"appsody,omitempty"`
+
+	// Kabanero Application Navigator instance readiness status.
+	Kappnav *KappnavStatus `json:"kappnav,omitempty"`
 }
 
+// KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
 type KabaneroInstanceStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
+// TektonStatus defines the observed status details of Tekton.
 type TektonStatus struct {
-	Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
+// KnativeEventingStatus defines the observed status details of Knative Eventing.
 type KnativeEventingStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
+// KnativeServingStatus defines the observed status details of Knative Serving.
 type KnativeServingStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
+// CliStatus defines the observed status details of the Kabanero CLI.
 type CliStatus struct {
-	Ready string `json:"ready, omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Hostnames []string `json:"hostnames,omitempty"`
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
+	Hostnames    []string `json:"hostnames,omitempty"`
 }
 
+// KabaneroLandingPageStatus defines the observed status details of the Kabanero landing page.
 type KabaneroLandingPageStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
+// AppsodyStatus defines the observed status details of Appsody.
 type AppsodyStatus struct {
-	Ready string `json:"ready,omitempty"`
+	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
+}
+
+// KappnavStatus defines the observed status details of Kubernetes Application Navigator.
+type KappnavStatus struct {
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
