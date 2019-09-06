@@ -592,6 +592,11 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 //}
 
 func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *IndexedCollectionV2, c client.Client) error {
+	//The context which will be used when rendering remote yaml
+	renderingContext := map[string]interface{}{
+		"CollectionId":   collection.Id,
+		"CollectionName": collection.Name,
+	}
 
 	// Detect if the version is changing from the active version.  If it is, we need to clean up the
 	// assets from the previous version.
@@ -612,7 +617,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
 
 			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url, collection.Name)
+			manifests, err := GetManifests(asset.Url, renderingContext)
 			if err != nil {
 				log.Error(err, errorMessage, "resource", asset.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
@@ -682,7 +687,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
 
 			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url, collection.Name)
+			manifests, err := GetManifests(asset.Url, renderingContext)
 			if err != nil {
 				return err
 			}

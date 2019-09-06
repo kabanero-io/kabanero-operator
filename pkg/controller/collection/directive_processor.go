@@ -45,7 +45,7 @@ func (g DirectiveProcessor) Render(b []byte, context map[string]interface{}) ([]
 
 //process_directive processes an individual directive like: #Kabanero! on activate substitute CollectionName for text '${collection-name}'
 func (g DirectiveProcessor) process_directive(directive string, text string, context map[string]interface{}) (string, error) {
-	textSubstitutionExpr := regexp.MustCompile(`#Kabanero!\son\sactivate\s(substitute\s(CollectionName)\s(for text)\s'(.+?)')`)
+	textSubstitutionExpr := regexp.MustCompile(`#Kabanero!\son\sactivate\s(substitute\s(.+?)\s(for text)\s'(.+?)')`)
 	if textSubstitutionExpr.MatchString(directive) {
 		groups := textSubstitutionExpr.FindStringSubmatch(directive)
 

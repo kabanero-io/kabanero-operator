@@ -27,7 +27,7 @@ func DownloadToByte(url string) ([]byte, error) {
 //Read the manifests from a tar.gz archive
 //It would be better to use the manifest.yaml as the index, and check the signatures
 //For now, ignore manifest.yaml and return all other yaml files from the archive
-func DecodeManifests(archive []byte, collectionName string) ([]unstructured.Unstructured, error) {
+func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
 	manifests := []unstructured.Unstructured{}
 
 	r := bytes.NewReader(archive)
@@ -63,7 +63,7 @@ func DecodeManifests(archive []byte, collectionName string) ([]unstructured.Unst
 
 			//Apply the Kabanero yaml directive processor
 			s := &DirectiveProcessor{}
-			b, err = s.Render(b, map[string]interface{}{"CollectionName": collectionName})
+			b, err = s.Render(b, renderingContext)
 			if err != nil {
 				return nil, fmt.Errorf("Error processing directives %v: %v", header.Name, err.Error())
 			}
@@ -80,13 +80,13 @@ func DecodeManifests(archive []byte, collectionName string) ([]unstructured.Unst
 	return manifests, nil
 }
 
-func GetManifests(url string, collectionName string) ([]unstructured.Unstructured, error) {
+func GetManifests(url string, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
 	b, err := DownloadToByte(url)
 	if err != nil {
 		return nil, err
 	}
 
-	manifests, err := DecodeManifests(b, collectionName)
+	manifests, err := DecodeManifests(b, renderingContext)
 	if err != nil {
 		return nil, err
 	}
