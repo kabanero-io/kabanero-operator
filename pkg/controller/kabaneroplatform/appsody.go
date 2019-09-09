@@ -3,17 +3,41 @@ package kabaneroplatform
 import (
 	"context"
 	"github.com/go-logr/logr"
-	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	mf "github.com/kabanero-io/manifestival"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 func reconcile_appsody(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	filename := "config/reconciler/appsody-operator/appsody-0.1.0.yaml"
-	m, err := mf.NewManifest(filename, true, c)
+	rev, err := resolveSoftwareRevision(k, "appsody-operator", k.Spec.AppsodyOperator.Version)
+	if err != nil {
+		return err
+	}
+
+	//The context which will be used to render any templates
+	templateContext := rev.Identifiers
+
+	image, err := imageUriWithOverrides(k.Spec.AppsodyOperator.Repository, k.Spec.AppsodyOperator.Tag, k.Spec.AppsodyOperator.Image, rev)
+	if err != nil {
+		return err
+	}
+	templateContext["image"] = image
+
+	f, err := rev.OpenOrchestration("appsody.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateContext)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), c)
 	if err != nil {
 		return err
 	}
@@ -36,7 +60,6 @@ func reconcile_appsody(ctx context.Context, k *kabanerov1alpha1.Kabanero, c clie
 
 // Retrieves the Appsody deployment status.
 func getAppsodyStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
-
 	ready := false
 	message := "The Appsody application deployment does not have condition indicating it is available"
 

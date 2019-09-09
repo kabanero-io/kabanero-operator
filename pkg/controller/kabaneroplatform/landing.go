@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,9 +29,31 @@ var landingImageTag = "0.1.0"
 
 // Deploys resources and customizes to the Openshift web console.
 func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	// Apply the needed resources.
-	filename := "config/reconciler/kabanero-landing/kabanero-landing-0.1.0.yaml"
-	m, err := mf.NewManifest(filename, true, c)
+	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.AppsodyOperator.Version)
+	if err != nil {
+		return err
+	}
+
+	//The context which will be used to render any templates
+	templateContext := rev.Identifiers
+
+	image, err := imageUriWithOverrides("", "", "", rev)
+	if err != nil {
+		return err
+	}
+	templateContext["image"] = image
+
+	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateContext)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), c)
 	if err != nil {
 		return err
 	}

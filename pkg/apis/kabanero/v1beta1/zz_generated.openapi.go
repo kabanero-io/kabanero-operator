@@ -217,11 +217,26 @@ func schema_pkg_apis_kabanero_v1beta1_KabaneroSpec(ref common.ReferenceCallback)
 							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonCustomizationSpec"),
 						},
 					},
+					"appsodyOperator": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.AppsodyCustomizationSpec"),
+						},
+					},
+					"cliServices": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroCliServicesCustomizationSpec"),
+						},
+					},
+					"landing": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroLandingCustomizationSpec"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.InstanceCollectionConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonCustomizationSpec"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.AppsodyCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.InstanceCollectionConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroCliServicesCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.KabaneroLandingCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1beta1.TektonCustomizationSpec"},
 	}
 }
 

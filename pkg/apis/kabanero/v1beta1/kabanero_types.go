@@ -21,6 +21,12 @@ type KabaneroSpec struct {
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
+
+	AppsodyOperator AppsodyCustomizationSpec `json:"appsodyOperator,omitempty"`
+
+	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
+
+	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
@@ -37,6 +43,26 @@ type RepositoryConfig struct {
 type TektonCustomizationSpec struct {
 	Enable  string `json:"enable,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+type AppsodyCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type KabaneroCliServicesCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type KabaneroLandingCustomizationSpec struct {
+	Enable bool `json:"enable,omitempty"`
 }
 
 // KabaneroStatus defines the observed state of the Kabanero instance

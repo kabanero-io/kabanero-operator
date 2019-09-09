@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	"github.com/kabanero-io/kabanero-operator/version"
+	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -214,9 +213,31 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 }
 
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	// Deploy the Kabanero CLI
-	filename := "config/reconciler/kabanero-cli.yaml"
-	m, err := mf.NewManifest(filename, true, cl)
+	rev, err := resolveSoftwareRevision(k, "cli-services", k.Spec.AppsodyOperator.Version)
+	if err != nil {
+		return err
+	}
+
+	//The context which will be used to render any templates
+	templateContext := rev.Identifiers
+
+	image, err := imageUriWithOverrides(k.Spec.CliServices.Repository, k.Spec.CliServices.Tag, k.Spec.CliServices.Image, rev)
+	if err != nil {
+		return err
+	}
+	templateContext["image"] = image
+
+	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateContext)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), cl)
 	if err != nil {
 		return err
 	}
@@ -239,7 +260,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 // is set to true. Otherwise, it is set to false.
 func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	errorMessage := "One or more resource dependencies are not ready."
-	k.Status.KabaneroInstance.Version = version.Version
+	//k.Status.KabaneroInstance.Version = version.Version
 	k.Status.KabaneroInstance.Ready = "False"
 
 	// Gather the status of all resource dependencies.
