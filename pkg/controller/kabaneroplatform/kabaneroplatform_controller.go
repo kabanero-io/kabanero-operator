@@ -3,6 +3,7 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,7 +34,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileKabanero{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileKabanero{client: mgr.GetClient(), scheme: mgr.GetScheme(), requeueDelayMapV1: make(map[string]RequeueData), requeueDelayMapV2: make(map[string]RequeueData)}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -71,6 +72,57 @@ type ReconcileKabanero struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	requeueDelayMapV1 map[string]RequeueData
+	requeueDelayMapV2 map[string]RequeueData
+}
+
+type RequeueData struct {
+	delay int
+	futureTime time.Time
+}
+
+// Determine if requeue is needed or not. 
+// If requeue is required set RequeueAfter to 60 seconds the first time. 
+// After the first time increase RequeueAfter by 60 seconds up to a max of 15 minutes.
+func (r *ReconcileKabanero) determineHowToRequeue(request reconcile.Request, ctx context.Context, instance *kabanerov1alpha1.Kabanero, errorMessage string, requeueDelayMap map[string]RequeueData, reqLogger logr.Logger) (reconcile.Result, error) {
+	var requeueDelay int
+	var localFutureTime time.Time
+	requeueData, ok := requeueDelayMap[request.Namespace]
+	if !ok {
+		requeueDelay = 0
+		localFutureTime = time.Now()
+		requeueData := RequeueData{requeueDelay, localFutureTime}
+		requeueDelayMap[request.Namespace] = requeueData
+	} else {
+		requeueDelay = requeueData.delay
+		localFutureTime = requeueData.futureTime
+	}
+	currentTime := time.Now()
+	// if first time or current time is after the requeue time we requested previously, request a requeue
+	if requeueDelay == 0 || currentTime.After(localFutureTime) {
+		// only update status if error message changed
+		if strings.Compare(errorMessage, instance.Status.KabaneroInstance.ErrorMessage) != 0 {
+			instance.Status.KabaneroInstance.ErrorMessage = errorMessage
+			instance.Status.KabaneroInstance.Ready = "False"
+			// Update the kabanero instance status.
+			err := r.client.Status().Update(ctx, instance)
+			if err != nil {
+				reqLogger.Error(err, "Error updating Kabanero status.")
+			}
+		}
+		// increase delay by 60 seconds
+		requeueDelay = requeueDelay + 60
+		// do not go over 15 minutes
+		if requeueDelay >= 900 {
+			requeueDelay = 900
+		}
+		localFutureTime = currentTime.Add(time.Duration(requeueDelay) * time.Second)
+		requeueDelayMap[request.Namespace] = RequeueData{requeueDelay,localFutureTime}
+		reqLogger.Info(fmt.Sprintf("Reconciling Kabanero requesting requeue in %d seconds", requeueDelay))
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(requeueDelay) * time.Second}, nil
+	} else { // no requeue
+		return reconcile.Result{}, nil
+	}
 }
 
 // Reconcile reads that state of the cluster for a Kabanero object and makes changes based on the state read
@@ -103,14 +155,18 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
 		fmt.Println("Error in reconcile featured collections: ", err)
-		return reconcile.Result{}, err
+		return r.determineHowToRequeue(request, ctx, instance, err.Error(), r.requeueDelayMapV1, reqLogger)
 	}
+	// things worked reset requeue data
+	r.requeueDelayMapV1[request.Namespace] = RequeueData{0, time.Now()}
 	
 	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
 	if err != nil {
 		fmt.Println("Error in reconcile featured collections V2: ", err)
-		return reconcile.Result{}, err
+		return r.determineHowToRequeue(request, ctx, instance, err.Error(), r.requeueDelayMapV2, reqLogger)
 	}
+	// things worked reset requeue data
+	r.requeueDelayMapV2[request.Namespace] = RequeueData{0, time.Now()}
 
 	//Reconcile the appsody operator
 	err = reconcile_appsody(ctx, instance, r.client)
