@@ -89,9 +89,10 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 		env = append(env, corev1.EnvVar{Name: "teamsInGroup_admin", Value: teamList})
 	}
 
-	// Export the github API URL, if it's set.
+	// Export the github API URL, if it's set.  This is used by the security
+	// portion of the microservice.
 	if len(k.Spec.Github.ApiUrl) > 0 {
-		env = append(env, corev1.EnvVar{Name: "KABANERO_GITHUB_API_URL", Value: k.Spec.Github.ApiUrl})
+		env = append(env, corev1.EnvVar{Name: "github.api.url", Value: k.Spec.Github.ApiUrl})
 	}
 	
 	// Tell the CLI where the AES encryption key secret is
