@@ -30,7 +30,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileKabanero{client: mgr.GetClient(), scheme: mgr.GetScheme(), requeueDelayMapV1: make(map[string]RequeueData), requeueDelayMapV2: make(map[string]RequeueData)}
+	return &ReconcileKabanero{
+		client:            mgr.GetClient(),
+		scheme:            mgr.GetScheme(),
+		requeueDelayMapV1: make(map[string]RequeueData),
+		requeueDelayMapV2: make(map[string]RequeueData)}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -72,6 +76,7 @@ type ReconcileKabanero struct {
 	requeueDelayMapV2 map[string]RequeueData
 }
 
+// RequeueData stores information that enables reconcile operations to be retried.
 type RequeueData struct {
 	delay      int
 	futureTime time.Time
@@ -80,7 +85,7 @@ type RequeueData struct {
 // Determine if requeue is needed or not.
 // If requeue is required set RequeueAfter to 60 seconds the first time.
 // After the first time increase RequeueAfter by 60 seconds up to a max of 15 minutes.
-func (r *ReconcileKabanero) determineHowToRequeue(request reconcile.Request, ctx context.Context, instance *kabanerov1alpha1.Kabanero, errorMessage string, requeueDelayMap map[string]RequeueData, reqLogger logr.Logger) (reconcile.Result, error) {
+func (r *ReconcileKabanero) determineHowToRequeue(ctx context.Context, request reconcile.Request, instance *kabanerov1alpha1.Kabanero, errorMessage string, requeueDelayMap map[string]RequeueData, reqLogger logr.Logger) (reconcile.Result, error) {
 	var requeueDelay int
 	var localFutureTime time.Time
 	requeueData, ok := requeueDelayMap[request.Namespace]
@@ -115,16 +120,17 @@ func (r *ReconcileKabanero) determineHowToRequeue(request reconcile.Request, ctx
 		localFutureTime = currentTime.Add(time.Duration(requeueDelay) * time.Second)
 		requeueDelayMap[request.Namespace] = RequeueData{requeueDelay, localFutureTime}
 		reqLogger.Info(fmt.Sprintf("Reconciling Kabanero requesting requeue in %d seconds", requeueDelay))
+
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(requeueDelay) * time.Second}, nil
-	} else { // no requeue
-		return reconcile.Result{}, nil
 	}
+
+	// No requeue
+	return reconcile.Result{}, nil
+
 }
 
 // Reconcile reads that state of the cluster for a Kabanero object and makes changes based on the state read
 // and what is in the Kabanero.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -140,7 +146,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Owned objects are automatically garbage collected.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
@@ -148,55 +154,67 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// Process kabanero instance deletion logic.
+	beingDeleted, err := processDeletion(ctx, instance, r.client, reqLogger)
+	if beingDeleted {
+		return reconcile.Result{}, nil
+	}
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Deploy version 1 feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile featured collections: ", err)
-		return r.determineHowToRequeue(request, ctx, instance, err.Error(), r.requeueDelayMapV1, reqLogger)
+		reqLogger.Error(err, "Error reconciling featured collections.")
+		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV1, reqLogger)
 	}
 
 	// things worked reset requeue data
 	r.requeueDelayMapV1[request.Namespace] = RequeueData{0, time.Now()}
 
+	// Deploy version 2 feature collection resources.
 	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile featured collections V2: ", err)
-		return r.determineHowToRequeue(request, ctx, instance, err.Error(), r.requeueDelayMapV2, reqLogger)
+		reqLogger.Error(err, "Error reconciling featured collections V2.")
+		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV2, reqLogger)
 	}
 	// things worked reset requeue data
 	r.requeueDelayMapV2[request.Namespace] = RequeueData{0, time.Now()}
 
-	//Reconcile the appsody operator
+	// Reconcile the appsody operator
 	err = reconcile_appsody(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile appsody: ", err)
+		reqLogger.Error(err, "Error reconciling appsody.")
 		return reconcile.Result{}, err
 	}
 
 	// Deploy the kabanero landing page
 	err = deployLandingPage(instance, r.client)
 	if err != nil {
-		fmt.Println("Error deploying the kabanero landing page: ", err)
+		reqLogger.Error(err, "Error deploying the kabanero landing page.")
 		return reconcile.Result{}, err
 	}
 
 	// Reconcile the Kabanero CLI.
 	err = reconcileKabaneroCli(ctx, instance, r.client, reqLogger)
 	if err != nil {
-		fmt.Println("Error in reconcile Kabanero CLI: ", err)
+		reqLogger.Error(err, "Error reconciling the Kabanero CLI.")
 		return reconcile.Result{}, err
 	}
 
 	// Reconcile the Kubernetes Application Navigator if enabled. It is disabled by default.
 	err = reconcileKappnav(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error reconciling the Kubernetes Application Navigator: ", err)
+		reqLogger.Error(err, "Error reconciling the Kubernetes Application Navigator.")
 		return reconcile.Result{}, err
 	}
 
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, instance, r.client, reqLogger)
 	if err != nil {
-		fmt.Println("Error updating the status: ", err)
+		reqLogger.Error(err, "Error updating the status.")
 		return reconcile.Result{}, err
 	}
 
@@ -206,6 +224,77 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	return reconcile.Result{}, nil
+}
+
+// Drives kabanero instance deletion processing. This includes creating a finalizer, handling
+// kabanero instance cleanup logic, and finalizer removal.
+func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Client, reqLogger logr.Logger) (bool, error) {
+	// The kabanero instance is not deleted. Create a finalizer if it was not created already.
+	kabaneroFinalizer := "kabanero.io.kabanero-operator"
+	foundFinalizer := isFinalizerInList(k, kabaneroFinalizer)
+	beingDeleted := !k.ObjectMeta.DeletionTimestamp.IsZero()
+	if !beingDeleted {
+		if !foundFinalizer {
+			k.ObjectMeta.Finalizers = append(k.ObjectMeta.Finalizers, kabaneroFinalizer)
+			err := client.Update(ctx, k)
+			if err != nil {
+				reqLogger.Error(err, "Unable to set the kabanero operator finalizer.")
+				return beingDeleted, err
+			}
+		}
+
+		return beingDeleted, nil
+	}
+
+	// The instance is being deleted.
+	if foundFinalizer {
+		// Drive kabanero cleanup processing.
+		err := cleanup(k)
+		if err != nil {
+			reqLogger.Error(err, "Error during cleanup processing.")
+			return beingDeleted, err
+		}
+
+		// Remove the finalizer entry from the instance.
+		var newFinalizerList []string
+		for _, finalizer := range k.ObjectMeta.Finalizers {
+			if finalizer == kabaneroFinalizer {
+				continue
+			}
+			newFinalizerList = append(newFinalizerList, finalizer)
+		}
+
+		k.ObjectMeta.Finalizers = newFinalizerList
+		err = client.Update(ctx, k)
+
+		if err != nil {
+			reqLogger.Error(err, "Error while attempting to remove the finalizer.")
+			return beingDeleted, err
+		}
+	}
+
+	return beingDeleted, nil
+}
+
+// Handles all cleanup logic for the Kabanero instance.
+func cleanup(k *kabanerov1alpha1.Kabanero) error {
+	// Remove landing page customizations for the current namespace.
+	err := removeWebConsoleCustomization(k)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Returns true if the kabanero operator instance has the given finalizer defined. False otherwise.
+func isFinalizerInList(k *kabanerov1alpha1.Kabanero, finalizer string) bool {
+	for _, f := range k.ObjectMeta.Finalizers {
+		if f == finalizer {
+			return true
+		}
+	}
+	return false
 }
 
 // Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.
