@@ -35,6 +35,13 @@ type CollectionStatus struct {
 	AvailableVersion string `json:"availableVersion,omitempty"`
 	AvailableLocation string `json:"availableLocation,omitempty"`
 	StatusMessage string `json:"statusMessage,omitempty"`
+	Images []Image `json:"images,omitempty"`
+}
+
+// Image defines a container image used by a collection
+type Image struct {
+	Id                 string                   `json:"id,omitempty"`
+	Image              string                   `json:"image,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
