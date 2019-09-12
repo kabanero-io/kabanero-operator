@@ -1,15 +1,15 @@
 package collection
 
 import (
-	"testing"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	"testing"
 )
 
 func TestResolveIndex(t *testing.T) {
 	repoConfig := kabanerov1alpha1.RepositoryConfig{
-			Name: "name",
-			Url: "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental",
-			ActivateDefaultCollections: true,
+		Name:                       "name",
+		Url:                        "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental",
+		ActivateDefaultCollections: true,
 	}
 
 	index, err := ResolveIndex(repoConfig)
@@ -28,10 +28,10 @@ func TestResolveIndex(t *testing.T) {
 
 func TestResolveIndexWithSkipCertVerify(t *testing.T) {
 	repoConfig := kabanerov1alpha1.RepositoryConfig{
-			Name: "name",
-			Url: "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental",
-			ActivateDefaultCollections: true,
-			SkipCertVerification: true,
+		Name:                       "name",
+		Url:                        "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental",
+		ActivateDefaultCollections: true,
+		SkipCertVerification:       true,
 	}
 
 	index, err := ResolveIndex(repoConfig)
@@ -50,10 +50,10 @@ func TestResolveIndexWithSkipCertVerify(t *testing.T) {
 
 func TestResolveIndexV2(t *testing.T) {
 	repoConfig := kabanerov1alpha1.RepositoryConfig{
-			Name: "name",
-			Url: "https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml",
-			ActivateDefaultCollections: true,
-        }
+		Name:                       "name",
+		Url:                        "https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml",
+		ActivateDefaultCollections: true,
+	}
 
 	index, err := ResolveIndex(repoConfig)
 	if err != nil {
@@ -71,9 +71,9 @@ func TestResolveIndexV2(t *testing.T) {
 
 func TestResolveCollection(t *testing.T) {
 	repoConfig := kabanerov1alpha1.RepositoryConfig{
-			Name: "name",
-			Url: "https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml",
-			ActivateDefaultCollections: true,
+		Name:                       "name",
+		Url:                        "https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml",
+		ActivateDefaultCollections: true,
 	}
 
 	collection, err := ResolveCollection(repoConfig, "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/java-microprofile-0.2.1/collection.yaml")

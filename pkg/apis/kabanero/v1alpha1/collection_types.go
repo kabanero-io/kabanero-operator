@@ -18,30 +18,30 @@ type CollectionSpec struct {
 // RepositoryAssetStatus defines the observed state of a single asset
 // in a respository, in the collection.
 type RepositoryAssetStatus struct {
-	Name string `json:"assetName,omitempty"`
-	Url string `json:"url,omitempty"`
-	Digest string `json:"assetDigest,omitempty"`
-	Status string `json:"status,omitempty"`
+	Name          string `json:"assetName,omitempty"`
+	Url           string `json:"url,omitempty"`
+	Digest        string `json:"assetDigest,omitempty"`
+	Status        string `json:"status,omitempty"`
 	StatusMessage string `json:"statusMessage,omitempty"`
 }
 
 // CollectionStatus defines the observed state of Collection
 // +k8s:openapi-gen=true
 type CollectionStatus struct {
-	ActiveVersion string `json:"activeVersion,omitempty"`
-	ActiveLocation string `json:"activeLocation,omitempty"`
-	ActiveDigest  string `json:"activeDigest,omitempty"`
-	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
-	AvailableVersion string `json:"availableVersion,omitempty"`
-	AvailableLocation string `json:"availableLocation,omitempty"`
-	StatusMessage string `json:"statusMessage,omitempty"`
-	Images []Image `json:"images,omitempty"`
+	ActiveVersion     string                  `json:"activeVersion,omitempty"`
+	ActiveLocation    string                  `json:"activeLocation,omitempty"`
+	ActiveDigest      string                  `json:"activeDigest,omitempty"`
+	ActiveAssets      []RepositoryAssetStatus `json:"activeAssets,omitempty"`
+	AvailableVersion  string                  `json:"availableVersion,omitempty"`
+	AvailableLocation string                  `json:"availableLocation,omitempty"`
+	StatusMessage     string                  `json:"statusMessage,omitempty"`
+	Images            []Image                 `json:"images,omitempty"`
 }
 
 // Image defines a container image used by a collection
 type Image struct {
-	Id                 string                   `json:"id,omitempty"`
-	Image              string                   `json:"image,omitempty"`
+	Id    string `json:"id,omitempty"`
+	Image string `json:"image,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

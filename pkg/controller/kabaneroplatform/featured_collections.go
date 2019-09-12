@@ -24,7 +24,7 @@ func findMaxVersionCollectionWithName(collections []*collection.CollectionV1, na
 			if err == nil { // TODO: log error?
 				if candidateVersion.Compare(highestVersion) > 0 {
 					highestVersion = candidateVersion
-				} 
+				}
 			}
 		}
 	}
@@ -45,13 +45,12 @@ func findMaxVersionCollectionWithIdV2(collections []*collection.IndexedCollectio
 			if err == nil { // TODO: log error?
 				if candidateVersion.Compare(highestVersion) > 0 {
 					highestVersion = candidateVersion
-				} 
+				}
 			}
 		}
 	}
 	return highestVersion.String()
 }
-
 
 func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
 	//Resolve the collections which are currently featured across the various indexes
@@ -59,7 +58,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 	if err != nil {
 		return err
 	}
-	
+
 	ownerIsController := true
 	for _, c := range featured {
 		//For each collection, assure that a corresponding resource exists
@@ -79,11 +78,11 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 					Namespace: k.GetNamespace(),
 					OwnerReferences: []metav1.OwnerReference{
 						metav1.OwnerReference{
-							APIVersion:           k.TypeMeta.APIVersion,
-							Kind:                 k.TypeMeta.Kind,
-							Name:                 k.ObjectMeta.Name,
-							UID:                  k.ObjectMeta.UID,
-							Controller:           &ownerIsController,
+							APIVersion: k.TypeMeta.APIVersion,
+							Kind:       k.TypeMeta.Kind,
+							Name:       k.ObjectMeta.Name,
+							UID:        k.ObjectMeta.UID,
+							Controller: &ownerIsController,
 						},
 					},
 				},
@@ -103,7 +102,6 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 
 	return nil
 }
-
 
 func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
 	//Resolve the collections which are currently featured across the various indexes
@@ -130,11 +128,11 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 					Namespace: k.GetNamespace(),
 					OwnerReferences: []metav1.OwnerReference{
 						metav1.OwnerReference{
-							APIVersion:           k.TypeMeta.APIVersion,
-							Kind:                 k.TypeMeta.Kind,
-							Name:                 k.ObjectMeta.Name,
-							UID:                  k.ObjectMeta.UID,
-							Controller:           &ownerIsController,
+							APIVersion: k.TypeMeta.APIVersion,
+							Kind:       k.TypeMeta.Kind,
+							Name:       k.ObjectMeta.Name,
+							UID:        k.ObjectMeta.UID,
+							Controller: &ownerIsController,
 						},
 					},
 				},
@@ -190,7 +188,7 @@ func featuredCollectionsV2(k *kabanerov1alpha1.Kabanero) ([]*collection.IndexedC
 			if err != nil {
 				return nil, err
 			}
-			
+
 			for _, c := range index.CollectionsV2 {
 				//forced to re-declare the variable on the stack, thereby giving it a new unique memory address.
 				var col collection.IndexedCollectionV2

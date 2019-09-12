@@ -105,7 +105,7 @@ type KnativeServingStatus struct {
 
 // CliStatus defines the observed status details of the Kabanero CLI.
 type CliStatus struct {
-	Ready        string   `json:"ready,omitempty"`
+	Ready        string   `json:"ready, omitempty"`
 	ErrorMessage string   `json:"errorMessage,omitempty"`
 	Hostnames    []string `json:"hostnames,omitempty"`
 }
