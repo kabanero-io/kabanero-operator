@@ -59,6 +59,15 @@ spec:
                 type: string
               availableVersion:
                 type: string
+              images:
+                items:
+                  properties:
+                    id:
+                      type: string
+                    image:
+                      type: string
+                  type: object
+                type: array
               statusMessage:
                 type: string
             type: object
@@ -114,6 +123,15 @@ spec:
                 type: string
               availableVersion:
                 type: string
+              images:
+                items:
+                  properties:
+                    id:
+                      type: string
+                    image:
+                      type: string
+                  type: object
+                type: array
               statusMessage:
                 type: string
             type: object

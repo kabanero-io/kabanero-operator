@@ -1,0 +1,85 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kappnavs.charts.helm.k8s.io
+spec:
+  group: charts.helm.k8s.io
+  names:
+    kind: KAppNav
+    listKind: KAppNavList
+    plural: kappnavs
+    singular: kappnav
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helm-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: helm-operator
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: helm-operator
+subjects:
+- kind: ServiceAccount
+  name: helm-operator
+  namespace: kappnav
+roleRef:
+  kind: ClusterRole
+  name: helm-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: helm-operator
+  template:
+    metadata:
+      labels:
+        name: helm-operator
+    spec:
+      serviceAccountName: helm-operator
+      containers:
+        - name: helm-operator
+          # Replace this with the built image name
+          image: kappnav/operator:0.1.0
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "helm-operator"

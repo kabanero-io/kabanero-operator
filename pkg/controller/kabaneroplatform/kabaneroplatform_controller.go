@@ -5,23 +5,24 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/go-logr/logr"
+	mf "github.com/jcrossley3/manifestival"
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	"github.com/kabanero-io/kabanero-operator/version"
+	routev1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"github.com/go-logr/logr"
-	"github.com/kabanero-io/kabanero-operator/version"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	mf "github.com/jcrossley3/manifestival"
-	routev1 "github.com/openshift/api/route/v1"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
@@ -70,19 +71,19 @@ var _ reconcile.Reconciler = &ReconcileKabanero{}
 type ReconcileKabanero struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client            client.Client
+	scheme            *runtime.Scheme
 	requeueDelayMapV1 map[string]RequeueData
 	requeueDelayMapV2 map[string]RequeueData
 }
 
 type RequeueData struct {
-	delay int
+	delay      int
 	futureTime time.Time
 }
 
-// Determine if requeue is needed or not. 
-// If requeue is required set RequeueAfter to 60 seconds the first time. 
+// Determine if requeue is needed or not.
+// If requeue is required set RequeueAfter to 60 seconds the first time.
 // After the first time increase RequeueAfter by 60 seconds up to a max of 15 minutes.
 func (r *ReconcileKabanero) determineHowToRequeue(request reconcile.Request, ctx context.Context, instance *kabanerov1alpha1.Kabanero, errorMessage string, requeueDelayMap map[string]RequeueData, reqLogger logr.Logger) (reconcile.Result, error) {
 	var requeueDelay int
@@ -117,7 +118,7 @@ func (r *ReconcileKabanero) determineHowToRequeue(request reconcile.Request, ctx
 			requeueDelay = 900
 		}
 		localFutureTime = currentTime.Add(time.Duration(requeueDelay) * time.Second)
-		requeueDelayMap[request.Namespace] = RequeueData{requeueDelay,localFutureTime}
+		requeueDelayMap[request.Namespace] = RequeueData{requeueDelay, localFutureTime}
 		reqLogger.Info(fmt.Sprintf("Reconciling Kabanero requesting requeue in %d seconds", requeueDelay))
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(requeueDelay) * time.Second}, nil
 	} else { // no requeue
@@ -157,9 +158,10 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		fmt.Println("Error in reconcile featured collections: ", err)
 		return r.determineHowToRequeue(request, ctx, instance, err.Error(), r.requeueDelayMapV1, reqLogger)
 	}
+
 	// things worked reset requeue data
 	r.requeueDelayMapV1[request.Namespace] = RequeueData{0, time.Now()}
-	
+
 	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
 	if err != nil {
 		fmt.Println("Error in reconcile featured collections V2: ", err)
@@ -170,28 +172,36 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	//Reconcile the appsody operator
 	err = reconcile_appsody(ctx, instance, r.client)
-        if err != nil {
-                fmt.Println("Error in reconcile appsody: ", err)
-                return reconcile.Result{}, err
-        }
-	
-	// Deploy the kabanero landing page
-	err = deployLandingPage(instance, r.client)
 	if err != nil {
-		fmt.Println("Error deploying the kabanero landing page.", err)
+		fmt.Println("Error in reconcile appsody: ", err)
 		return reconcile.Result{}, err
 	}
 
+	// Deploy the kabanero landing page
+	err = deployLandingPage(instance, r.client)
+	if err != nil {
+		fmt.Println("Error deploying the kabanero landing page: ", err)
+		return reconcile.Result{}, err
+	}
+
+	// Reconcile the Kabanero CLI.
 	err = reconcileKabaneroCli(ctx, instance, r.client)
 	if err != nil {
 		fmt.Println("Error in reconcile Kabanero CLI: ", err)
 		return reconcile.Result{}, err
 	}
-	
-	// Determine the status of the kabanero operator instance and set it.
-	isReady, err := processStatus(instance, r.client, ctx, reqLogger)
+
+	// Reconcile the Kubernetes Application Navigator if enabled. It is disabled by default.
+	err = reconcileKappnav(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error updating the status", err)
+		fmt.Println("Error reconciling the Kubernetes Application Navigator: ", err)
+		return reconcile.Result{}, err
+	}
+
+	// Determine the status of the kabanero operator instance and set it.
+	isReady, err := processStatus(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		fmt.Println("Error updating the status: ", err)
 		return reconcile.Result{}, err
 	}
 
@@ -199,7 +209,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	if !isReady {
 		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 	}
-        
+
 	return reconcile.Result{}, nil
 }
 
@@ -227,22 +237,30 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 // Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.
 // If all resource dependencies are in the ready state, the kabanero instance's readiness status
 // is set to true. Otherwise, it is set to false.
-func processStatus(k *kabanerov1alpha1.Kabanero, c client.Client, ctx context.Context, reqLogger logr.Logger) (bool, error) {
+func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	errorMessage := "One or more resource dependencies are not ready."
 	k.Status.KabaneroInstance.Version = version.Version
 	k.Status.KabaneroInstance.Ready = "False"
 
 	// Gather the status of all resource dependencies.
 	isAppsodyReady, _ := getAppsodyStatus(k, c, reqLogger)
-	isTektonReady, _ := getTektonStatus(k,c);
-	isKnativeEventingReady, _ := getKnativeServingStatus(k,c)
-	isKnativeServingReady, _ := getKnativeEventingStatus(k,c)
+	isTektonReady, _ := getTektonStatus(k, c)
+	isKnativeEventingReady, _ := getKnativeServingStatus(k, c)
+	isKnativeServingReady, _ := getKnativeEventingStatus(k, c)
 	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger)
-        isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k,c)	
+	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
+	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 
 	// Set the overall status.
-	isKabaneroReady := isTektonReady && isKnativeEventingReady && isKnativeServingReady && isCliRouteReady && isKabaneroLandingReady && isAppsodyReady
-	if (isKabaneroReady ) {
+	isKabaneroReady := isTektonReady &&
+		isKnativeEventingReady &&
+		isKnativeServingReady &&
+		isCliRouteReady &&
+		isKabaneroLandingReady &&
+		isAppsodyReady &&
+		isKubernetesAppNavigatorReady
+
+	if isKabaneroReady {
 		k.Status.KabaneroInstance.ErrorMessage = ""
 		k.Status.KabaneroInstance.Ready = "True"
 	} else {
@@ -275,7 +293,7 @@ func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger) (boo
 		k.Status.Cli.Hostnames = nil
 		// Looking for an ingress that has an admitted status and a hostname
 		for _, ingress := range cliRoute.Status.Ingress {
-			var routeAdmitted bool = false
+			var routeAdmitted = false
 			for _, condition := range ingress.Conditions {
 				if condition.Type == routev1.RouteAdmitted && condition.Status == corev1.ConditionTrue {
 					routeAdmitted = true

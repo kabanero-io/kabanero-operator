@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -19,17 +21,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"strings"
 )
 
 var kllog = rlog.Log.WithName("kabanero-landing")
-var landingImage string = "kabanero/landing"
-var landingImageTag string = "0.1.0"
+var landingImage = "kabanero/landing"
+var landingImageTag = "0.1.0"
 
 // Deploys resources and customizes to the Openshift web console.
 func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	// Apply the needed resources.
-	filename := "config/reconciler/kabanero-landing"
+	filename := "config/reconciler/kabanero-landing/kabanero-landing-0.1.0.yaml"
 	m, err := mf.NewManifest(filename, true, c)
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func getLandingURL(k *kabanerov1alpha1.Kabanero, config *restclient.Config) (str
 
 	// If the URL is invalid, return an error.
 	if len(landingURL) == 0 {
-		err = errors.New("Invalid kabanero landing URL.")
+		err = errors.New("Invalid kabanero landing URL")
 	} else {
 		landingURL = "https://" + landingURL
 	}
@@ -182,10 +183,10 @@ func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Client
 
 	if err == nil {
 		return nil
-	} else {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
+	}
+
+	if !apierrors.IsNotFound(err) {
+		return err
 	}
 
 	// The Deployment resource does not exist. Create it.
@@ -289,7 +290,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Cli
 					su := vv.([]interface{})
 					eScripts := getEffectiveCustomizationURLs(su, scripts)
 					sun := make([]interface{}, (len(su) + len(eScripts)))
-					var ix int = 0
+					var ix = 0
 					for i := 0; i < len(su); i++ {
 						sun[ix] = su[ix]
 						ix++
@@ -304,7 +305,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Cli
 					su := vv.([]interface{})
 					eSsheets := getEffectiveCustomizationURLs(su, ssheets)
 					sun := make([]interface{}, (len(su) + len(eSsheets)))
-					var ix int = 0
+					var ix = 0
 					for i := 0; i < len(su); i++ {
 						sun[ix] = su[ix]
 						ix++
