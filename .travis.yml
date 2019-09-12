@@ -19,7 +19,7 @@ before_install:
 - if [ ! -z \"$DOCKER_USERNAME\" ]; then docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD || true; fi
 
 script:
-- make
+- make check
 - make build-image
 
 before_deploy:

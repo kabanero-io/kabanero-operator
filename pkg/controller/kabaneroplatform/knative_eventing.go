@@ -3,16 +3,16 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
-	"strings"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	knepis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
 	knev1alpha1 "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
-// Retrieves the current knative eventing instance status. 
+// Retrieves the current knative eventing instance status.
 func getKnativeEventingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
 	k.Status.KnativeEventing.ErrorMessage = ""
 	k.Status.KnativeEventing.Ready = "False"
@@ -26,16 +26,16 @@ func getKnativeEventingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bo
 	kne := &knev1alpha1.KnativeEventing{}
 	err = cl.Get(context.TODO(), client.ObjectKey{
 		Namespace: kneInstNamespace,
-		Name: kneInstName}, kne)
+		Name:      kneInstName}, kne)
 	if err != nil {
 		message := "Knative eventing instance with the name of " + kneInstName + " under the namespace of " + kneInstNamespace + " could not be found."
 		k.Status.KnativeEventing.Ready = "False"
 		k.Status.KnativeEventing.ErrorMessage = message
-		fmt.Println("Error while assessing Knative eventing readiness. " + message, err)
+		fmt.Println("Error while assessing Knative eventing readiness. "+message, err)
 		return false, err
 	}
 
-	// Find the ready type condition. A status can be either True, False, or Unknown.                                        
+	// Find the ready type condition. A status can be either True, False, or Unknown.
 	// An Unknown status value is treated the same as a value of False.
 	statusReadyType := "ready"
 	ready := false
@@ -53,7 +53,7 @@ func getKnativeEventingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bo
 				k.Status.KnativeEventing.ErrorMessage = condition.Message
 			}
 
-			break;
+			break
 		}
 	}
 

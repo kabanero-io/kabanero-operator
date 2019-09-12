@@ -259,7 +259,6 @@ func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.C
 		isKabaneroLandingReady &&
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady
-
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.ErrorMessage = ""
 		k.Status.KabaneroInstance.Ready = "True"

@@ -33,6 +33,12 @@ ifdef TRAVIS_BRANCH
 endif
 endif
 
+test: 
+	go test ./cmd/... ./pkg/... 
+
+format:
+	go fmt ./cmd/... ./pkg/...
+
 generate:
 	operator-sdk generate k8s
 	operator-sdk generate openapi
@@ -54,6 +60,8 @@ endif
 	rm deploy/operator.yaml.bak
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
 	kubectl apply -f deploy/
+
+check: format build #test
 
 dependencies: 
 ifeq (, $(shell which dep))
