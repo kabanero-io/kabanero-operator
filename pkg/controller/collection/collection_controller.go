@@ -16,11 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_collection")
@@ -44,8 +47,19 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Create Collection predicate
+	c_pred := predicate.Funcs{
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
+
 	// Watch for changes to primary resource Collection
-	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, &handler.EnqueueRequestForObject{}, c_pred)
 	if err != nil {
 		return err
 	}
@@ -57,6 +71,41 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		OwnerType:    &kabanerov1alpha1.Collection{},
 	})
 	if err != nil {
+		return err
+	}
+	
+
+	// Create a handler for handling Tekton Pipeline & Task events
+	t_h := &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &kabanerov1alpha1.Collection{},
+	}
+	
+	// Create Tekton predicate
+	t_pred := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// ignore Create. Collection create applies the documents. Watch would unnecessarily requeue.
+			return false
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
+	
+	// Watch for changes to Collection Tekton Pipeline objects
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Pipeline{}}, t_h, t_pred)
+	if err != nil {
+		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Task{}}, t_h, t_pred)
+	if err != nil {
+		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
 	}
 
@@ -273,6 +322,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo)
 		if err != nil {
+			r_log.Error(err, "indexresolver error, requeue")
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
 		// Handle Index Collection version
@@ -358,6 +408,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			case matchingCollection.collection.Manifest.Version == c.Spec.Version:
 				err := activate(c, &matchingCollection.collection, r.client)
 				if err != nil {
+					r_log.Error(err, "activatev1 returned an error, requeue")
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
 				c.Status.ActiveLocation = matchingCollection.repositoryUrl
@@ -367,9 +418,11 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 				//need a v2 activate
 				err := activatev2(c, &matchingCollection.collectionv2, r.client)
 				if err != nil {
+					r_log.Error(err, "activatev2 returned an error, requeue")
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
 				c.Status.ActiveLocation = matchingCollection.repositoryUrl
+				log.Info(fmt.Sprintf("activatev2 success"))
 				return reconcile.Result{}, nil
 			}
 		}
@@ -652,6 +705,8 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			transformedManifests = append(transformedManifests, transformedRemoteManifest{m, asset.Url})
 		}
 
+// 182: Do not delete, only apply
+/*
 		// Now delete the manifests
 		for _, transformedManifest := range transformedManifests {
 			err := transformedManifest.m.DeleteAll()
@@ -660,6 +715,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
 			}
 		}
+*/
 
 		// Indicate there is not currently an active version of this collection.
 		collectionResource.Status.ActiveVersion = ""
@@ -668,6 +724,10 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 
 	// Now apply the new version
 	for _, asset := range collection.Pipelines {
+	
+
+// 182: Do not prevent collection from being reapplied. One manifest of a collection may have triggered the need to reapply the collection archive
+/*
 		// If the asset has a digest, see if the digest has changed.  Don't bother updating anything
 		// if the digest is the same and the asset is active.
 		log.Info(fmt.Sprintf("Checking digest for asset %v", asset.Url))
@@ -682,7 +742,8 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 				}
 			}
 		}
-
+*/
+		applyAsset := true
 		if applyAsset {
 			log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
 
