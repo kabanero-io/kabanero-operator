@@ -6,8 +6,8 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/go-logr/logr"
-	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"math/big"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
@@ -33,8 +34,31 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	}
 
 	// Deploy some of the Kabanero CLI components - service acct, role, etc
-	filename := "config/reconciler/kabanero-cli.yaml"
-	m, err := mf.NewManifest(filename, true, cl)
+	rev, err := resolveSoftwareRevision(k, "cli-services", k.Spec.CliServices.Version)
+	if err != nil {
+		return err
+	}
+
+	//The context which will be used to render any templates
+	templateContext := rev.Identifiers
+
+	image, err := imageUriWithOverrides(k.Spec.CliServices.Repository, k.Spec.CliServices.Tag, k.Spec.CliServices.Image, rev)
+	if err != nil {
+		return err
+	}
+	templateContext["image"] = image
+
+	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateContext)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), cl)
 	if err != nil {
 		return err
 	}
@@ -67,7 +91,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	}
 
 	// Create the deployment manually as we have to fill in some env vars.
-	image := "kabanero/kabanero-command-line-services:0.1.1-rc.1"
+	image = "kabanero/kabanero-command-line-services:0.1.1-rc.1"
 	env := []corev1.EnvVar{{Name: "KABANERO_CLI_NAMESPACE", Value: k.GetNamespace()}}
 
 	// The CLI wants to know the Github organization name, if it was provided
