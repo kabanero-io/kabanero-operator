@@ -8,13 +8,9 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	mf "github.com/kabanero-io/manifestival"
-	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -184,7 +180,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// Reconcile the Kabanero CLI.
-	err = reconcileKabaneroCli(ctx, instance, r.client)
+	err = reconcileKabaneroCli(ctx, instance, r.client, reqLogger)
 	if err != nil {
 		fmt.Println("Error in reconcile Kabanero CLI: ", err)
 		return reconcile.Result{}, err
@@ -210,49 +206,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	rev, err := resolveSoftwareRevision(k, "cli-services", k.Spec.AppsodyOperator.Version)
-	if err != nil {
-		return err
-	}
-
-	//The context which will be used to render any templates
-	templateContext := rev.Identifiers
-
-	image, err := imageUriWithOverrides(k.Spec.CliServices.Repository, k.Spec.CliServices.Tag, k.Spec.CliServices.Image, rev)
-	if err != nil {
-		return err
-	}
-	templateContext["image"] = image
-
-	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
-	if err != nil {
-		return err
-	}
-
-	s, err := renderOrchestration(f, templateContext)
-	if err != nil {
-		return err
-	}
-
-	m, err := mf.FromReader(strings.NewReader(s), cl)
-	if err != nil {
-		return err
-	}
-
-	transforms := []mf.Transformer{
-		mf.InjectOwner(k),
-		mf.InjectNamespace(k.GetNamespace()),
-	}
-
-	err = m.Transform(transforms...)
-	if err != nil {
-		return err
-	}
-
-	return m.ApplyAll()
 }
 
 // Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.
@@ -294,57 +247,4 @@ func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.C
 	}
 
 	return isKabaneroReady, err
-}
-
-// Tries to see if the CLI route has been assigned a hostname.
-func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger) (bool, error) {
-
-	// Get the knative eventing installation instance.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	myScheme := runtime.NewScheme()
-	cl, _ := client.New(config, client.Options{Scheme: myScheme})
-	routev1.AddToScheme(myScheme)
-
-	// Check that the route is accepted
-	cliRoute := &routev1.Route{}
-	cliRouteName := types.NamespacedName{Namespace: k.ObjectMeta.Namespace, Name: "kabanero-cli"}
-	err = cl.Get(context.TODO(), cliRouteName, cliRoute)
-	if err == nil {
-		k.Status.Cli.Hostnames = nil
-		// Looking for an ingress that has an admitted status and a hostname
-		for _, ingress := range cliRoute.Status.Ingress {
-			var routeAdmitted = false
-			for _, condition := range ingress.Conditions {
-				if condition.Type == routev1.RouteAdmitted && condition.Status == corev1.ConditionTrue {
-					routeAdmitted = true
-				}
-			}
-			if routeAdmitted == true && len(ingress.Host) > 0 {
-				k.Status.Cli.Hostnames = append(k.Status.Cli.Hostnames, ingress.Host)
-			}
-		}
-		// If we found a hostname from an admitted route, we're done.
-		if len(k.Status.Cli.Hostnames) > 0 {
-			k.Status.Cli.Ready = "True"
-			k.Status.Cli.ErrorMessage = ""
-		} else {
-			k.Status.Cli.Ready = "False"
-			k.Status.Cli.ErrorMessage = "There were no accepted ingress objects in the Route"
-			return false, err
-		}
-	} else {
-		var message string
-		if errors.IsNotFound(err) {
-			message = "The Route object for the CLI was not found"
-		} else {
-			message = "An error occurred retrieving the Route object for the CLI"
-		}
-		reqLogger.Error(err, message)
-		k.Status.Cli.Ready = "False"
-		k.Status.Cli.ErrorMessage = message + ": " + err.Error()
-		k.Status.Cli.Hostnames = nil
-		return false, err
-	}
-
-	return true, nil
 }

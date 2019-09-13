@@ -10,9 +10,6 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 build: generate
 	go install ./cmd/manager
 
-test:
-	go test ./pkg/...
-
 build-image: generate
 	operator-sdk build ${IMAGE}
 	# This is a workaround until manfistival can interact with the virtual file system

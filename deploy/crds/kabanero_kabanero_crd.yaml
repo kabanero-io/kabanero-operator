@@ -25,6 +25,31 @@ spec:
             type: object
           spec:
             properties:
+              appsodyOperator:
+                properties:
+                  enable:
+                    type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              cliServices:
+                properties:
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    description: 'Future: Enable     bool   `json:"enable,omitempty"`'
+                    type: string
+                type: object
               collections:
                 properties:
                   repositories:
@@ -41,10 +66,23 @@ spec:
                       type: object
                     type: array
                 type: object
+              github:
+                properties:
+                  apiUrl:
+                    type: string
+                  organization:
+                    type: string
+                  teams:
+                    items:
+                      type: string
+                    type: array
+                type: object
               kappnav:
                 properties:
                   enable:
                     type: boolean
+                type: object
+              landing:
                 type: object
               tekton:
                 properties:
@@ -75,8 +113,6 @@ spec:
                     items:
                       type: string
                     type: array
-                  ready:
-                    type: string
                 type: object
               kabaneroInstance:
                 description: Kabanero operator instance readiness status. The status
@@ -160,6 +196,32 @@ spec:
             type: object
           spec:
             properties:
+              appsodyOperator:
+                properties:
+                  enable:
+                    type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              cliServices:
+                properties:
+                  enable:
+                    type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
               collections:
                 properties:
                   repositories:
@@ -176,7 +238,16 @@ spec:
                       type: object
                     type: array
                 type: object
-              kappnav:
+              github:
+                properties:
+                  apiUrl:
+                    type: string
+                  organization:
+                    type: string
+                  team:
+                    type: string
+                type: object
+              landing:
                 properties:
                   enable:
                     type: boolean
@@ -210,22 +281,10 @@ spec:
                     items:
                       type: string
                     type: array
-                  ready:
-                    type: string
                 type: object
               kabaneroInstance:
                 description: Kabanero operator instance readiness status. The status
                   is directly correlated to the availability of resources dependencies.
-                properties:
-                  errorMessage:
-                    type: string
-                  ready:
-                    type: string
-                  version:
-                    type: string
-                type: object
-              kappnav:
-                description: Kabanero Application Navigator instance readiness status.
                 properties:
                   errorMessage:
                     type: string
