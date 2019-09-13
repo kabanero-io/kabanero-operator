@@ -5,12 +5,14 @@ import (
 )
 
 func TestAssets(t *testing.T) {
+	path := "orchestrations/appsody-operator/0.1/appsody.yaml"
+
 	if assets == nil {
 		t.Fatal("Assets were not initialized")
 	}
-	f, err := Open("reconciler/knative-eventing/knative-eventing.yaml")
+	f, err := Open(path)
 	if err != nil {
-		t.Fatal("Unexpected error reading olm.yaml")
+		t.Fatalf("Unexpected error reading %v: %v", path, err)
 	}
 	if f == nil {
 		t.Fatal("Could not open the file")

@@ -7,8 +7,11 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 
 .PHONY: build deploy build-image push-image
 
-build:
+build: generate
 	go install ./cmd/manager
+
+test:
+	go test ./pkg/...
 
 build-image: generate
 	operator-sdk build ${IMAGE}
@@ -42,6 +45,7 @@ format:
 generate:
 	operator-sdk generate k8s
 	operator-sdk generate openapi
+	go generate ./pkg/assets
 
 install:
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
@@ -57,7 +61,7 @@ ifneq "$(IMAGE)" "kabanero-operator:latest"
 	sed -i.bak -e 's!imagePullPolicy: Never!imagePullPolicy: Always!' deploy/operator.yaml
 	sed -i.bak -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
 endif
-	rm deploy/operator.yaml.bak
+	rm deploy/operator.yaml.bak || true
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
 	kubectl apply -f deploy/
 

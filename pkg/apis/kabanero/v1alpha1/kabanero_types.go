@@ -23,6 +23,12 @@ type KabaneroSpec struct {
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
 
 	Kappnav KappnavCustomizationSpec `json:"kappnav,omitempty"`
+
+	AppsodyOperator AppsodyCustomizationSpec `json:"appsodyOperator,omitempty"`
+
+	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
+
+	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
@@ -45,6 +51,26 @@ type TektonCustomizationSpec struct {
 // KappnavCustomizationSpec defines customization entries for Kubernetes Application Navigator
 type KappnavCustomizationSpec struct {
 	Enable bool `json:"enable,omitempty"`
+}
+
+type AppsodyCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type KabaneroCliServicesCustomizationSpec struct {
+	//Future: Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type KabaneroLandingCustomizationSpec struct {
+	//Future: Enable bool `json:"enable,omitempty"`
 }
 
 // KabaneroStatus defines the observed state of the Kabanero instance

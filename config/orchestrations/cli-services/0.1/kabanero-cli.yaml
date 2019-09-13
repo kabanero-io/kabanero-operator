@@ -23,7 +23,7 @@ spec:
       containers:
         - name: kabanero-cli
           # Replace this with the built image name
-          image: kabanero/kabanero-command-line-services:0.1.0
+          image: {{ .image }}
           ports:
           - containerPort: 9443
           imagePullPolicy: Always

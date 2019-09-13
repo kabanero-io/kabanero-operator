@@ -284,7 +284,7 @@ spec:
       serviceAccountName: appsody-operator
       containers:
         - name: appsody-operator
-          image: appsody/application-operator:0.1.0
+          image: {{ .image }}
           command:
           - appsody-operator
           imagePullPolicy: Always

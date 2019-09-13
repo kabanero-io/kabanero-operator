@@ -372,6 +372,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:315090bed68517c44bf9cfbee784c1c095edb9b8d2a01741624b95c797a15f56"
+  name = "github.com/kabanero-io/manifestival"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "5a78e825928e9f018e990a39355b6d8accbd716e"
+
+[[projects]]
+  branch = "master"
   digest = "1:5df41911fd0a84bcb7943ae1f08e4cdc1fead94e164be5953e02f79d923453aa"
   name = "github.com/knative/pkg"
   packages = ["apis"]
@@ -1188,6 +1196,7 @@
     "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
     "github.com/jcrossley3/manifestival",
+    "github.com/kabanero-io/manifestival",
     "github.com/knative/serving-operator/pkg/apis",
     "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis",

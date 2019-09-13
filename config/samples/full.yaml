@@ -1,3 +1,7 @@
+# This example demonstrates all of the possible configuration elements
+#
+# Note that some of the attributes may not make sense in combination with other attributes
+# and that this sample might not be runable as-is
 apiVersion: kabanero.io/v1alpha1
 kind: Kabanero
 metadata:
@@ -5,7 +9,36 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: 0.1.2
+  version: "0.1.2"
+
+  appsody-operator:
+    # Overrides the platform wide settings for version on this component
+    version: "0.1.1"
+
+    # Overrides the image as a separate repository or tag
+    repository: appsody/appsody-operator
+    tag: "0.1.0"
+
+    # Overrides the image uri
+    image: appsody/appsody-operator:0.1.0
+
+  kappnav:
+    enable: true
+
+  cliServices:
+    # Overrides the setting for version on this component
+    version: "0.1.1"
+
+    # Overrides the image as a separate repository or tag
+    repository: kabanero-io/cli-services
+    tag: "0.1.0"
+
+    # Overrides the image uri
+    image: kabanero-io/cli-services:0.1.0
+
+  landing:
+    # TBD
+
 
   collections: 
     # A list of those repositories which are searched for collections
