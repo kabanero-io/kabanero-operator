@@ -3,6 +3,7 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"github.com/go-logr/logr"
 )
 
 // Retrieves an OwnerRereference object populated with the Kabanero operator information.

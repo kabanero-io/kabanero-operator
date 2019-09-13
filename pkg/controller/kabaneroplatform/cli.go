@@ -5,21 +5,20 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"math/big"
+	"github.com/go-logr/logr"
+	mf "github.com/jcrossley3/manifestival"
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	routev1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"math/big"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	mf "github.com/jcrossley3/manifestival"
-	routev1 "github.com/openshift/api/route/v1"
 )
-
 
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 	// Create a clientset to drive API operations on resources.
@@ -66,18 +65,18 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	if err != nil {
 		return err
 	}
-	
+
 	// Create the deployment manually as we have to fill in some env vars.
 	image := "kabanero/kabanero-command-line-services:0.1.1-rc.1"
-	env := []corev1.EnvVar{{Name:  "KABANERO_CLI_NAMESPACE",	Value: k.GetNamespace()	}}
+	env := []corev1.EnvVar{{Name: "KABANERO_CLI_NAMESPACE", Value: k.GetNamespace()}}
 
 	// The CLI wants to know the Github organization name, if it was provided
 	if len(k.Spec.Github.Organization) > 0 {
-		env = append(env, corev1.EnvVar{Name:  "KABANERO_CLI_GROUP", Value: k.Spec.Github.Organization})
+		env = append(env, corev1.EnvVar{Name: "KABANERO_CLI_GROUP", Value: k.Spec.Github.Organization})
 	}
 
 	// The CLI wants to know which teams to bind to the admin role
-	if (len(k.Spec.Github.Teams) > 0) && (len(k.Spec.Github.Organization) > 0)  {
+	if (len(k.Spec.Github.Teams) > 0) && (len(k.Spec.Github.Organization) > 0) {
 		// Build a list of fully qualified team names
 		var teamList string = ""
 		for _, team := range k.Spec.Github.Teams {
@@ -94,7 +93,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	if len(k.Spec.Github.ApiUrl) > 0 {
 		env = append(env, corev1.EnvVar{Name: "github.api.url", Value: k.Spec.Github.ApiUrl})
 	}
-	
+
 	// Tell the CLI where the AES encryption key secret is
 	keyOptional := false
 	aesSecretKeySelector := corev1.SecretKeySelector{}
@@ -103,7 +102,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	aesSecretKeySelector.Optional = &keyOptional
 	aesSecretKeySource := corev1.EnvVarSource{SecretKeyRef: &aesSecretKeySelector}
 	env = append(env, corev1.EnvVar{Name: "AESEncryptionKey", ValueFrom: &aesSecretKeySource})
-	
+
 	// Go ahead and make or update the deployment object
 	err = createDeployment(k, clientset, cl, "kabanero-cli", image, env, nil, reqLogger)
 	if err != nil {
@@ -112,8 +111,6 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 
 	return nil
 }
-
-
 
 // Tries to see if the CLI route has been assigned a hostname.
 func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger) (bool, error) {
@@ -189,14 +186,14 @@ func destroyRoleBindingConfigMap(k *kabanerov1alpha1.Kabanero, c client.Client, 
 	// Need to delete it.
 	reqLogger.Info(fmt.Sprintf("Attempting to delete CLI role binding config map: %v", cmInstance))
 	err = c.Delete(context.TODO(), cmInstance)
-	
+
 	return err
 }
 
 // Creates the secret containing the AES encryption key used by the CLI.
 func createEncryptionKeySecret(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
 	secretName := "kabanero-cli-aes-encryption-key-secret"
-	
+
 	// Check if the Secret already exists.
 	secretInstance := &corev1.Secret{}
 	err := c.Get(context.Background(), types.NamespacedName{
@@ -240,6 +237,6 @@ func createEncryptionKeySecret(k *kabanerov1alpha1.Kabanero, c client.Client, re
 		reqLogger.Info(fmt.Sprintf("Attempting to create the CLI AES Encryption key secret"))
 		err = c.Create(context.TODO(), secretInstance)
 	}
-	
+
 	return err
 }

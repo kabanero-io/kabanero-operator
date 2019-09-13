@@ -16,8 +16,8 @@ type KabaneroSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	Version string `json:"version,omitempty"`
-	Github GithubConfig `json:"github,omitempty"`
+	Version     string                   `json:"version,omitempty"`
+	Github      GithubConfig             `json:"github,omitempty"`
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
@@ -40,9 +40,9 @@ type InstanceCollectionConfig struct {
 // of the specified team in the specified organization will have admin
 // authority in the Kabanero CLI.
 type GithubConfig struct {
-	Organization string `json:"organization,omitempty"`
-	Teams []string `json:"teams,omitempty"`
-	ApiUrl string `json:"apiUrl,omitempty"`
+	Organization string   `json:"organization,omitempty"`
+	Teams        []string `json:"teams,omitempty"`
+	ApiUrl       string   `json:"apiUrl,omitempty"`
 }
 
 type RepositoryConfig struct {
