@@ -1,0 +1,113 @@
+apiVersion: charts.helm.k8s.io/v1alpha1
+kind: KAppNav
+metadata:
+  name: instance
+spec:
+  # Default values copied from <project_dir>/helm-charts/kappnav/values.yaml
+
+  ###############################################################################
+  ## Common image variables
+  ###############################################################################
+
+
+  ###############################################################################
+  ## kAppNav REST API variables
+  ###############################################################################
+
+  appNavApi:
+    repository: kappnav/apis
+    tag: 0.1.0
+    resources:
+      constraints:
+        enabled: false
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  ###############################################################################
+  ## kAppNav Controller variables
+  ###############################################################################
+
+  appNavController:
+    repository: kappnav/controller
+    tag: 0.1.0
+    resources:
+      constraints:
+        enabled: false
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  ###############################################################################
+  ## kAppNav UI variables
+  ###############################################################################
+
+  appNavUI:
+    repository: kappnav/ui
+    tag: 0.1.0
+    service:
+      type: ClusterIP
+    resources:
+      constraints:
+        enabled: false
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+
+  ###############################################################################
+  ## kAppNav Init Container variables
+  ###############################################################################
+
+  appNavInit:
+    repository: kappnav/init
+    tag: 0.1.0
+    resources:
+      constraints:
+        enabled: false
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  image:
+    pullPolicy: Always
+    pullSecrets: []
+
+  ###############################################################################
+  ## Environmental variables
+  ###############################################################################
+  env:
+    kubeEnv: okd
+
+  ###############################################################################
+  ## Architecture
+  ###############################################################################
+  # Specify architecture (amd64, ppc64le, s390x) and weight to be
+  # used for scheduling as follows :
+  #   0 - Do not use
+  #   1 - Least preferred
+  #   2 - No preference
+  #   3 - Most preferred
+  arch:
+    amd64: "2 - No preference"
+    ppc64le: "2 - No preference"
+    s390x: "2 - No preference"
+
+  ###############################################################################
+  ## OpenShift web console variables
+  ###############################################################################
+  console:
+    okdFeaturedApp: disabled
+    okdAppLauncher: enabled
