@@ -1,3 +1,7 @@
+# This example demonstrates all of the possible configuration elements
+#
+# Note that some of the attributes may not make sense in combination with other attributes
+# and that this sample might not be runable as-is
 apiVersion: kabanero.io/v1alpha1
 kind: Kabanero
 metadata:
@@ -5,7 +9,36 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: 0.1.2
+  version: "0.1.2"
+
+  appsody-operator:
+    # Overrides the platform wide settings for version on this component
+    version: "0.1.1"
+
+    # Overrides the image as a separate repository or tag
+    repository: appsody/appsody-operator
+    tag: "0.1.0"
+
+    # Overrides the image uri
+    image: appsody/appsody-operator:0.1.0
+
+  kappnav:
+    enable: true
+
+  cliServices:
+    # Overrides the setting for version on this component
+    version: "0.1.1"
+
+    # Overrides the image as a separate repository or tag
+    repository: kabanero-io/cli-services
+    tag: "0.1.0"
+
+    # Overrides the image uri
+    image: kabanero-io/cli-services:0.1.0
+
+  landing:
+    # TBD
+
 
   collections: 
     # A list of those repositories which are searched for collections
@@ -13,4 +46,20 @@ spec:
     - name: incubator
       url: https://github.com/kabanero-io/collections/releases/download/v0.1.2/kabanero-index.yaml
       # Activates a default set of collections
-      activateDefaultCollections: true 
+      activateDefaultCollections: true
+  # The information in the Github section is used by the Kabanero CLI to
+  # perform user to role mapping when accessing the collection.
+  github:
+    # The API URL refers to the Github instance (or GHE instance) that
+    # contains the organization where the collection was cloned.  The
+    # CLI will use this URL to interact with Github (or GHE).
+    apiUrl: https://api.github.com
+    # The Github organization contains the repository where the
+    # collection was cloned.
+    organization: kabanero-io
+    # The list of teams which should have admin authority to the
+    # collection.  Each team must be defined in the Github
+    # organization.  Members of the teams will be able to login to the
+    # Kabanero CLI and administer the collection.
+    teams:
+    - adminTeam

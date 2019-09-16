@@ -1,6 +1,5 @@
 package collection
 
-
 // Convenience function which iterates over the complex Collections structure
 func (c *CollectionV1Index) ListCollections() []IndexedCollectionV1 {
 	all := make([]IndexedCollectionV1, 0)

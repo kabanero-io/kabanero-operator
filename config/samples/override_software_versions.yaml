@@ -1,0 +1,50 @@
+apiVersion: kabanero.io/v1alpha1
+kind: Kabanero
+metadata:
+  name: kabanero1
+spec:
+  version: 0.1.0
+  
+  appsodyOperator:
+    # Overrides the internally determined Appsody version with the provided value
+    version: "0.1.0"
+---
+apiVersion: kabanero.io/v1alpha1
+kind: Kabanero
+metadata:
+  name: kabanero1
+spec:
+  appsodyOperator:
+    # Overrides the internally determined Appsody image with the provided value
+    image: appsody/appsody-operator:0.1.0
+---
+apiVersion: kabanero.io/v1alpha1
+kind: Kabanero
+metadata:
+  name: kabanero2
+spec:
+  appsodyOperator:
+    # Overrides only the repository used by the appsody operator.
+    # The tag will be internally determined
+    repository: appsody/appsody-operator
+---
+apiVersion: kabanero.io/v1alpha1
+kind: Kabanero
+metadata:
+  name: kabanero2
+spec:
+  appsodyOperator:
+    # Overrides only the tag used in the appsody operator deployment
+    # The repository will be internally determined
+    tag: "0.1.2"
+---
+apiVersion: kabanero.io/v1alpha1
+kind: Kabanero
+metadata:
+  name: kabanero3
+spec:
+  appsodyOperator:
+    # When both image and repository overrides are present, the image attribute
+    # will take precedence
+    image: appsody/appsody-operator:0.1.0
+    repository: appsody/appsody-operator

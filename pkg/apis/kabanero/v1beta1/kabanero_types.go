@@ -16,15 +16,31 @@ type KabaneroSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	Version string `json:"version,omitempty"`
-
+	Version     string                   `json:"version,omitempty"`
+	Github      GithubConfig             `json:"github,omitempty"`
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
+
+	AppsodyOperator AppsodyCustomizationSpec `json:"appsodyOperator,omitempty"`
+
+	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
+
+	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
+}
+
+// This represents the Github information (public or GHE) where
+// the organization and teams managing the collections live.  Members
+// of the specified team in the specified organization will have admin
+// authority in the Kabanero CLI.
+type GithubConfig struct {
+	Organization string `json:"organization,omitempty"`
+	Team         string `json:"team,omitempty"`
+	ApiUrl       string `json:"apiUrl,omitempty"`
 }
 
 type RepositoryConfig struct {
@@ -37,6 +53,26 @@ type RepositoryConfig struct {
 type TektonCustomizationSpec struct {
 	Enable  string `json:"enable,omitempty"`
 	Version string `json:"version,omitempty"`
+}
+
+type AppsodyCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type KabaneroCliServicesCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type KabaneroLandingCustomizationSpec struct {
+	Enable bool `json:"enable,omitempty"`
 }
 
 // KabaneroStatus defines the observed state of the Kabanero instance
@@ -53,7 +89,7 @@ type KabaneroStatus struct {
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
-	
+
 	// CLI readiness status.
 	Cli CliStatus `json:"cli,omitempty"`
 
@@ -84,24 +120,24 @@ type KnativeEventingStatus struct {
 
 type KnativeServingStatus struct {
 	Ready        string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
-        Version string `json:"version,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 type CliStatus struct {
-	Ready string `json:"ready, omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Hostnames []string `json:"hostnames,omitempty"`
+	Ready        string   `json:"ready, omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
+	Hostnames    []string `json:"hostnames,omitempty"`
 }
 
 type KabaneroLandingPageStatus struct {
-        Ready string `json:"ready,omitempty"`
-        ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`
 }
 
 type AppsodyStatus struct {
-	Ready string `json:"ready,omitempty"`
+	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 

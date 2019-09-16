@@ -4,19 +4,19 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"regexp"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	"strings"
 )
 
 func ResolveIndex(repoConf kabanerov1alpha1.RepositoryConfig) (*CollectionV1Index, error) {
 	url := repoConf.Url
 
 	// user may specify url to yaml file or directory
-	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url) 
+	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url)
 	if err != nil {
 		return nil, err
 	}
@@ -34,15 +34,15 @@ func ResolveIndex(repoConf kabanerov1alpha1.RepositoryConfig) (*CollectionV1Inde
 	skipCertVerify := repoConf.SkipCertVerification
 	client := http.DefaultClient
 	if skipCertVerify {
-		config := &tls.Config{InsecureSkipVerify: skipCertVerify,}	
+		config := &tls.Config{InsecureSkipVerify: skipCertVerify}
 		transport := &http.Transport{TLSClientConfig: config}
-        	client = &http.Client{Transport: transport}
+		client = &http.Client{Transport: transport}
 	}
 
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -98,12 +98,11 @@ func SearchCollection(repoConf kabanerov1alpha1.RepositoryConfig, collectionName
 	return collections, nil
 }
 
-
 // Return all resolved collections in the index matching the given name.
 func SearchCollectionV2(collectionName string, index *CollectionV1Index) ([]IndexedCollectionV2, error) {
 	//Locate the desired collection in the index
 	var collectionRefs []IndexedCollectionV2
-	
+
 	for _, collectionRef := range index.CollectionsV2 {
 		if collectionRef.Id == collectionName {
 			collectionRefs = append(collectionRefs, collectionRef)
@@ -141,15 +140,15 @@ func ResolveCollection(repoConf kabanerov1alpha1.RepositoryConfig, urls ...strin
 		skipCertVerify := repoConf.SkipCertVerification
 		client := http.DefaultClient
 		if skipCertVerify {
-			config := &tls.Config{InsecureSkipVerify: skipCertVerify,}
+			config := &tls.Config{InsecureSkipVerify: skipCertVerify}
 			transport := &http.Transport{TLSClientConfig: config}
 			client = &http.Client{Transport: transport}
 		}
 
 		resp, err := client.Do(req)
 
-        	if err != nil {
-			return nil,err
+		if err != nil {
+			return nil, err
 		}
 
 		if resp.StatusCode != http.StatusOK {

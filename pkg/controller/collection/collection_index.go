@@ -1,15 +1,15 @@
 package collection
 
 type CollectionV1Index struct {
-	ApiVersion      string                              `yaml:"apiVersion,omitempty"`
-	
+	ApiVersion string `yaml:"apiVersion,omitempty"`
+
 	// V1 Collections
-	Generated       string                              `yaml:"generated,omitempty"`
-	Collections     map[string][]IndexedCollectionV1    `yaml:"projects,omitempty"`
-	
+	Generated   string                           `yaml:"generated,omitempty"`
+	Collections map[string][]IndexedCollectionV1 `yaml:"projects,omitempty"`
+
 	// V2 Collections
-	CollectionsV2   []IndexedCollectionV2               `yaml:"stacks,omitempty"`
-	
+	CollectionsV2 []IndexedCollectionV2 `yaml:"stacks,omitempty"`
+
 	// Source URL of this index
-	Url              string                             `yaml:"url,omitempty"`
+	Url string `yaml:"url,omitempty"`
 }

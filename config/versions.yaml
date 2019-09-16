@@ -1,0 +1,54 @@
+# Maps Kabanero platform version to related component versions
+# understood by the other operators. 
+
+# Note the following sequence: the Kabanero operator becomes aware
+# of a new version of the Kabanero platform, in part by editing this file
+# Once the operators are rolled out, the administrator can choose to use
+# the new Kabanero version by editing the Kabanero resource. This causes
+# other resources to be updated using this mapping
+
+# When the Kabanero instance does not specify which version of Kabanero to use,
+# this is the value
+default: "0.1.2"
+
+# Top level: relates Kabanero versions to software versions
+kabanero:
+- version: "0.1.1"
+  related-versions: 
+    appsody-operator: "0.1.0"
+    cli-services: "0.1.0"
+    landing: "0.1.0"
+- version: "0.1.2"
+  related-versions: 
+    appsody-operator: "0.1.0"
+    cli-services: "0.1.0"
+    landing: "0.1.0"
+- version: "0.1.3"
+  related-versions: 
+    appsody-operator: "0.1.0"
+    cli-services: "0.1.0"
+    landing: "0.1.0"
+
+related-software:
+  appsody-operator:
+  - version: "0.1.0"
+    orchestrations: "orchestrations/appsody-operator/0.1"
+    identifiers:
+      repository: "appsody/appsody"
+      tag: "0.1.0"
+
+  landing:
+  - version: "0.1.0"
+    orchestrations: "orchestrations/landing/0.1"
+
+  cli-services: 
+  - version: "0.1.1"
+    orchestrations: "orchestrations/cli-services/0.1"
+    identifiers:
+      repository: "kabanero-io/kabanero-cli"
+      tag: "0.1.0"
+  - version: "0.1.0"
+    orchestrations: "orchestrations/cli-services/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.1.0"

@@ -3,13 +3,13 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
-	"strings"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	knsapis "github.com/knative/serving-operator/pkg/apis"
 	knsv1alpha1 "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 // Retrieves the knative serving instance status.
@@ -26,17 +26,17 @@ func getKnativeServingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (boo
 	kns := &knsv1alpha1.KnativeServing{}
 	err = cl.Get(context.TODO(), client.ObjectKey{
 		Namespace: knsInstNamespace,
-		Name: knsInstName}, kns)
+		Name:      knsInstName}, kns)
 
 	if err != nil {
-		message := "Knative serving instance with the name of " + knsInstName + " under the namespace of "+ knsInstNamespace + " could not be found."
+		message := "Knative serving instance with the name of " + knsInstName + " under the namespace of " + knsInstNamespace + " could not be found."
 		k.Status.KnativeServing.Ready = "False"
 		k.Status.KnativeServing.ErrorMessage = message
-		fmt.Println("Error while assessing Knative serving readiness. " + message, err)
+		fmt.Println("Error while assessing Knative serving readiness. "+message, err)
 		return false, err
 	}
 
-	// Find the ready type condition. A status can be either True, False, or Unknown. 
+	// Find the ready type condition. A status can be either True, False, or Unknown.
 	// An Unknown status value is treated the same as a value of False.
 	statusReadyType := "ready"
 	ready := false
@@ -54,7 +54,7 @@ func getKnativeServingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (boo
 				k.Status.KnativeServing.ErrorMessage = condition.Message
 			}
 
-			break;
+			break
 		}
 	}
 
