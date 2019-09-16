@@ -88,6 +88,10 @@ spec:
               type: object
             landing:
               type: object
+            targetNamespaces:
+              items:
+                type: string
+              type: array
             tekton:
               properties:
                 disabled:

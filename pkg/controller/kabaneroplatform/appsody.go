@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -42,7 +43,16 @@ func reconcile_appsody(ctx context.Context, k *kabanerov1alpha1.Kabanero, c clie
 		return err
 	}
 
+	//Determine watch namespaces
+	var watchNamespaces string
+	if len(k.Spec.TargetNamespaces) > 0 {
+		watchNamespaces = k.GetObjectMeta().GetNamespace() + "," + strings.Join(k.Spec.TargetNamespaces, ",")
+	} else {
+		watchNamespaces = k.GetObjectMeta().GetNamespace()
+	}
+
 	transforms := []mf.Transformer{
+		transforms.ReplaceEnvVariable("WATCH_NAMESPACE", watchNamespaces),
 		mf.InjectOwner(k),
 		mf.InjectNamespace(k.GetNamespace()),
 	}
