@@ -311,7 +311,6 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo)
 		if err != nil {
-			r_log.Error(err, "indexresolver error, requeue")
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
 		// Handle Index Collection version
@@ -397,7 +396,6 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			case matchingCollection.collection.Manifest.Version == c.Spec.Version:
 				err := activate(c, &matchingCollection.collection, r.client)
 				if err != nil {
-					r_log.Error(err, "activatev1 returned an error, requeue")
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
 				c.Status.ActiveLocation = matchingCollection.repositoryUrl
@@ -407,11 +405,9 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 				//need a v2 activate
 				err := activatev2(c, &matchingCollection.collectionv2, r.client)
 				if err != nil {
-					r_log.Error(err, "activatev2 returned an error, requeue")
 					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 				}
 				c.Status.ActiveLocation = matchingCollection.repositoryUrl
-				log.Info(fmt.Sprintf("activatev2 success"))
 				return reconcile.Result{}, nil
 			}
 		}

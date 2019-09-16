@@ -195,6 +195,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	// Reconcile the Kabanero CLI.
 	err = reconcileKabaneroCli(ctx, instance, r.client, reqLogger)
 	if err != nil {
+		fmt.Println("Error in reconcile Kabanero CLI: ", err)
 		return reconcile.Result{}, err
 	}
 
