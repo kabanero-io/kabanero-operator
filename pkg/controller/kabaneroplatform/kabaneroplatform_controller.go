@@ -11,8 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -50,15 +52,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner Kabanero
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Create a handler
+	t_h := &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &kabanerov1alpha1.Kabanero{},
-	})
+	}
+
+	// Create predicate
+	t_pred := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Ignore updates to CR status in which case metadata.Generation does not change
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
+
+	//Watch Collections
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, t_h, t_pred)
 	if err != nil {
 		return err
 	}
+
 
 	return nil
 }
@@ -102,40 +115,34 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile featured collections: ", err)
 		return reconcile.Result{}, err
 	}
 	
 	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile featured collections V2: ", err)
 		return reconcile.Result{}, err
 	}
 
 	//Reconcile the appsody operator
 	err = reconcile_appsody(ctx, instance, r.client)
-        if err != nil {
-                fmt.Println("Error in reconcile appsody: ", err)
-                return reconcile.Result{}, err
-        }
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	
 	// Deploy the kabanero landing page
 	err = deployLandingPage(instance, r.client)
 	if err != nil {
-		fmt.Println("Error deploying the kabanero landing page.", err)
 		return reconcile.Result{}, err
 	}
 
 	err = reconcileKabaneroCli(ctx, instance, r.client)
 	if err != nil {
-		fmt.Println("Error in reconcile Kabanero CLI: ", err)
 		return reconcile.Result{}, err
 	}
 	
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(instance, r.client, ctx, reqLogger)
 	if err != nil {
-		fmt.Println("Error updating the status", err)
 		return reconcile.Result{}, err
 	}
 
@@ -143,7 +150,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	if !isReady {
 		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 	}
-        
+
 	return reconcile.Result{}, nil
 }
 

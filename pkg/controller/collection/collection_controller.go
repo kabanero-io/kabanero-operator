@@ -9,7 +9,7 @@ import (
 	"github.com/blang/semver"
 	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+//	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,17 +63,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner Collection
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &kabanerov1alpha1.Collection{},
-	})
-	if err != nil {
-		return err
-	}
-	
 
 	// Create a handler for handling Tekton Pipeline & Task events
 	t_h := &handler.EnqueueRequestForOwner{
