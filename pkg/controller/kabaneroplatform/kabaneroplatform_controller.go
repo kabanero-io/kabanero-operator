@@ -8,13 +8,15 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+//	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -47,15 +49,28 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner Kabanero
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Create a handler
+	t_h := &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &kabanerov1alpha1.Kabanero{},
-	})
+	}
+
+	// Create predicate
+	t_pred := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Returning true only when the metadata generation has changed, 
+			// allows us to ignore events where only the object status has changed, 
+			// since the generation is not incremented when only the status changes
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
+
+	//Watch Collections
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, t_h, t_pred)
 	if err != nil {
 		return err
 	}
+
 
 	return nil
 }

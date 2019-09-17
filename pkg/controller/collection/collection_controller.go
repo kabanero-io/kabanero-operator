@@ -9,18 +9,21 @@ import (
 	"github.com/blang/semver"
 	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+//	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_collection")
@@ -44,19 +47,58 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Create Collection predicate
+	c_pred := predicate.Funcs{
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Returning true only when the metadata generation has changed, 
+			// allows us to ignore events where only the object status has changed, 
+			// since the generation is not incremented when only the status changes
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
+
 	// Watch for changes to primary resource Collection
-	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, &handler.EnqueueRequestForObject{}, c_pred)
 	if err != nil {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner Collection
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Create a handler for handling Tekton Pipeline & Task events
+	t_h := &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &kabanerov1alpha1.Collection{},
-	})
+	}
+	
+	// Create Tekton predicate
+	t_pred := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// ignore Create. Collection create applies the documents. Watch would unnecessarily requeue.
+			return false
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Returning true only when the metadata generation has changed, 
+			// allows us to ignore events where only the object status has changed, 
+			// since the generation is not incremented when only the status changes
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
+	
+	// Watch for changes to Collection Tekton Pipeline objects
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Pipeline{}}, t_h, t_pred)
 	if err != nil {
+		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Task{}}, t_h, t_pred)
+	if err != nil {
+		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
 	}
 
@@ -652,15 +694,6 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			transformedManifests = append(transformedManifests, transformedRemoteManifest{m, asset.Url})
 		}
 
-		// Now delete the manifests
-		for _, transformedManifest := range transformedManifests {
-			err := transformedManifest.m.DeleteAll()
-			if err != nil {
-				// It's hard to know what the state of things is now... log the error.
-				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
-			}
-		}
-
 		// Indicate there is not currently an active version of this collection.
 		collectionResource.Status.ActiveVersion = ""
 		collectionResource.Status.ActiveAssets = nil
@@ -669,63 +702,46 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 
 	// Now apply the new version
 	for _, asset := range collection.Pipelines {
-		// If the asset has a digest, see if the digest has changed.  Don't bother updating anything
-		// if the digest is the same and the asset is active.
-		log.Info(fmt.Sprintf("Checking digest for asset %v", asset.Url))
-		applyAsset := true
-		if len(asset.Sha256) > 0 {
-			for _, assetStatus := range collectionResource.Status.ActiveAssets {
-				if assetMatchv2(assetStatus, asset) && (assetStatus.Digest == asset.Sha256) && (assetStatus.Status == asset_active_status) {
-					// The digest is equal and the asset is active - don't apply the asset.
-					log.Info(fmt.Sprintf("Digest has not changed %v", asset.Sha256))
-					applyAsset = false
-					break
-				}
-			}
+		log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
+
+		// Retrieve manifests as unstructured
+		manifests, err := GetManifests(asset.Url, renderingContext)
+		if err != nil {
+			return err
 		}
 
-		if applyAsset {
-			log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
+		// Construct dummy Manifest and client, due to client being private struct field
+		m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
+		if err != nil {
+			return err
+		}
 
-			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url, renderingContext)
+		// Assign the real manifests
+		m.Resources = manifests
+
+		log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+		transforms := []mf.Transformer{
+			mf.InjectOwner(collectionResource),
+			mf.InjectNamespace(collectionResource.GetNamespace()),
+		}
+
+		err = m.Transform(transforms...)
+		if err != nil {
+			return err
+		}
+
+		for _, spec := range m.Resources {
+			log.Info(fmt.Sprintf("Applying resource: %v", spec))
+
+			err := m.Apply(&spec)
 			if err != nil {
-				return err
-			}
-
-			// Construct dummy Manifest and client, due to client being private struct field
-			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
-			if err != nil {
-				return err
-			}
-
-			// Assign the real manifests
-			m.Resources = manifests
-
-			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
-
-			transforms := []mf.Transformer{
-				mf.InjectOwner(collectionResource),
-				mf.InjectNamespace(collectionResource.GetNamespace()),
-			}
-
-			err = m.Transform(transforms...)
-			if err != nil {
-				return err
-			}
-
-			for _, spec := range m.Resources {
-				log.Info(fmt.Sprintf("Applying resource: %v", spec))
-
-				err := m.Apply(&spec)
-				if err != nil {
-					// Update the asset status with the error message
-					log.Error(err, "Error installing the resource", "resource", asset.Url)
-					updateAssetStatusv2(&collectionResource.Status, asset, err.Error())
-				} else {
-					// Update the digest for this asset in the status
-					updateAssetStatusv2(&collectionResource.Status, asset, "")
-				}
+				// Update the asset status with the error message
+				log.Error(err, "Error installing the resource", "resource", asset.Url)
+				updateAssetStatusv2(&collectionResource.Status, asset, err.Error())
+			} else {
+				// Update the digest for this asset in the status
+				updateAssetStatusv2(&collectionResource.Status, asset, "")
 			}
 		}
 	}
