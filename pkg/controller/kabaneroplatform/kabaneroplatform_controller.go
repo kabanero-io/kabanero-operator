@@ -58,7 +58,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create predicate
 	t_pred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Ignore updates to CR status in which case metadata.Generation does not change
+			// Returning true only when the metadata generation has changed, 
+			// allows us to ignore events where only the object status has changed, 
+			// since the generation is not incremented when only the status changes
 			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 		},
 	}
