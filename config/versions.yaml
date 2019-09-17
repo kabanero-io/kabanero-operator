@@ -34,12 +34,15 @@ related-software:
   - version: "0.1.0"
     orchestrations: "orchestrations/appsody-operator/0.1"
     identifiers:
-      repository: "appsody/appsody"
+      repository: "appsody/application-operator"
       tag: "0.1.0"
 
   landing:
   - version: "0.1.0"
     orchestrations: "orchestrations/landing/0.1"
+    identifiers:
+      repository: "kabanero/landing"
+      tag: "0.1.0"
 
   cli-services: 
   - version: "0.1.1"

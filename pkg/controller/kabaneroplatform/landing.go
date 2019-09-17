@@ -137,26 +137,36 @@ func getLandingURL(k *kabanerov1alpha1.Kabanero, config *restclient.Config) (str
 	return landingURL, err
 }
 
-// Adds customizations to the OpenShift web console.
-func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Clientset, config *restclient.Config, landingURL string) error {
-
-	// Get the Route instance.
+// Returns a copy of the OKD web-console ConfigMap
+func getWebConsoleConfigMap(config *restclient.Config) (*corev1.ConfigMap, error) {
 	myScheme := runtime.NewScheme()
 	cl, _ := client.New(config, client.Options{Scheme: myScheme})
 	corev1.AddToScheme(myScheme)
 	configmap := &corev1.ConfigMap{}
 	err := cl.Get(context.TODO(), types.NamespacedName{
 		Namespace: "openshift-web-console", Name: "webconsole-config"}, configmap)
+	if err != nil {
+		return nil, err
+	}
 
+	cmCopy := configmap.DeepCopy()
+	if cmCopy == nil {
+		err = errors.New("getWebConsoleConfigMap: Failed to copy web-console configuration data")
+	}
+
+	return cmCopy, err
+}
+
+// Adds customizations to the OpenShift web console.
+func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Clientset, config *restclient.Config, landingURL string) error {
+	// Get a copy of the web-console ConfigMap.
+	cm, err := getWebConsoleConfigMap(config)
 	if err != nil {
 		return err
 	}
 
-	// Create a copy of the original config map.
-	newcm := configmap.DeepCopy()
-
 	// Get the embedded yaml entry in the web console ConfigMap yaml.
-	wccyaml := newcm.Data["webconsole-config.yaml"]
+	wccyaml := cm.Data["webconsole-config.yaml"]
 
 	m := make(map[string]interface{})
 	err = yaml.Unmarshal([]byte(wccyaml), &m)
@@ -172,13 +182,18 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Cli
 			extmap := v.(map[interface{}]interface{})
 			for kk, vv := range extmap {
 				if kk == "scriptURLs" {
-					su := vv.([]interface{})
-					eScripts := getEffectiveCustomizationURLs(su, scripts)
-					sun := make([]interface{}, (len(su) + len(eScripts)))
+					eScripts := scripts
+					sun := make([]interface{}, (len(eScripts)))
 					var ix = 0
-					for i := 0; i < len(su); i++ {
-						sun[ix] = su[ix]
-						ix++
+					if vv != nil {
+						su := vv.([]interface{})
+						eScripts = getEffectiveCustomizationURLs(su, scripts)
+						sun = make([]interface{}, (len(su) + len(eScripts)))
+
+						for i := 0; i < len(su); i++ {
+							sun[ix] = su[ix]
+							ix++
+						}
 					}
 					for _, u := range eScripts {
 						sun[ix] = u
@@ -187,13 +202,18 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Cli
 					extmap[kk] = sun
 				}
 				if kk == "stylesheetURLs" {
-					su := vv.([]interface{})
-					eSsheets := getEffectiveCustomizationURLs(su, ssheets)
-					sun := make([]interface{}, (len(su) + len(eSsheets)))
+					eSsheets := ssheets
+					sun := make([]interface{}, (len(eSsheets)))
 					var ix = 0
-					for i := 0; i < len(su); i++ {
-						sun[ix] = su[ix]
-						ix++
+					if vv != nil {
+						su := vv.([]interface{})
+						eSsheets = getEffectiveCustomizationURLs(su, ssheets)
+						sun = make([]interface{}, (len(su) + len(eSsheets)))
+
+						for i := 0; i < len(su); i++ {
+							sun[ix] = su[ix]
+							ix++
+						}
 					}
 
 					for _, u := range eSsheets {
@@ -210,16 +230,106 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Cli
 
 	// Update our copy of the web console yaml and update it.
 	upatedCMBytes, err := yaml.Marshal(m)
-	newcm.Data["webconsole-config.yaml"] = string(upatedCMBytes)
-	_, err = yaml.Marshal(newcm)
+	cm.Data["webconsole-config.yaml"] = string(upatedCMBytes)
+	_, err = yaml.Marshal(cm)
 
 	if err != nil {
 		return err
 	}
 
-	kllog.Info(fmt.Sprintf("customizeWebConsole: ConfigMap for update: %v", newcm))
+	kllog.Info(fmt.Sprintf("customizeWebConsole: ConfigMap for update: %v", cm))
 
-	_, err = clientset.CoreV1().ConfigMaps("openshift-web-console").Update(newcm)
+	_, err = clientset.CoreV1().ConfigMaps("openshift-web-console").Update(cm)
+
+	return err
+}
+
+// Removes customizations from the openshift console.
+func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero) error {
+	// Create a clientset to drive API operations on resources.
+	config, err := clientcmd.BuildConfigFromFlags("", "")
+	if err != nil {
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	// Get a copy of the web-console ConfigMap.
+	cm, err := getWebConsoleConfigMap(config)
+	if err != nil {
+		return err
+	}
+
+	// Get the embedded yaml entry in the web console ConfigMap yaml.
+	wccyaml := cm.Data["webconsole-config.yaml"]
+	m := make(map[string]interface{})
+	err = yaml.Unmarshal([]byte(wccyaml), &m)
+	if err != nil {
+		return err
+	}
+
+	// Update the extensions section of the embedded webconsole-config.yaml entry
+	landingURL, err := getLandingURL(k, config)
+	if err != nil {
+		return err
+	}
+	scripts, ssheets := getCustomizationURLs(landingURL)
+
+	for k, v := range m {
+		if k == "extensions" {
+			extmap := v.(map[interface{}]interface{})
+			for kk, vv := range extmap {
+				if kk == "scriptURLs" {
+					if vv != nil {
+						su := vv.([]interface{})
+						var esu []interface{}
+						for _, s := range su {
+							if isInStringList(scripts, s.(string)) {
+								continue
+							} else {
+								esu = append(esu, s)
+							}
+						}
+						extmap[kk] = esu
+					}
+				}
+
+				if kk == "stylesheetURLs" {
+					if vv != nil {
+						ssu := vv.([]interface{})
+						var essu []interface{}
+
+						for _, ss := range ssu {
+							if isInStringList(ssheets, ss.(string)) {
+								continue
+							} else {
+								essu = append(essu, ss)
+							}
+						}
+						extmap[kk] = essu
+					}
+				}
+			}
+			m[k] = extmap
+			break
+		}
+	}
+
+	// Update our copy of the web console yaml and update it.
+	upatedCMBytes, err := yaml.Marshal(m)
+	cm.Data["webconsole-config.yaml"] = string(upatedCMBytes)
+	_, err = yaml.Marshal(cm)
+
+	if err != nil {
+		return err
+	}
+
+	kllog.Info(fmt.Sprintf("removeWebConsoleCustomization: ConfigMap for update: %v", cm))
+
+	_, err = clientset.CoreV1().ConfigMaps("openshift-web-console").Update(cm)
 
 	return err
 }
@@ -254,16 +364,24 @@ func getEffectiveCustomizationURLs(extUrls []interface{}, urls []string) []strin
 	var eUrls []string
 
 	for _, url := range urls {
-		if !contains(extUrls, url) {
+		if !isInInterfaceList(extUrls, url) {
 			eUrls = append(eUrls, url)
 		}
 	}
 	return eUrls
-
 }
 
 // Checks if the given string is contained in the given array.
-func contains(urls []interface{}, s string) bool {
+func isInStringList(urls []string, s string) bool {
+	for _, url := range urls {
+		if url == s {
+			return true
+		}
+	}
+	return false
+}
+
+func isInInterfaceList(urls []interface{}, s string) bool {
 	for _, url := range urls {
 		if url == s {
 			return true
