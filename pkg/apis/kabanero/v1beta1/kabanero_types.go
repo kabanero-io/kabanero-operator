@@ -72,7 +72,7 @@ type KabaneroCliServicesCustomizationSpec struct {
 }
 
 type KabaneroLandingCustomizationSpec struct {
-	Enable bool `json:"enable,omitempty"`
+	Enable *bool `json:"enable,omitempty"`
 }
 
 // KabaneroStatus defines the observed state of the Kabanero instance
@@ -94,7 +94,7 @@ type KabaneroStatus struct {
 	Cli CliStatus `json:"cli,omitempty"`
 
 	// Kabanero Landing page readiness status.
-	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
+	Landing *KabaneroLandingPageStatus `json:"landing,omitempty"`
 
 	// Appsody instance readiness status.
 	Appsody AppsodyStatus `json:"appsody,omitempty"`

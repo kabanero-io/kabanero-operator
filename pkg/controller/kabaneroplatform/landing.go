@@ -12,6 +12,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -27,6 +28,11 @@ var landingImageTag = "0.1.0"
 
 // Deploys resources and customizes to the Openshift web console.
 func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+	// if enable is false do not deploy the landing page
+	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
+		err := cleanupLandingPage(k, c)
+		return err
+	}
 	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.AppsodyOperator.Version)
 	if err != nil {
 		return err
@@ -96,6 +102,73 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	err = customizeWebConsole(k, clientset, config, landingURL)
 
 	return err
+}
+
+func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+	err := removeWebConsoleCustomization(k)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	clientset, err := getClient()
+	deploymentClient := clientset.AppsV1().Deployments(k.GetNamespace())
+	if err != nil {
+		return err
+	}
+
+	deletePolicy := metav1.DeletePropagationForeground
+	err = deploymentClient.Delete("kabanero-landing", &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.AppsodyOperator.Version)
+	if err != nil {
+		return err
+	}
+
+	//The context which will be used to render any templates
+	templateContext := rev.Identifiers
+
+	image, err := imageUriWithOverrides("", "", "", rev)
+	if err != nil {
+		return err
+	}
+	templateContext["image"] = image
+
+	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateContext)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), c)
+	if err != nil {
+		return err
+	}
+
+	transforms := []mf.Transformer{mf.InjectOwner(k), mf.InjectNamespace(k.GetNamespace())}
+	err = m.Transform(transforms...)
+	if err != nil {
+		return err
+	}
+
+	err = m.DeleteAll()
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Retrieves the landing URL from the landing Route.
@@ -392,6 +465,17 @@ func isInInterfaceList(urls []interface{}, s string) bool {
 
 // Retrieves the current kabanero landing page status.
 func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
+	// if landing page is disabled set landing status in kabanero to nil so it does not show up in kabanero's status
+	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
+		k.Status.Landing = nil
+		return true, nil
+	}
+	// landing page is optional. The status was defined as a pointer so that it is not displayed
+	// in the kabanero instance data if the landing page is disabled. That is because structures are
+	// never 'empty' for json tagging 'omitempty' to take effect.
+	// We need to create the structure here before we use it.
+	status := kabanerov1alpha1.KabaneroLandingPageStatus{}
+	k.Status.Landing = &status
 	k.Status.Landing.ErrorMessage = ""
 	k.Status.Landing.Ready = "False"
 

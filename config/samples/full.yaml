@@ -37,8 +37,7 @@ spec:
     image: kabanero-io/cli-services:0.1.0
 
   landing:
-    # TBD
-
+    enable: true
 
   collections: 
     # A list of those repositories which are searched for collections

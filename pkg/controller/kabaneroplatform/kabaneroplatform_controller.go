@@ -293,10 +293,13 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 
 // Handles all cleanup logic for the Kabanero instance.
 func cleanup(k *kabanerov1alpha1.Kabanero) error {
-	// Remove landing page customizations for the current namespace.
-	err := removeWebConsoleCustomization(k)
-	if err != nil {
-		return err
+        // if landing enabled 
+	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
+		// Remove landing page customizations for the current namespace.
+		err := removeWebConsoleCustomization(k)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
