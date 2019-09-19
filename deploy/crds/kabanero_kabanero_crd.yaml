@@ -83,6 +83,9 @@ spec:
                     type: boolean
                 type: object
               landing:
+                properties:
+                  enable:
+                    type: boolean
                 type: object
               tekton:
                 properties:
