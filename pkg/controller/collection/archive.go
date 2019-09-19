@@ -126,16 +126,19 @@ func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([
 			b_sum := sha256.Sum256(b)
 			for _, content := range collectionmanifest.Contents {
 					if content.File == strings.TrimPrefix(header.Name, "./") {
-						var c_sum [32]byte
-						decoded, err := hex.DecodeString(content.Sha256)
-						if err != nil {
-							return nil, err
+						// Older releases may not have a sha256 in the manifest.yaml
+						if content.Sha256 != "" {
+							var c_sum [32]byte
+							decoded, err := hex.DecodeString(content.Sha256)
+							if err != nil {
+								return nil, err
+							}
+							copy(c_sum[:], decoded)
+							if b_sum != c_sum {
+								return nil, fmt.Errorf("Archive file: %v  manifest.yaml checksum: %x  did not match file checksum: %x", header.Name, c_sum, b_sum)
+							}
+							match = true
 						}
-						copy(c_sum[:], decoded)
-						if b_sum != c_sum {
-//							return nil, fmt.Errorf("Archive file: %v  manifest.yaml checksum: %x  did not match file checksum: %x", header.Name, c_sum, b_sum)
-						}
-						match = true
 					}
 			}
 			if match != true {
@@ -176,7 +179,7 @@ func GetManifests(url string, checksum string, renderingContext map[string]inter
 	copy(c_sum[:], decoded)
 	
 	if b_sum != c_sum {
-//		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
+		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
 	}
 	
 	manifests, err := DecodeManifests(b, renderingContext)
