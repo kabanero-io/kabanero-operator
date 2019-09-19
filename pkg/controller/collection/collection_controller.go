@@ -659,7 +659,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
 
 			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url, renderingContext)
+			manifests, err := GetManifests(asset.Url, asset.Digest, renderingContext)
 			if err != nil {
 				log.Error(err, errorMessage, "resource", asset.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
@@ -705,7 +705,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 		log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
 
 		// Retrieve manifests as unstructured
-		manifests, err := GetManifests(asset.Url, renderingContext)
+		manifests, err := GetManifests(asset.Url, asset.Sha256, renderingContext)
 		if err != nil {
 			return err
 		}

@@ -12,7 +12,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"net/http"
 	"strings"
+	"crypto/sha256"
+	"encoding/hex"
+	yml "gopkg.in/yaml.v2"
 )
+
+// Collection archive manifest.yaml
+type CollectionManifest struct {
+	Contents []CollectionContents                 `yaml:"contents,omitempty"`
+}
+
+type CollectionContents struct {
+	File   string                 `yaml:"file,omitempty"`
+	Sha256 string                 `yaml:"sha256,omitempty"`
+}
+
 
 func DownloadToByte(url string) ([]byte, error) {
 	r, err := http.Get(url)
@@ -29,13 +43,59 @@ func DownloadToByte(url string) ([]byte, error) {
 //For now, ignore manifest.yaml and return all other yaml files from the archive
 func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
 	manifests := []unstructured.Unstructured{}
+	var collectionmanifest CollectionManifest
+	
 
+
+	// Read the manifest.yaml from the collection archive
 	r := bytes.NewReader(archive)
 	gzReader, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Could not read manifest gzip"))
 	}
 	tarReader := tar.NewReader(gzReader)
+
+	foundManifest := false
+	for {
+		header, err := tarReader.Next()
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Could not read manifest tar"))
+		}
+
+		fmt.Printf("Header Name: %v", header.Name)
+
+		switch {
+		case strings.TrimPrefix(header.Name, "./") == "manifest.yaml":
+			//Buffer the document for further processing
+			b := make([]byte, header.Size)
+			i, err := tarReader.Read(b)
+			//An EOF error is normal, as long as bytes read > 0
+			if err == io.EOF && i == 0 || err != nil && err != io.EOF {
+				return nil, fmt.Errorf("Error reading archive %v: %v", header.Name, err.Error())
+			}
+			err = yml.Unmarshal(b, &collectionmanifest)
+			if err != nil {
+				return nil, err
+			}
+			foundManifest = true
+		}
+	}
+	if foundManifest != true {
+		return nil, fmt.Errorf("Error reading archive, unable to read manifest.yaml")
+	}
+
+	// Re-Read the archive and validate against archive manifest.yaml
+	r = bytes.NewReader(archive)
+	gzReader, err = gzip.NewReader(r)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Could not read manifest gzip"))
+	}
+	tarReader = tar.NewReader(gzReader)
 
 	for {
 		header, err := tarReader.Next()
@@ -48,9 +108,9 @@ func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([
 			return nil, errors.New(fmt.Sprintf("Could not read manifest tar"))
 		}
 
-		//For now skip manifest.yaml, rather than utilizing it as the index of the archive
+		// Ignore manifest.yaml on this pass, only read yaml files
 		switch {
-		case header.Name == "manifest.yaml" || strings.HasSuffix(header.Name, "/manifest.yaml"):
+		case strings.TrimPrefix(header.Name, "./") == "manifest.yaml":
 			break
 		case strings.HasSuffix(header.Name, ".yaml"):
 			//Buffer the document for further processing
@@ -59,6 +119,27 @@ func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([
 			//An EOF error is normal, as long as bytes read > 0
 			if err == io.EOF && i == 0 || err != nil && err != io.EOF {
 				return nil, fmt.Errorf("Error reading archive %v: %v", header.Name, err.Error())
+			}
+			
+			// Checksum. Lookup the read file in the index and compare sha256
+			match := false
+			b_sum := sha256.Sum256(b)
+			for _, content := range collectionmanifest.Contents {
+					if content.File == strings.TrimPrefix(header.Name, "./") {
+						var c_sum [32]byte
+						decoded, err := hex.DecodeString(content.Sha256)
+						if err != nil {
+							return nil, err
+						}
+						copy(c_sum[:], decoded)
+						if b_sum != c_sum {
+//							return nil, fmt.Errorf("Archive file: %v  manifest.yaml checksum: %x  did not match file checksum: %x", header.Name, c_sum, b_sum)
+						}
+						match = true
+					}
+			}
+			if match != true {
+				return nil, fmt.Errorf("File %v was found in the archive, but not in the manifest.yaml", header.Name)
 			}
 
 			//Apply the Kabanero yaml directive processor
@@ -80,12 +161,24 @@ func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([
 	return manifests, nil
 }
 
-func GetManifests(url string, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
+func GetManifests(url string, checksum string, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
 	b, err := DownloadToByte(url)
 	if err != nil {
 		return nil, err
 	}
-
+	
+	b_sum := sha256.Sum256(b)
+	var c_sum [32]byte
+	decoded, err := hex.DecodeString(checksum)
+	if err != nil {
+		return nil, err
+	}
+	copy(c_sum[:], decoded)
+	
+	if b_sum != c_sum {
+//		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
+	}
+	
 	manifests, err := DecodeManifests(b, renderingContext)
 	if err != nil {
 		return nil, err
