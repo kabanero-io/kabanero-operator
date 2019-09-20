@@ -25,3 +25,52 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kabanero-landing
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kabanero-landing
+subjects:
+- kind: ServiceAccount
+  name: kabanero-landing
+  namespace: kabanero
+roleRef:
+  kind: ClusterRole
+  name: kabanero-landing
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kabanero-landing
+  namespace: kabanero
+rules:
+- apiGroups:
+  - ""
+  - route.openshift.io
+  attributeRestrictions: null
+  resources:
+  - routes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  - route.openshift.io
+  attributeRestrictions: null
+  resources:
+  - routes/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kabanero.io
+  attributeRestrictions: null
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
