@@ -33,7 +33,7 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 		err := cleanupLandingPage(k, c)
 		return err
 	}
-	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.AppsodyOperator.Version)
+	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.Landing.Version)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 			return err
 		}
 	}
-	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.AppsodyOperator.Version)
+	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.Landing.Version)
 	if err != nil {
 		return err
 	}
@@ -465,17 +465,13 @@ func isInInterfaceList(urls []interface{}, s string) bool {
 
 // Retrieves the current kabanero landing page status.
 func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
-	// if landing page is disabled set landing status in kabanero to nil so it does not show up in kabanero's status
+	// if landing page is disabled set ready to false with a message explaining why.
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
-		k.Status.Landing = nil
+		k.Status.Landing.ErrorMessage = "The landing page is not ready because the configuration disables it."
+		k.Status.Landing.Ready = "False"
+		// Return true so we do not affect the overall status of kabanero.
 		return true, nil
 	}
-	// landing page is optional. The status was defined as a pointer so that it is not displayed
-	// in the kabanero instance data if the landing page is disabled. That is because structures are
-	// never 'empty' for json tagging 'omitempty' to take effect.
-	// We need to create the structure here before we use it.
-	status := kabanerov1alpha1.KabaneroLandingPageStatus{}
-	k.Status.Landing = &status
 	k.Status.Landing.ErrorMessage = ""
 	k.Status.Landing.Ready = "False"
 
