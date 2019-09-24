@@ -72,7 +72,8 @@ type KabaneroCliServicesCustomizationSpec struct {
 }
 
 type KabaneroLandingCustomizationSpec struct {
-	Enable bool `json:"enable,omitempty"`
+	Enable     *bool `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
 }
 
 // KabaneroStatus defines the observed state of the Kabanero instance

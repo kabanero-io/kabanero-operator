@@ -83,6 +83,11 @@ spec:
                     type: boolean
                 type: object
               landing:
+                properties:
+                  enable:
+                    type: boolean
+                  version:
+                    type: string
                 type: object
               tekton:
                 properties:
@@ -251,6 +256,8 @@ spec:
                 properties:
                   enable:
                     type: boolean
+                  version:
+                    type: string
                 type: object
               tekton:
                 properties:
