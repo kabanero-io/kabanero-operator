@@ -91,7 +91,6 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	}
 
 	// Create the deployment manually as we have to fill in some env vars.
-	image = "kabanero/kabanero-command-line-services:0.1.1-rc.1"
 	env := []corev1.EnvVar{{Name: "KABANERO_CLI_NAMESPACE", Value: k.GetNamespace()}}
 
 	// The CLI wants to know the Github organization name, if it was provided
