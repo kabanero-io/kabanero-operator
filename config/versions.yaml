@@ -44,7 +44,12 @@ related-software:
       repository: "kabanero/landing"
       tag: "0.1.0"
 
-  cli-services: 
+  cli-services:
+  - version: "0.1.1-rc.1"
+    orchestrations: "orchestrations/cli-services/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.1.1-rc.1"
   - version: "0.1.1"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
