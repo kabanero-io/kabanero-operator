@@ -102,7 +102,6 @@ func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Client
 						Containers: []corev1.Container{
 							{
 								Name:            name,
-								Image:           image,
 								ImagePullPolicy: "Always",
 								Ports: []corev1.ContainerPort{
 									{
@@ -122,7 +121,8 @@ func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Client
 	// deployment object in an incompatible way.
 	dInstance.Spec.Template.Spec.Containers[0].Env = env
 	dInstance.Spec.Template.Spec.Containers[0].EnvFrom = envFrom
-
+	dInstance.Spec.Template.Spec.Containers[0].Image = image
+	
 	if deploymentExists == false {
 		reqLogger.Info(fmt.Sprintf("createDeployment: Deployment for create: %v", dInstance))
 
