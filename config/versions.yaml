@@ -49,7 +49,7 @@ related-software:
       repository: "kabanero/landing"
       tag: "0.1.0"
   - version: "0.2.0"
-    orchestrations: "orchestrations/landing/0.2"
+    orchestrations: "orchestrations/landing/0.1"
     identifiers:
       repository: "kabanero/landing"
       tag: "0.2.0"
