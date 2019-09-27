@@ -81,11 +81,6 @@ spec:
                     type: string
                   type: array
               type: object
-            kappnav:
-              properties:
-                enable:
-                  type: boolean
-              type: object
             landing:
               properties:
                 enable:
@@ -140,8 +135,6 @@ spec:
                 errorMessage:
                   type: string
                 ready:
-                  type: string
-                version:
                   type: string
               type: object
             knativeEventing:

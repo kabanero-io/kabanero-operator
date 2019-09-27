@@ -219,13 +219,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// Reconcile the Kubernetes Application Navigator if enabled. It is disabled by default.
-	err = reconcileKappnav(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling the Kubernetes Application Navigator.")
-		return reconcile.Result{}, err
-	}
-
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, instance, r.client, reqLogger)
 	if err != nil {
