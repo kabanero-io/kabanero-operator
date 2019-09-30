@@ -27,7 +27,8 @@ func reconcile_appsody(ctx context.Context, k *kabanerov1alpha1.Kabanero, c clie
 		return err
 	}
 	templateContext["image"] = image
-
+	templateContext["namespace"] = k.GetObjectMeta().GetNamespace()
+	
 	f, err := rev.OpenOrchestration("appsody.yaml")
 	if err != nil {
 		return err

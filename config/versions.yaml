@@ -28,6 +28,11 @@ kabanero:
     appsody-operator: "0.1.0"
     cli-services: "0.1.0"
     landing: "0.1.0"
+- version: "0.2.0"
+  related-versions: 
+    appsody-operator: "0.2.0"
+    cli-services: "0.1.0"
+    landing: "0.1.0"
 
 related-software:
   appsody-operator:
@@ -36,6 +41,11 @@ related-software:
     identifiers:
       repository: "appsody/application-operator"
       tag: "0.1.0"
+  - version: "0.2.0"
+    orchestrations: "orchestrations/appsody-operator/0.2"
+    identifiers:
+      repository: "appsody/application-operator"
+      tag: "0.2.0"
 
   landing:
   - version: "0.1.0"
