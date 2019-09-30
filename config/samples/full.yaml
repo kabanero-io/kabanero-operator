@@ -31,14 +31,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.1.1"
+    version: "0.1.1-rc.1"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero-io/cli-services
-    tag: "0.1.0"
+    repository: kabanero/kabanero-command-line-services
+    tag: "0.1.1-rc.1"
 
     # Overrides the image uri
-    image: kabanero-io/cli-services:0.1.0
+    image: kabanero/kabanero-command-line-services:0.1.1-rc.1
 
   landing:
     # The landing page is enabled by default. To disable specify false.

@@ -32,7 +32,7 @@ kabanero:
   related-versions: 
     appsody-operator: "0.2.0"
     cli-services: "0.1.0"
-    landing: "0.1.0"
+    landing: "0.2.0"
 
 related-software:
   appsody-operator:
@@ -53,8 +53,18 @@ related-software:
     identifiers:
       repository: "kabanero/landing"
       tag: "0.1.0"
+  - version: "0.2.0"
+    orchestrations: "orchestrations/landing/0.1"
+    identifiers:
+      repository: "kabanero/landing"
+      tag: "0.2.0"
 
   cli-services: 
+  - version: "0.1.1-rc.1"
+    orchestrations: "orchestrations/cli-services/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.1.1-rc.1"
   - version: "0.1.1"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
