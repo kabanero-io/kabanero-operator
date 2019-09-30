@@ -88,6 +88,10 @@ spec:
                 version:
                   type: string
               type: object
+            targetNamespaces:
+              items:
+                type: string
+              type: array
             tekton:
               properties:
                 disabled:

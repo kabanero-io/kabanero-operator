@@ -11,6 +11,10 @@ spec:
   # can be overriden individually as well
   version: "0.1.2"
 
+  targetNamespaces:
+  - ns1
+  - ns2
+
   appsody-operator:
     # Overrides the platform wide settings for version on this component
     version: "0.1.1"
