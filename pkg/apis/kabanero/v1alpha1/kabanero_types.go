@@ -16,8 +16,12 @@ type KabaneroSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	Version     string                   `json:"version,omitempty"`
-	Github      GithubConfig             `json:"github,omitempty"`
+	Version string `json:"version,omitempty"`
+
+	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
+
+	Github GithubConfig `json:"github,omitempty"`
+
 	Collections InstanceCollectionConfig `json:"collections,omitempty"`
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
