@@ -136,10 +136,18 @@ spec:
             kappnav:
               description: Kabanero Application Navigator instance readiness status.
               properties:
+                apiLocations:
+                  items:
+                    type: string
+                  type: array
                 errorMessage:
                   type: string
                 ready:
                   type: string
+                uiLocations:
+                  items:
+                    type: string
+                  type: array
               type: object
             knativeEventing:
               description: Knative eventing instance readiness status.
