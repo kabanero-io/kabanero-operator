@@ -81,6 +81,7 @@ type KabaneroCliServicesCustomizationSpec struct {
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
 	Tag        string `json:"tag,omitempty"`
+	SessionExpirationSeconds string `json:"sessionExpirationSeconds,omitempty"`
 }
 
 type KabaneroLandingCustomizationSpec struct {
