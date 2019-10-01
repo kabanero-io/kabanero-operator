@@ -527,3 +527,19 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client)
 
 	return ready, err
 }
+
+// Returns a Clientset object.
+func getClient() (*kubernetes.Clientset, error) {
+	// Create a clientset to drive API operations on resources.
+	config, err := clientcmd.BuildConfigFromFlags("", "")
+	if err != nil {
+		return nil, err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientset, err
+}

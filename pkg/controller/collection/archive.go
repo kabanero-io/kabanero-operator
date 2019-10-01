@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/go-logr/logr"
 	"io"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,7 +42,7 @@ func DownloadToByte(url string) ([]byte, error) {
 //Read the manifests from a tar.gz archive
 //It would be better to use the manifest.yaml as the index, and check the signatures
 //For now, ignore manifest.yaml and return all other yaml files from the archive
-func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
+func decodeManifests(archive []byte, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]unstructured.Unstructured, error) {
 	manifests := []unstructured.Unstructured{}
 	var collectionmanifest CollectionManifest
 	
@@ -138,6 +139,12 @@ func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([
 								return nil, fmt.Errorf("Archive file: %v  manifest.yaml checksum: %x  did not match file checksum: %x", header.Name, c_sum, b_sum)
 							}
 							match = true
+						} else {
+							// Would be nice if we could make this a warning message, but it seems like the only
+							// options are error and info.  It's possible that some implementation has other methods
+							// but someone needs to investigate.
+							reqLogger.Info(fmt.Sprintf("Archive file %v was listed in the manifest but had no checksum.  Checksum validation for this file is skipped.", header.Name))
+							match = true
 						}
 					}
 			}
@@ -164,7 +171,7 @@ func DecodeManifests(archive []byte, renderingContext map[string]interface{}) ([
 	return manifests, nil
 }
 
-func GetManifests(url string, checksum string, renderingContext map[string]interface{}) ([]unstructured.Unstructured, error) {
+func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]unstructured.Unstructured, error) {
 	b, err := DownloadToByte(url)
 	if err != nil {
 		return nil, err
@@ -182,7 +189,7 @@ func GetManifests(url string, checksum string, renderingContext map[string]inter
 		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
 	}
 	
-	manifests, err := DecodeManifests(b, renderingContext)
+	manifests, err := decodeManifests(b, renderingContext, reqLogger)
 	if err != nil {
 		return nil, err
 	}

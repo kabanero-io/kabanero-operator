@@ -26,8 +26,6 @@ type KabaneroSpec struct {
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
 
-	Kappnav KappnavCustomizationSpec `json:"kappnav,omitempty"`
-
 	AppsodyOperator AppsodyCustomizationSpec `json:"appsodyOperator,omitempty"`
 
 	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
@@ -60,11 +58,6 @@ type RepositoryConfig struct {
 type TektonCustomizationSpec struct {
 	Disabled bool   `json:"disabled,omitempty"`
 	Version  string `json:"version,omitempty"`
-}
-
-// KappnavCustomizationSpec defines customization entries for Kubernetes Application Navigator
-type KappnavCustomizationSpec struct {
-	Enable bool `json:"enable,omitempty"`
 }
 
 type AppsodyCustomizationSpec struct {
@@ -168,7 +161,6 @@ type AppsodyStatus struct {
 type KappnavStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
