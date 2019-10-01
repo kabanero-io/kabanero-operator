@@ -9,7 +9,7 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: "0.1.2"
+  version: "0.2.0"
 
   targetNamespaces:
   - ns1
@@ -25,9 +25,6 @@ spec:
 
     # Overrides the image uri
     image: appsody/appsody-operator:0.1.0
-
-  kappnav:
-    enable: true
 
   cliServices:
     # Overrides the setting for version on this component
@@ -48,7 +45,7 @@ spec:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/v0.1.2/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/v0.2.0-beta1/kabanero-index.yaml
       # Activates a default set of collections
       activateDefaultCollections: true
   # The information in the Github section is used by the Kabanero CLI to
