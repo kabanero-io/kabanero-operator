@@ -47,11 +47,6 @@ func getKappnavStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, erro
 	// in the Kabanero status for fear of misleading the user into thinking
 	// that there is a configuration problem.
 	if err != nil {
-		if errors.IsNotFound(err) {
-			k.Status.Kappnav = nil
-			return true, nil // Don't fail Kabanero status for this.
-		}
-
 		k.Status.Kappnav = nil
 		return true, nil // Don't fail Kabanero status for this.
 	}
