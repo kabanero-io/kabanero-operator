@@ -48,6 +48,8 @@ spec:
                   type: string
                 repository:
                   type: string
+                sessionExpirationSeconds:
+                  type: string
                 tag:
                   type: string
                 version:
