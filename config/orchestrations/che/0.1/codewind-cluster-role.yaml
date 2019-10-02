@@ -1,0 +1,82 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: eclipse-codewind
+  labels:
+    app: eclipse-codewind
+rules:
+- apiGroups: ["extensions", ""]
+  resources: ["ingresses", "ingresses/status", "podsecuritypolicies"]
+  verbs: ["delete", "create", "patch", "get", "list", "update", "watch", "use"]
+
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["delete", "create", "patch", "get", "list"]
+
+- apiGroups: [""]
+  resources: ["pods", "pods/portforward", "pods/log", "pods/exec"]
+  verbs: ["get", "list", "create", "delete", "watch"]
+
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "create", "watch"]
+
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "patch"]
+
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "create", "delete", "patch"]
+
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "create", "update", "delete", "patch"]
+
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["delete", "create", "patch", "get", "list"]
+
+- apiGroups: ["icp.ibm.com"]
+  resources: ["images"]
+  verbs: ["get", "list", "create", "watch"]
+
+- apiGroups: ["apps", "extensions"]
+  resources: ["deployments"]
+  verbs: ["watch", "get", "list", "create", "update", "delete", "patch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources: ["replicasets", "replicasets/finalizers"]
+  verbs: ["get", "list", "update", "delete"]
+
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "create", "delete"]
+
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests"]
+  verbs: ["delete", "get", "list", "watch", "create"]
+
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests/approval", "certificatesigningrequests/status"]
+  verbs: ["update"]
+
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews"]
+  verbs: ["create"]
+
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["rolebindings", "roles", "clusterroles"]
+  verbs: ["create", "get", "patch", "list"]
+
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch", "update"]
+
+- apiGroups: ["route.openshift.io"]
+  resources: ["routes", "routes/custom-host"]
+  verbs: ["get", "list", "create", "delete", "watch", "patch", "update"]
