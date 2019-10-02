@@ -196,6 +196,8 @@ type AppsodyStatus struct {
 type KappnavStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
+	UiLocations  []string `json:"uiLocations,omitempty"`
+	ApiLocations []string `json:"apiLocations,omitempty"`
 }
 
 // CheStatus defines the observed status details of Che.
