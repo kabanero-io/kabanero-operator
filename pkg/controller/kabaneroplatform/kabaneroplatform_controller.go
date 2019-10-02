@@ -8,7 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-//	corev1 "k8s.io/api/core/v1"
+	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
+var ctrlr controller.Controller
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -46,6 +48,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+	ctrlr = c
 
 	// Watch for changes to primary resource Kabanero
 	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Kabanero{}}, &handler.EnqueueRequestForObject{})
@@ -54,27 +57,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Create a handler
-	t_h := &handler.EnqueueRequestForOwner{
+	tH := &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &kabanerov1alpha1.Kabanero{},
 	}
 
 	// Create predicate
-	t_pred := predicate.Funcs{
+	tPred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Returning true only when the metadata generation has changed, 
-			// allows us to ignore events where only the object status has changed, 
+			// Returning true only when the metadata generation has changed,
+			// allows us to ignore events where only the object status has changed,
 			// since the generation is not incremented when only the status changes
 			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 		},
 	}
 
-	//Watch Collections
-	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, t_h, t_pred)
+	// Watch Collections
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, tH, tPred)
 	if err != nil {
 		return err
 	}
-
 
 	return nil
 }
@@ -169,14 +171,17 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// Initializes dependency data
+	initializeDependencies(instance)
+
 	// Process kabanero instance deletion logic.
 	beingDeleted, err := processDeletion(ctx, instance, r.client, reqLogger)
-	if beingDeleted {
-		return reconcile.Result{}, nil
-	}
-
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	if beingDeleted {
+		return reconcile.Result{}, nil
 	}
 
 	// Deploy version 1 feature collection resources.
@@ -195,6 +200,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		reqLogger.Error(err, "Error reconciling featured collections V2.")
 		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV2, reqLogger)
 	}
+
 	// things worked reset requeue data
 	r.requeueDelayMapV2[request.Namespace] = RequeueData{0, time.Now()}
 
@@ -219,8 +225,15 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// Reconcile the Che Operator.
+	err = reconcileChe(ctx, instance, r.client, ctrlr)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling Che.")
+		return reconcile.Result{}, err
+	}
+
 	// Determine the status of the kabanero operator instance and set it.
-	isReady, err := processStatus(ctx, instance, r.client, reqLogger)
+	isReady, err := processStatus(ctx, request, instance, r.client, reqLogger)
 	if err != nil {
 		reqLogger.Error(err, "Error updating the status.")
 		return reconcile.Result{}, err
@@ -257,7 +270,7 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 	// The instance is being deleted.
 	if foundFinalizer {
 		// Drive kabanero cleanup processing.
-		err := cleanup(k)
+		err := cleanup(ctx, k, client)
 		if err != nil {
 			reqLogger.Error(err, "Error during cleanup processing.")
 			return beingDeleted, err
@@ -285,8 +298,8 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 }
 
 // Handles all cleanup logic for the Kabanero instance.
-func cleanup(k *kabanerov1alpha1.Kabanero) error {
-        // if landing enabled 
+func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Client) error {
+	// if landing enabled
 	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
 		// Remove landing page customizations for the current namespace.
 		err := removeWebConsoleCustomization(k)
@@ -311,7 +324,7 @@ func isFinalizerInList(k *kabanerov1alpha1.Kabanero, finalizer string) bool {
 // Retrieves Kabanero resource dependencies' readiness status to determine the Kabanero instance readiness status.
 // If all resource dependencies are in the ready state, the kabanero instance's readiness status
 // is set to true. Otherwise, it is set to false.
-func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
+func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	errorMessage := "One or more resource dependencies are not ready."
 	//k.Status.KabaneroInstance.Version = version.Version
 	k.Status.KabaneroInstance.Ready = "False"
@@ -324,6 +337,7 @@ func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.C
 	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger)
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
+	isCheReady, _ := getCheStatus(ctx, k, c)
 
 	// Set the overall status.
 	isKabaneroReady := isTektonReady &&
@@ -332,7 +346,9 @@ func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.C
 		isCliRouteReady &&
 		isKabaneroLandingReady &&
 		isAppsodyReady &&
-		isKubernetesAppNavigatorReady
+		isKubernetesAppNavigatorReady &&
+		isCheReady
+
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.ErrorMessage = ""
 		k.Status.KabaneroInstance.Ready = "True"
@@ -340,11 +356,30 @@ func processStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.C
 		k.Status.KabaneroInstance.ErrorMessage = errorMessage
 	}
 
-	// Update the kabanero instance status.
-	err := c.Status().Update(ctx, k)
-	if err != nil {
-		fmt.Println("Error updating the status.", err)
-	}
+	// Update the kabanero instance status in a retriable manner. The instance may have changed.
+	err := kutils.Retry(10, 100*time.Millisecond, func() (bool, error) {
+		err := c.Status().Update(ctx, k)
+		if err != nil {
+			if errors.IsConflict(err) {
+				k = &kabanerov1alpha1.Kabanero{}
+				err = c.Get(context.TODO(), request.NamespacedName, k)
+
+				if err != nil {
+					return false, err
+				}
+
+				return false, nil
+			}
+		}
+
+		return true, nil
+	})
 
 	return isKabaneroReady, err
+}
+
+// Initializes dependencies.
+func initializeDependencies(k *kabanerov1alpha1.Kabanero) {
+	// Che initialization.
+	initializeChe(k)
 }
