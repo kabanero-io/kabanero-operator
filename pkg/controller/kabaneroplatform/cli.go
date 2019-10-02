@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+	"regexp"
 )
 
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
@@ -115,6 +116,24 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	// portion of the microservice.
 	if len(k.Spec.Github.ApiUrl) > 0 {
 		env = append(env, corev1.EnvVar{Name: "github.api.url", Value: k.Spec.Github.ApiUrl})
+	}
+
+	// Set JwtExpiration for login duration/timeout
+	// Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
+	if len(k.Spec.CliServices.SessionExpirationSeconds) > 0 {
+		// If the format is incorrect, set the default
+		matched, err := regexp.MatchString(`^\d+[smh]{1}$`, k.Spec.CliServices.SessionExpirationSeconds)
+		if err != nil {
+			return err
+		}
+		if !matched {
+			reqLogger.Info(fmt.Sprintf("Kabanero Spec.CliServices.SessionExpirationSeconds must specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). Defaulting to 1440m."))
+			env = append(env, corev1.EnvVar{Name: "JwtExpiration", Value: "1440m"})
+		} else {
+			env = append(env, corev1.EnvVar{Name: "JwtExpiration", Value: k.Spec.CliServices.SessionExpirationSeconds})
+		}
+	} else {
+		env = append(env, corev1.EnvVar{Name: "JwtExpiration", Value: "1440m"})
 	}
 
 	// Tell the CLI where the AES encryption key secret is

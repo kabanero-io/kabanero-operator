@@ -31,13 +31,15 @@ type KabaneroSpec struct {
 	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
 
 	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
+
+	Che CheCustomizationSpec `json:"che,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
 
-// This represents the Github information (public or GHE) where
+// GithubConfig represents the Github information (public or GHE) where
 // the organization and teams managing the collections live.  Members
 // of the specified team in the specified organization will have admin
 // authority in the Kabanero CLI.
@@ -74,14 +76,44 @@ type KabaneroCliServicesCustomizationSpec struct {
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
 	Tag        string `json:"tag,omitempty"`
+	SessionExpirationSeconds string `json:"sessionExpirationSeconds,omitempty"`
 }
 
 type KabaneroLandingCustomizationSpec struct {
-	Enable     *bool `json:"enable,omitempty"`
-	Version    string `json:"version,omitempty"`
+	Enable  *bool  `json:"enable,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
-// KabaneroStatus defines the observed state of the Kabanero instance
+// CheCustomizationSpec defines customization entries for Che.
+type CheCustomizationSpec struct {
+	Enable              *bool                   `json:"enable,omitempty"`
+	CheOperator         CheOperatorSpec         `json:"cheOperator,omitempty"`
+	CheOperatorInstance CheOperatorInstanceSpec `json:"cheOperatorInstance,omitempty"`
+	KabaneroChe         KabaneroCheSpec         `json:"kabaneroChe,omitempty"`
+}
+
+// CheOperatorSpec defines customization entries for the Che operator
+type CheOperatorSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+// CheOperatorInstanceSpec defines customization entries for the Che operator instance.
+type CheOperatorInstanceSpec struct {
+	CheWorkspaceClusterRole string `json:"cheWorkspaceClusterRole,omitempty"`
+}
+
+// KabaneroCheSpec defines customization entries for Kabanero Che.
+type KabaneroCheSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+// KabaneroStatus defines the observed state of the Kabanero instance.
 // +k8s:openapi-gen=true
 type KabaneroStatus struct {
 	// Kabanero operator instance readiness status. The status is directly correlated to the availability of resources dependencies.
@@ -107,6 +139,9 @@ type KabaneroStatus struct {
 
 	// Kabanero Application Navigator instance readiness status.
 	Kappnav *KappnavStatus `json:"kappnav,omitempty"`
+
+	// Che instance readiness status.
+	Che *CheStatus `json:"che,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -139,7 +174,7 @@ type KnativeServingStatus struct {
 
 // CliStatus defines the observed status details of the Kabanero CLI.
 type CliStatus struct {
-	Ready        string   `json:"ready, omitempty"`
+	Ready        string   `json:"ready,omitempty"`
 	ErrorMessage string   `json:"errorMessage,omitempty"`
 	Hostnames    []string `json:"hostnames,omitempty"`
 }
@@ -163,6 +198,32 @@ type KappnavStatus struct {
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	UiLocations  []string `json:"uiLocations,omitempty"`
 	ApiLocations []string `json:"apiLocations,omitempty"`
+}
+
+// CheStatus defines the observed status details of Che.
+type CheStatus struct {
+	Ready               string                    `json:"ready,omitempty"`
+	ErrorMessage        string                    `json:"errorMessage,omitempty"`
+	CheOperator         CheOperatorStatus         `json:"cheOperator,omitempty"`
+	KabaneroChe         KabaneroCheStatus         `json:"kabaneroChe,omitempty"`
+	KabaneroCheInstance KabaneroCheInstanceStatus `json:"kabaneroCheInstance,omitempty"`
+}
+
+// CheOperatorStatus defines the observed status details of Che.
+type CheOperatorStatus struct {
+	Version string `json:"version,omitempty"`
+}
+
+// KabaneroCheStatus defines the observed status details of Che.
+type KabaneroCheStatus struct {
+	Version string `json:"version,omitempty"`
+}
+
+// KabaneroCheInstanceStatus defines the observed status details of Che instance.
+type KabaneroCheInstanceStatus struct {
+	CheImage                string `json:"cheImage,omitempty"`
+	CheImageTag             string `json:"cheImageTag,omitempty"`
+	CheWorkspaceClusterRole string `json:"cheWorkspaceClusterRole,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

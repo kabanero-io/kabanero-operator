@@ -15,16 +15,16 @@ spec:
   - ns1
   - ns2
 
-  appsody-operator:
+  appsodyOperator:
     # Overrides the platform wide settings for version on this component
-    version: "0.1.1"
+    version: "0.1.0"
 
     # Overrides the image as a separate repository or tag
-    repository: appsody/appsody-operator
+    repository: appsody/application-operator
     tag: "0.1.0"
 
     # Overrides the image uri
-    image: appsody/appsody-operator:0.1.0
+    image: appsody/application-operator:0.1.0
 
   cliServices:
     # Overrides the setting for version on this component
@@ -37,9 +37,46 @@ spec:
     # Overrides the image uri
     image: kabanero/kabanero-command-line-services:0.1.1-rc.1
 
+    # Indicates the token expiration time 
+    # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
+    # For example, specify 30 seconds as 30s. 
+    # You can include multiple values in a single entry. For example, 1m30s is equivalent to 90 seconds.
+    sessionExpirationSeconds: "1440m"
+
   landing:
     # The landing page is enabled by default. To disable specify false.
     enable: true 
+
+  che:
+    # che is disabled by default. Set the enable value to true/false to enable/disable the Che installation.
+    enable: true
+
+    kabaneroChe:
+      # Overrides the platform wide settings for version on this component.
+      version: "0.5.0"
+
+      # Overrides the image as a separate repository or tag.
+      repository: kabanero/kabanero-che
+      tag: "0.5.0"
+
+      # Overrides the image uri.
+      image: kabanero/kabanero-che:0.5.0
+
+    cheOperator:
+      # Overrides the platform wide settings for version on this component.
+      version: "7.2.0"
+
+      # Overrides the image as a separate repository or tag.
+      repository: quay.io/eclipse/che-operator
+      tag: "7.2.0"
+
+      # Overrides the image uri
+      image: quay.io/eclipse/che-operator:7.2.0
+
+    cheOperatorInstance:
+      # Overrides the workspaceClusterRole to be used when deploying an instance of the Che CR.
+      # The default workspaceClusterRole name is eclipse-codewind.
+      cheWorkspaceClusterRole: eclipse-codewind
 
   collections: 
     # A list of those repositories which are searched for collections

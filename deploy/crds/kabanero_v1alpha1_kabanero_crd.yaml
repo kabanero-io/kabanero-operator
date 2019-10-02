@@ -42,11 +42,45 @@ spec:
                 version:
                   type: string
               type: object
+            che:
+              properties:
+                cheOperator:
+                  properties:
+                    image:
+                      type: string
+                    repository:
+                      type: string
+                    tag:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                cheOperatorInstance:
+                  properties:
+                    cheWorkspaceClusterRole:
+                      type: string
+                  type: object
+                enable:
+                  type: boolean
+                kabaneroChe:
+                  properties:
+                    image:
+                      type: string
+                    repository:
+                      type: string
+                    tag:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+              type: object
             cliServices:
               properties:
                 image:
                   type: string
                 repository:
+                  type: string
+                sessionExpirationSeconds:
                   type: string
                 tag:
                   type: string
@@ -112,6 +146,33 @@ spec:
                 ready:
                   type: string
               type: object
+            che:
+              description: Che instance readiness status.
+              properties:
+                cheOperator:
+                  properties:
+                    version:
+                      type: string
+                  type: object
+                errorMessage:
+                  type: string
+                kabaneroChe:
+                  properties:
+                    version:
+                      type: string
+                  type: object
+                kabaneroCheInstance:
+                  properties:
+                    cheImage:
+                      type: string
+                    cheImageTag:
+                      type: string
+                    cheWorkspaceClusterRole:
+                      type: string
+                  type: object
+                ready:
+                  type: string
+              type: object
             cli:
               description: CLI readiness status.
               properties:
@@ -121,6 +182,8 @@ spec:
                   items:
                     type: string
                   type: array
+                ready:
+                  type: string
               type: object
             kabaneroInstance:
               description: Kabanero operator instance readiness status. The status
