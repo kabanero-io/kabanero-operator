@@ -116,7 +116,9 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 
 	ownerIsController := true
 	for _, c := range featured {
-		// For each collection, assure that a corresponding resource exists.
+		// For each collection, assure that a corresponding resource exists and it is at
+		// the highest level found among the repositories.
+		updateCollection := cl.Update
 		name := types.NamespacedName{
 			Name:      c.Id,
 			Namespace: k.GetNamespace(),
@@ -128,6 +130,7 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 			if errors.IsNotFound(err) {
 				// Not found, so create.  Need to create at the highest supported
 				// version found in the repositories.
+				updateCollection = cl.Create
 				collectionResource = &kabanerov1alpha1.Collection{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      c.Id,
@@ -143,18 +146,19 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 						},
 					},
 					Spec: kabanerov1alpha1.CollectionSpec{
-						Name:    c.Id,
-						Version: findMaxVersionCollectionWithIdV2(featured, c.Id),
+						Name: c.Id,
 					},
-				}
-
-				err := cl.Create(ctx, collectionResource)
-				if err != nil {
-					return err
 				}
 			} else {
 				return err
 			}
+		}
+
+		collectionResource.Spec.Version = findMaxVersionCollectionWithIdV2(featured, c.Id)
+		err = updateCollection(ctx, collectionResource)
+
+		if err != nil {
+			return err
 		}
 	}
 
