@@ -112,40 +112,47 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 
 	ownerIsController := true
 	for _, c := range featured {
-		//For each collection, assure that a corresponding resource exists
+		// For each collection, assure that a corresponding resource exists and it is at
+		// the highest level found among the repositories.
+		updateCollection := cl.Update
 		name := types.NamespacedName{
 			Name:      c.Id,
 			Namespace: k.GetNamespace(),
 		}
 		collectionResource := &kabanerov1alpha1.Collection{}
 		err := cl.Get(ctx, name, collectionResource)
-		if errors.IsNotFound(err) {
-			// Not found, so create.  Need to create at the highest supported
-			// version found in the repositories.
-			collectionResource = &kabanerov1alpha1.Collection{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      c.Id,
-					Namespace: k.GetNamespace(),
-					OwnerReferences: []metav1.OwnerReference{
-						metav1.OwnerReference{
-							APIVersion: k.TypeMeta.APIVersion,
-							Kind:       k.TypeMeta.Kind,
-							Name:       k.ObjectMeta.Name,
-							UID:        k.ObjectMeta.UID,
-							Controller: &ownerIsController,
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// Not found, so create.  Need to create at the highest supported
+				// version found in the repositories.
+				updateCollection = cl.Create
+				collectionResource = &kabanerov1alpha1.Collection{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      c.Id,
+						Namespace: k.GetNamespace(),
+						OwnerReferences: []metav1.OwnerReference{
+							metav1.OwnerReference{
+								APIVersion: k.TypeMeta.APIVersion,
+								Kind:       k.TypeMeta.Kind,
+								Name:       k.ObjectMeta.Name,
+								UID:        k.ObjectMeta.UID,
+								Controller: &ownerIsController,
+							},
 						},
 					},
-				},
-				Spec: kabanerov1alpha1.CollectionSpec{
-					Name:    c.Id,
-					Version: findMaxVersionCollectionWithIdV2(featured, c.Id),
-				},
-			}
-			err := cl.Create(ctx, collectionResource)
-			if err != nil {
+					Spec: kabanerov1alpha1.CollectionSpec{
+						Name:    c.Id,
+					},
+				}
+			} else {
 				return err
 			}
-		} else {
+		}
+
+		collectionResource.Spec.Version = findMaxVersionCollectionWithIdV2(featured, c.Id)
+		err = updateCollection(ctx, collectionResource)
+		
+		if err != nil {
 			return err
 		}
 	}
