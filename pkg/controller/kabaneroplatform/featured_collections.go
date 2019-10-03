@@ -2,6 +2,7 @@ package kabaneroplatform
 
 import (
 	"context"
+
 	"github.com/blang/semver"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
@@ -69,34 +70,37 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 
 		collectionResource := &kabanerov1alpha1.Collection{}
 		err := cl.Get(ctx, name, collectionResource)
-		if errors.IsNotFound(err) {
-			// Not found, so create.  Need to create at the highest supported
-			// version found in the repositories.
-			collectionResource = &kabanerov1alpha1.Collection{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      c.Manifest.Name,
-					Namespace: k.GetNamespace(),
-					OwnerReferences: []metav1.OwnerReference{
-						metav1.OwnerReference{
-							APIVersion: k.TypeMeta.APIVersion,
-							Kind:       k.TypeMeta.Kind,
-							Name:       k.ObjectMeta.Name,
-							UID:        k.ObjectMeta.UID,
-							Controller: &ownerIsController,
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// Not found, so create.  Need to create at the highest supported
+				// version found in the repositories.
+				collectionResource = &kabanerov1alpha1.Collection{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      c.Manifest.Name,
+						Namespace: k.GetNamespace(),
+						OwnerReferences: []metav1.OwnerReference{
+							metav1.OwnerReference{
+								APIVersion: k.TypeMeta.APIVersion,
+								Kind:       k.TypeMeta.Kind,
+								Name:       k.ObjectMeta.Name,
+								UID:        k.ObjectMeta.UID,
+								Controller: &ownerIsController,
+							},
 						},
 					},
-				},
-				Spec: kabanerov1alpha1.CollectionSpec{
-					Name:    c.Manifest.Name,
-					Version: findMaxVersionCollectionWithName(featured, c.Manifest.Name),
-				},
-			}
-			err := cl.Create(ctx, collectionResource)
-			if err != nil {
+					Spec: kabanerov1alpha1.CollectionSpec{
+						Name:    c.Manifest.Name,
+						Version: findMaxVersionCollectionWithName(featured, c.Manifest.Name),
+					},
+				}
+
+				err := cl.Create(ctx, collectionResource)
+				if err != nil {
+					return err
+				}
+			} else {
 				return err
 			}
-		} else {
-			return err
 		}
 	}
 
@@ -104,7 +108,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 }
 
 func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	//Resolve the collections which are currently featured across the various indexes
+	// Resolve the collections which are currently featured across the various indexes.
 	featured, err := featuredCollectionsV2(k)
 	if err != nil {
 		return err
@@ -119,6 +123,7 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 			Name:      c.Id,
 			Namespace: k.GetNamespace(),
 		}
+
 		collectionResource := &kabanerov1alpha1.Collection{}
 		err := cl.Get(ctx, name, collectionResource)
 		if err != nil {
@@ -141,7 +146,7 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 						},
 					},
 					Spec: kabanerov1alpha1.CollectionSpec{
-						Name:    c.Id,
+						Name: c.Id,
 					},
 				}
 			} else {
@@ -151,7 +156,7 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 
 		collectionResource.Spec.Version = findMaxVersionCollectionWithIdV2(featured, c.Id)
 		err = updateCollection(ctx, collectionResource)
-		
+
 		if err != nil {
 			return err
 		}
