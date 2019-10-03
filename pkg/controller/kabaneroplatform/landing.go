@@ -11,8 +11,8 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -23,8 +23,6 @@ import (
 )
 
 var kllog = rlog.Log.WithName("kabanero-landing")
-var landingImage = "kabanero/landing"
-var landingImageTag = "0.1.0"
 
 // Deploys resources and customizes to the Openshift web console.
 func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
@@ -490,20 +488,24 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client)
 		return false, err
 	}
 
+	// By default there should only be one instance of the landing pod (replica count = 1).
+	// Aggregate the results if that changes.
+	ready := true
+	finalErrorMessage := ""
+	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.Landing.Version)
+	if err != nil {
+		return false, err
+	}
+	k.Status.Landing.Version = rev.Version
+
 	options := metav1.ListOptions{LabelSelector: "app=kabanero-landing"}
 	pods, err := clientset.CoreV1().Pods(k.ObjectMeta.Namespace).List(options)
-
 	if err != nil {
 		k.Status.Landing.Ready = "False"
 		k.Status.Landing.ErrorMessage = "Pod instance(s) with label kabanero-landing under the namespace of " + k.ObjectMeta.Namespace + " could not be retrieved."
 		return false, err
 	}
 
-	// By default there should only be one instance of the landing pod (replica count = 1).
-	// Aggregate the results if that changes.
-	ready := true
-	finalErrorMessage := ""
-	k.Status.Landing.Version = landingImageTag
 	for _, pod := range pods.Items {
 		for _, condition := range pod.Status.Conditions {
 			if strings.ToLower(string(condition.Type)) == "ready" {
