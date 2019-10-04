@@ -326,7 +326,9 @@ func isFinalizerInList(k *kabanerov1alpha1.Kabanero, finalizer string) bool {
 // is set to true. Otherwise, it is set to false.
 func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	errorMessage := "One or more resource dependencies are not ready."
-	//k.Status.KabaneroInstance.Version = version.Version
+	_, instanceVersion := resolveKabaneroVersion(k)
+	k.Status.KabaneroInstance.Version = instanceVersion
+
 	k.Status.KabaneroInstance.Ready = "False"
 
 	// Gather the status of all resource dependencies.
