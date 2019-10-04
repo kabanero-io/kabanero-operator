@@ -9,7 +9,7 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.1.2"
+default: "0.2.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
