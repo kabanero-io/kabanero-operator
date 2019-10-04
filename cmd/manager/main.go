@@ -41,6 +41,7 @@ var log = logf.Log.WithName("cmd")
 var GitTag string
 var GitCommit string
 var GitRepoSlug string
+var BuildDate string
 
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -58,6 +59,11 @@ func printVersion() {
 	if len(GitRepoSlug) > 0 {
 		log.Info(fmt.Sprintf("kabanero-operator Git repository: %s", GitRepoSlug))
 	}
+
+	if len(BuildDate) == 0 {
+		BuildDate = "unspecified"
+	}
+	log.Info(fmt.Sprintf("kabanero-operator build date: %s", BuildDate))
 }
 
 func main() {
