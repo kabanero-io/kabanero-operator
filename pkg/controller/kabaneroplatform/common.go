@@ -2,12 +2,13 @@ package kabaneroplatform
 
 import (
 	"fmt"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 	"io"
 	"io/ioutil"
 	"strings"
 	"text/template"
+
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 )
 
 // Evaluates the image uri using any provided overrides. Here repository, tag and image are from
@@ -74,11 +75,7 @@ func renderOrchestration(r io.Reader, context map[string]interface{}) (string, e
 
 // Resolve the SoftwareRevision object for a named software component.
 func resolveSoftwareRevision(k *kabanerov1alpha1.Kabanero, softwareComponent string, softwareVersionOverride string) (versioning.SoftwareRevision, error) {
-	v := versioning.Data
-	kabaneroVersion := k.Spec.Version
-	if kabaneroVersion == "" {
-		kabaneroVersion = v.DefaultKabaneroRevision
-	}
+	v, kabaneroVersion := resolveKabaneroVersion(k)
 
 	kabaneroRevision := v.KabaneroRevision(kabaneroVersion)
 	if kabaneroRevision == nil {
@@ -102,5 +99,14 @@ func resolveSoftwareRevision(k *kabanerov1alpha1.Kabanero, softwareComponent str
 
 		return versioning.SoftwareRevision{}, fmt.Errorf("Data related to the software component `%v` and version `%v` within Kabanero release identifier `%v` cannot be found", softwareComponent, softwareVersionOverride, kabaneroVersion)
 	}
+}
 
+// Resolves the version of the Kabanero instance.
+func resolveKabaneroVersion(k *kabanerov1alpha1.Kabanero) (versioning.VersionDocument, string) {
+	v := versioning.Data
+	kabaneroVersion := k.Spec.Version
+	if kabaneroVersion == "" {
+		kabaneroVersion = v.DefaultKabaneroRevision
+	}
+	return v, kabaneroVersion
 }
