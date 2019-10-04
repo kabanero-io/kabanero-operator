@@ -11,23 +11,28 @@ build: generate
 	go install ./cmd/manager
 
 build-image: generate
-	operator-sdk build ${IMAGE}
-	# This is a workaround until manfistival can interact with the virtual file system
+  # These commands were taken from operator-sdk 0.8.1.  The sdk did not let us
+  # pass the ldflags option.  The advice from operator-sdk was to run the 
+  # commands separately here.
+  # operator-sdk build ${IMAGE}
+	CGO_ENABLED=0 go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
+	docker build -f build/Dockerfile -t ${IMAGE} .
+  # This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
 
 push-image:
 ifneq "$(IMAGE)" "kabanero-operator:latest"
-	# Default push
+  # Default push
 	docker push $(IMAGE)
 
 ifdef TRAVIS_TAG
-	# This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
+  # This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REPOSITORY):$(TRAVIS_TAG)
 endif
 
 ifdef TRAVIS_BRANCH
-	# This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
+  # This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
 endif
@@ -48,13 +53,13 @@ install:
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
 	kubectl apply -f deploy/crds/kabanero_kabanero_crd.yaml
 	kubectl apply -f deploy/crds/kabanero_collection_crd.yaml
-	
+
 deploy: 
 	kubectl create namespace kabanero || true
 
 ifneq "$(IMAGE)" "kabanero-operator:latest"
-	# By default there is no image pull policy for local image. However, for other images
-	# substitute current image name, and update the pull policy to always pull images.
+  # By default there is no image pull policy for local image. However, for other images
+  # substitute current image name, and update the pull policy to always pull images.
 	sed -i.bak -e 's!imagePullPolicy: Never!imagePullPolicy: Always!' deploy/operator.yaml
 	sed -i.bak -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
 endif
@@ -70,7 +75,7 @@ ifeq (, $(shell which dep))
 endif
 	dep ensure
 
-	# Remove some creative commons licensed tests/samples
+  # Remove some creative commons licensed tests/samples
 	rm vendor/golang.org/x/net/http2/h2demo/tmpl.go
 	rm -r vendor/golang.org/x/text/internal/testtext
 

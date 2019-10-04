@@ -37,10 +37,33 @@ var (
 )
 var log = logf.Log.WithName("cmd")
 
+// These variables are injected during the build using ldflags
+var GitTag string
+var GitCommit string
+var GitRepoSlug string
+var BuildDate string
+
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+	
+	if len(GitTag) > 0 {
+		log.Info(fmt.Sprintf("kabanero-operator Git tag: %s", GitTag))
+	}
+
+	if len(GitCommit) > 0 {
+		log.Info(fmt.Sprintf("kabanero-operator Git commit: %s", GitCommit))
+	}
+
+	if len(GitRepoSlug) > 0 {
+		log.Info(fmt.Sprintf("kabanero-operator Git repository: %s", GitRepoSlug))
+	}
+
+	if len(BuildDate) == 0 {
+		BuildDate = "unspecified"
+	}
+	log.Info(fmt.Sprintf("kabanero-operator build date: %s", BuildDate))
 }
 
 func main() {
