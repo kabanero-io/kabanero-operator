@@ -135,6 +135,19 @@ spec:
               type: object
             version:
               type: string
+            webhook:
+              properties:
+                enable:
+                  type: boolean
+                image:
+                  type: string
+                repository:
+                  type: string
+                tag:
+                  type: string
+                version:
+                  type: string
+              type: object
           type: object
         status:
           properties:
@@ -250,6 +263,18 @@ spec:
                 ready:
                   type: string
                 version:
+                  type: string
+              type: object
+            webhook:
+              description: Webhook instance status
+              properties:
+                errorMessage:
+                  type: string
+                hostnames:
+                  items:
+                    type: string
+                  type: array
+                ready:
                   type: string
               type: object
           type: object

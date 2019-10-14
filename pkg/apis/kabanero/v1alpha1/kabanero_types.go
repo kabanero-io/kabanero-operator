@@ -33,6 +33,8 @@ type KabaneroSpec struct {
 	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
 
 	Che CheCustomizationSpec `json:"che,omitempty"`
+
+	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
 }
 
 type InstanceCollectionConfig struct {
@@ -113,6 +115,14 @@ type KabaneroCheSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
+type WebhookCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
 // KabaneroStatus defines the observed state of the Kabanero instance.
 // +k8s:openapi-gen=true
 type KabaneroStatus struct {
@@ -142,6 +152,9 @@ type KabaneroStatus struct {
 
 	// Che instance readiness status.
 	Che *CheStatus `json:"che,omitempty"`
+
+	// Webhook instance status
+	Webhook *WebhookStatus `json:"webhook,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -224,6 +237,13 @@ type KabaneroCheInstanceStatus struct {
 	CheImage                string `json:"cheImage,omitempty"`
 	CheImageTag             string `json:"cheImageTag,omitempty"`
 	CheWorkspaceClusterRole string `json:"cheWorkspaceClusterRole,omitempty"`
+}
+
+// WebhookStatus defines the observed status details of the Kabanero webhook.
+type WebhookStatus struct {
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
+	Hostnames    []string `json:"hostnames,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
