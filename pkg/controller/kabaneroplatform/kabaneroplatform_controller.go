@@ -257,11 +257,16 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 	if !beingDeleted {
 		if !foundFinalizer {
 			k.ObjectMeta.Finalizers = append(k.ObjectMeta.Finalizers, kabaneroFinalizer)
+			// Need to cache the Group/Version/Kind here because the Update call
+			// will clear them.  This is fixed in controller-runtime v0.2.0 /
+			// operator-sdk 0.11.0.  TODO
+			gvk := k.GroupVersionKind()
 			err := client.Update(ctx, k)
 			if err != nil {
 				reqLogger.Error(err, "Unable to set the kabanero operator finalizer.")
 				return beingDeleted, err
 			}
+			k.SetGroupVersionKind(gvk)
 		}
 
 		return beingDeleted, nil
@@ -286,12 +291,19 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 		}
 
 		k.ObjectMeta.Finalizers = newFinalizerList
+
+		// Need to cache the Group/Version/Kind here because the Update call
+		// will clear them.  This is fixed in controller-runtime v0.2.0 /
+		// operator-sdk 0.11.0.  TODO
+		gvk := k.GroupVersionKind()
 		err = client.Update(ctx, k)
 
 		if err != nil {
 			reqLogger.Error(err, "Error while attempting to remove the finalizer.")
 			return beingDeleted, err
 		}
+
+		k.SetGroupVersionKind(gvk)
 	}
 
 	return beingDeleted, nil
