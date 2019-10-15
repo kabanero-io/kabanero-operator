@@ -89,8 +89,9 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 						},
 					},
 					Spec: kabanerov1alpha1.CollectionSpec{
-						Name:    c.Manifest.Name,
-						Version: findMaxVersionCollectionWithName(featured, c.Manifest.Name),
+						Name:         c.Manifest.Name,
+						Version:      findMaxVersionCollectionWithName(featured, c.Manifest.Name),
+						DesiredState: kabanerov1alpha1.CollectionDesiredStateActive,
 					},
 				}
 
@@ -146,7 +147,8 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 						},
 					},
 					Spec: kabanerov1alpha1.CollectionSpec{
-						Name: c.Id,
+						Name:         c.Id,
+						DesiredState: kabanerov1alpha1.CollectionDesiredStateActive,
 					},
 				}
 			} else {

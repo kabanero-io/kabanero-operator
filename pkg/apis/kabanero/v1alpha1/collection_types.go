@@ -4,8 +4,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+const (
+	// CollectionDesiredStateActive represents a desired collection active state.
+	// It indicates that the collection needs activation. This is the default desired state of a collection.
+	CollectionDesiredStateActive = "active"
+
+	// CollectionDesiredStateInactive represents a desired collection inactive state.
+	// It indicates that the collection needs to be deactivated.
+	CollectionDesiredStateInactive = "inactive"
+)
 
 // CollectionSpec defines the desired state of Collection
 // +k8s:openapi-gen=true
@@ -13,6 +22,7 @@ type CollectionSpec struct {
 	RepositoryUrl string `json:"repositoryUrl,omitempty"`
 	Name          string `json:"name,omitempty"`
 	Version       string `json:"version,omitempty"`
+	DesiredState  string `json:"desiredState,omitempty"`
 }
 
 // RepositoryAssetStatus defines the observed state of a single asset

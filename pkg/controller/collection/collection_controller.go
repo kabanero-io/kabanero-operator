@@ -4,12 +4,15 @@ import (
 	"context"
 	me "errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/blang/semver"
-	mf "github.com/jcrossley3/manifestival"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-//	corev1 "k8s.io/api/core/v1"
+	mf "github.com/kabanero-io/manifestival"
+
+	//	corev1 "k8s.io/api/core/v1"
+	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,10 +26,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_collection")
+
+const (
+	// Asset status.
+	assetStatusActive  = "active"
+	assetStatusFailed  = "failed"
+	assetStatusUnknown = "unknown"
+)
 
 // Add creates a new Collection Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -48,32 +57,32 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Create Collection predicate
-	c_pred := predicate.Funcs{
+	cPred := predicate.Funcs{
 		GenericFunc: func(e event.GenericEvent) bool {
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Returning true only when the metadata generation has changed, 
-			// allows us to ignore events where only the object status has changed, 
+			// Returning true only when the metadata generation has changed,
+			// allows us to ignore events where only the object status has changed,
 			// since the generation is not incremented when only the status changes
 			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 		},
 	}
 
 	// Watch for changes to primary resource Collection
-	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, &handler.EnqueueRequestForObject{}, c_pred)
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha1.Collection{}}, &handler.EnqueueRequestForObject{}, cPred)
 	if err != nil {
 		return err
 	}
 
 	// Create a handler for handling Tekton Pipeline & Task events
-	t_h := &handler.EnqueueRequestForOwner{
+	tH := &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &kabanerov1alpha1.Collection{},
 	}
-	
+
 	// Create Tekton predicate
-	t_pred := predicate.Funcs{
+	tPred := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// ignore Create. Collection create applies the documents. Watch would unnecessarily requeue.
 			return false
@@ -82,21 +91,21 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Returning true only when the metadata generation has changed, 
-			// allows us to ignore events where only the object status has changed, 
+			// Returning true only when the metadata generation has changed,
+			// allows us to ignore events where only the object status has changed,
 			// since the generation is not incremented when only the status changes
 			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 		},
 	}
-	
+
 	// Watch for changes to Collection Tekton Pipeline objects
-	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Pipeline{}}, t_h, t_pred)
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Pipeline{}}, tH, tPred)
 	if err != nil {
 		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Task{}}, t_h, t_pred)
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Task{}}, tH, tPred)
 	if err != nil {
 		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
@@ -161,10 +170,8 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 
 	rr, err := r.ReconcileCollection(instance, k)
 
-	//Update the status
-	if !rr.Requeue {
-		r.client.Status().Update(ctx, instance)
-	}
+	// Update the status
+	r.client.Status().Update(ctx, instance)
 
 	// Force a requeue if there are failed assets.  These should be retried, and since
 	// they are hosted outside of Kubernetes, the controller will not see when they
@@ -181,7 +188,7 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 // Check to see if the status contains any assets that are failed
 func failedAssets(status kabanerov1alpha1.CollectionStatus) bool {
 	for _, assetStatus := range status.ActiveAssets {
-		if assetStatus.Status == asset_failed_status {
+		if assetStatus.Status == assetStatusFailed {
 			return true
 		}
 	}
@@ -194,12 +201,12 @@ func failedAssets(status kabanerov1alpha1.CollectionStatus) bool {
 func findMaxVersionCollection(collections []resolvedCollection) *resolvedCollection {
 	log.Info(fmt.Sprintf("findMaxVersionCollection: processing %v collections", len(collections)))
 
-	var maxCollection *resolvedCollection = nil
-	var err error = nil
+	var maxCollection *resolvedCollection
+	var err error
 	maxVersion, _ := semver.Make("0.0.0")
 	curVersion, _ := semver.Make("0.0.0")
 
-	for i, _ := range collections {
+	for i := range collections {
 
 		switch {
 		//v1
@@ -271,7 +278,7 @@ func (r *ReconcileCollection) ensureCollectionHasOwner(c *kabanerov1alpha1.Colle
 type resolvedCollection struct {
 	//v1
 	collection    CollectionV1
-	repositoryUrl string
+	repositoryURL string
 	//v2
 	collectionv2 IndexedCollectionV2
 }
@@ -290,6 +297,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	} else {
 		collectionName = c.Name
 	}
+
 	r_log = r_log.WithValues("Collection.Name", collectionName)
 
 	// A collection created by the CLI might not have kabanero as the owner.
@@ -328,7 +336,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 
 			// Build out the list of all collections across all repository indexes
 			for _, collection := range _collections {
-				matchingCollections = append(matchingCollections, resolvedCollection{collection: collection, repositoryUrl: repo.Url})
+				matchingCollections = append(matchingCollections, resolvedCollection{collection: collection, repositoryURL: repo.Url})
 			}
 		case "v2":
 			// Search for all versions of the collection in this repository index.
@@ -339,7 +347,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 
 			// Build out the list of all collections across all repository indexes
 			for _, collection := range _collections {
-				matchingCollections = append(matchingCollections, resolvedCollection{collectionv2: collection, repositoryUrl: repo.Url})
+				matchingCollections = append(matchingCollections, resolvedCollection{collectionv2: collection, repositoryURL: repo.Url})
 			}
 
 		default:
@@ -366,7 +374,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 					upgradeVersion, _ = semver.ParseTolerant(upgradeCollection.collection.Manifest.Version)
 					if upgradeVersion.Compare(specVersion) > 0 {
 						c.Status.AvailableVersion = upgradeCollection.collection.Manifest.Version
-						c.Status.AvailableLocation = upgradeCollection.repositoryUrl
+						c.Status.AvailableLocation = upgradeCollection.repositoryURL
 					} else {
 						c.Status.AvailableVersion = ""
 						c.Status.AvailableLocation = ""
@@ -376,7 +384,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 					upgradeVersion, _ = semver.ParseTolerant(upgradeCollection.collectionv2.Version)
 					if upgradeVersion.Compare(specVersion) > 0 {
 						c.Status.AvailableVersion = upgradeCollection.collectionv2.Version
-						c.Status.AvailableLocation = upgradeCollection.repositoryUrl
+						c.Status.AvailableLocation = upgradeCollection.repositoryURL
 					} else {
 						c.Status.AvailableVersion = ""
 						c.Status.AvailableLocation = ""
@@ -398,20 +406,44 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			switch {
 			//v1
 			case matchingCollection.collection.Manifest.Version == c.Spec.Version:
-				err := activate(c, &matchingCollection.collection, r.client)
-				if err != nil {
-					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+				// Activate or deactivate the collection based on the set desired state.
+				// The default action is to activate the collection.
+				desiredCollecitonState := strings.ToLower(c.Spec.DesiredState)
+				switch desiredCollecitonState {
+				case kabanerov1alpha1.CollectionDesiredStateInactive:
+					err = deactivate(c, &matchingCollection.collection, r.client)
+					if err != nil {
+						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+					}
+				default:
+					err = activate(c, &matchingCollection.collection, r.client)
+					if err != nil {
+						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+					}
+					c.Status.ActiveLocation = matchingCollection.repositoryURL
 				}
-				c.Status.ActiveLocation = matchingCollection.repositoryUrl
+
 				return reconcile.Result{}, nil
 			//v2
 			case matchingCollection.collectionv2.Version == c.Spec.Version:
-				//need a v2 activate
-				err := activatev2(c, &matchingCollection.collectionv2, r.client)
-				if err != nil {
-					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+				// Activate or deactivate the collection based on the set desired state.
+				// The default action is to activate the collection.
+				desiredCollecitonState := strings.ToLower(c.Spec.DesiredState)
+				switch desiredCollecitonState {
+				case kabanerov1alpha1.CollectionDesiredStateInactive:
+					err := deactivateV2(c, &matchingCollection.collectionv2, r.client)
+					if err != nil {
+						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+					}
+				default:
+					//need a v2 activate
+					err := activatev2(c, &matchingCollection.collectionv2, r.client)
+					if err != nil {
+						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+					}
+					c.Status.ActiveLocation = matchingCollection.repositoryURL
 				}
-				c.Status.ActiveLocation = matchingCollection.repositoryUrl
+
 				return reconcile.Result{}, nil
 			}
 		}
@@ -453,18 +485,14 @@ func assetMatchv2(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset Inde
 	return asset.Id == assetStatus.Name
 }
 
-// Some asset status states
-const asset_active_status = "active"
-const asset_failed_status = "failed"
-
 func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, asset AssetManifest, message string) {
 	log.Info(fmt.Sprintf("Updating status for asset %v", asset.Name))
 
 	// Assume that if there is a message, it's an error condition
 	assetStatusMessage := message
-	assetStatus := asset_active_status
+	assetStatus := assetStatusActive
 	if len(assetStatusMessage) > 0 {
-		assetStatus = asset_failed_status
+		assetStatus = assetStatusFailed
 	}
 
 	// First find the asset in the Collection status.
@@ -487,9 +515,9 @@ func updateAssetStatusv2(status *kabanerov1alpha1.CollectionStatus, asset Indexe
 
 	// Assume that if there is a message, it's an error condition
 	assetStatusMessage := message
-	assetStatus := asset_active_status
+	assetStatus := assetStatusActive
 	if len(assetStatusMessage) > 0 {
-		assetStatus = asset_failed_status
+		assetStatus = assetStatusFailed
 	}
 
 	// First find the asset in the Collection status.
@@ -507,6 +535,47 @@ func updateAssetStatusv2(status *kabanerov1alpha1.CollectionStatus, asset Indexe
 	status.ActiveAssets = append(status.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Id, asset.Url, asset.Sha256, assetStatus, assetStatusMessage})
 }
 
+// Deactivates a V1 collection.
+func deactivate(collectionResource *kabanerov1alpha1.Collection, collection *CollectionV1, c client.Client) error {
+	failedAssets := []kabanerov1alpha1.RepositoryAssetStatus{}
+	for _, asset := range collectionResource.Status.ActiveAssets {
+		m, err := mf.NewManifest(asset.Url, false, c)
+		if err != nil {
+			return err
+		}
+
+		transforms := []mf.Transformer{
+			mf.InjectNamespace(collectionResource.GetNamespace()),
+		}
+
+		err = m.Transform(transforms...)
+		if err != nil {
+			return err
+		}
+
+		err = m.DeleteAll()
+		if err != nil {
+			log.Error(err, "Error deleting asset "+asset.Name+" with URL: "+asset.Url)
+			asset.Status = assetStatusUnknown
+			asset.StatusMessage = "Failed to deactivate asset. Error: " + err.Error()
+			failedAssets = append(failedAssets, asset)
+		}
+	}
+
+	// Deletion processing completed. Leave only the failed assets in the asset list for users to get an idea of what failed.
+	if len(failedAssets) != 0 {
+		collectionResource.Status.ActiveAssets = failedAssets
+		return fmt.Errorf("Failed to deactivate collection. One or more assets failed to be deactivated")
+	}
+
+	// Everything went fine. Clear the status section and print a message stating that deactivation completed.
+	cstatus := kabanerov1alpha1.CollectionStatus{}
+	collectionResource.Status = cstatus
+	collectionResource.Status.StatusMessage = "The collection has been deactivated."
+
+	return nil
+}
+
 func activate(collectionResource *kabanerov1alpha1.Collection, collection *CollectionV1, c client.Client) error {
 	manifest := collection.Manifest
 
@@ -518,7 +587,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		// 2) Delete the artifacts.  If something goes wrong here, the state of the collection is unknown.
 		type transformedRemoteManifest struct {
 			m        mf.Manifest
-			assetUrl string
+			assetURL string
 		}
 
 		var transformedManifests []transformedRemoteManifest
@@ -556,7 +625,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			err := transformedManifest.m.DeleteAll()
 			if err != nil {
 				// It's hard to know what the state of things is now... log the error.
-				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetUrl)
+				log.Error(err, "Error deleting the resource", "resource", transformedManifest.assetURL)
 			}
 		}
 
@@ -574,7 +643,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			applyAsset := true
 			if len(asset.Digest) > 0 {
 				for _, assetStatus := range collectionResource.Status.ActiveAssets {
-					if assetMatch(assetStatus, asset) && (assetStatus.Digest == asset.Digest) && (assetStatus.Status == asset_active_status) {
+					if assetMatch(assetStatus, asset) && (assetStatus.Digest == asset.Digest) && (assetStatus.Status == assetStatusActive) {
 						// The digest is equal and the asset is active - don't apply the asset.
 						log.Info(fmt.Sprintf("Digest has not changed %v", asset.Digest))
 						applyAsset = false
@@ -622,16 +691,81 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	return nil
 }
 
-// Create a Manifest from unstructured, rather than path/url
-//type Manifest struct {
-//	mf.Manifest
-//	Resources []unstructured.Unstructured
-//	client    client.Client
-//}
+// Returns a set of resources from the input collection asset in Manifest form.
+func getResourceManifestFromAsset(collectionResource *kabanerov1alpha1.Collection, collection *IndexedCollectionV2, c client.Client, asset kabanerov1alpha1.RepositoryAssetStatus) (mf.Manifest, error) {
+	renderingContext := map[string]interface{}{
+		"CollectionId":   collection.Id,
+		"CollectionName": collection.Name,
+	}
 
-//func NewManifest(resources []unstructured.Unstructured, client client.Client) (Manifest, error) {
-//	return Manifest{Resources: resources, client: client}, nil
-//}
+	// Retrieve manifests as unstructured
+	manifests, err := GetManifests(asset.Url, asset.Digest, renderingContext, log)
+	if err != nil {
+		return mf.Manifest{}, err
+	}
+
+	m, err := mf.FromResources(manifests, c)
+	if err != nil {
+		return mf.Manifest{}, err
+	}
+
+	log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+	transforms := []mf.Transformer{
+		mf.InjectOwner(collectionResource),
+		mf.InjectNamespace(collectionResource.GetNamespace()),
+	}
+
+	err = m.Transform(transforms...)
+	if err != nil {
+		return mf.Manifest{}, err
+	}
+
+	return m, nil
+}
+
+// Deactivates a V2 collection.
+func deactivateV2(collectionResource *kabanerov1alpha1.Collection, collection *IndexedCollectionV2, c client.Client) error {
+	failedAssets := []kabanerov1alpha1.RepositoryAssetStatus{}
+	for _, asset := range collectionResource.Status.ActiveAssets {
+
+		m, err := getResourceManifestFromAsset(collectionResource, collection, c, asset)
+		if err != nil {
+			return err
+		}
+
+		failedResourceDeletion := []string{}
+		for _, spec := range m.Resources {
+			log.Info(fmt.Sprintf("Deleting resource: %v", spec))
+
+			err := m.Delete(&spec)
+			if err != nil {
+				failedResourceDeletion = append(failedResourceDeletion, spec.GetName()+": "+err.Error())
+				log.Error(err, "Error deleting resource "+spec.GetName()+" from "+asset.Url)
+			}
+		}
+
+		if len(failedResourceDeletion) != 0 {
+			asset.Status = assetStatusUnknown
+			asset.StatusMessage = "Failed to deactivate collection. The following resources failed deactivation: " + strings.Join(failedResourceDeletion, ", ")
+			failedAssets = append(failedAssets, asset)
+		}
+
+	}
+
+	// Deletion processing completed. Leave only the failed assets in the asset list for users to get an idea of what failed.
+	if len(failedAssets) != 0 {
+		collectionResource.Status.ActiveAssets = failedAssets
+		return fmt.Errorf("Failed to deactivate collection. One or more assets were not removed")
+	}
+
+	// Everything went fine. Clear the status section and print a message stating that deactivation completed.
+	cstatus := kabanerov1alpha1.CollectionStatus{}
+	collectionResource.Status = cstatus
+	collectionResource.Status.StatusMessage = "The collection has been deactivated."
+
+	return nil
+}
 
 func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *IndexedCollectionV2, c client.Client) error {
 	//The context which will be used when rendering remote yaml
@@ -649,7 +783,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 
 		type transformedRemoteManifest struct {
 			m        mf.Manifest
-			assetUrl string
+			assetURL string
 		}
 
 		var transformedManifests []transformedRemoteManifest

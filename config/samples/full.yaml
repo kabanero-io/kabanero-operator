@@ -45,7 +45,7 @@ spec:
 
   landing:
     # The landing page is enabled by default. To disable specify false.
-    enable: true 
+    enable: true
 
   che:
     # che is disabled by default. Set the enable value to true/false to enable/disable the Che installation.
@@ -78,7 +78,7 @@ spec:
       # The default workspaceClusterRole name is eclipse-codewind.
       cheWorkspaceClusterRole: eclipse-codewind
 
-  collections: 
+  collections:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator

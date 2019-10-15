@@ -29,6 +29,8 @@ spec:
           type: object
         spec:
           properties:
+            desiredState:
+              type: string
             name:
               type: string
             repositoryUrl:
