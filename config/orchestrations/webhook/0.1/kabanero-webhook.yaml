@@ -110,3 +110,9 @@ spec:
         - name: kabanero-webhook
           image: {{ .image }}
           imagePullPolicy: Always
+          env:
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
