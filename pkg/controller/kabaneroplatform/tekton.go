@@ -3,26 +3,12 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	tektonv1alpha1 "github.com/openshift/tektoncd-pipeline-operator/pkg/apis/operator/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
-)
 
-// Add tekton type to scheme.
-func addKnownTypes(scheme *runtime.Scheme) error {
-	SchemeGroupVersion := schema.GroupVersion{Group: "operator.tekton.dev", Version: "v1alpha1"}
-	scheme.AddKnownTypes(SchemeGroupVersion,
-		&tektonv1alpha1.Config{},
-		&tektonv1alpha1.ConfigList{},
-	)
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-	return nil
-}
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	tektoncdv1alpha1 "github.com/tektoncd/operator/pkg/apis/operator/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 // Retrieves the Tekton instance status.
 func getTektonStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
@@ -31,20 +17,9 @@ func getTektonStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error
 
 	// Get the tekton instance.
 	tektonInstName := "cluster"
-	tconfig, err := clientcmd.BuildConfigFromFlags("", "")
 
-	myScheme := runtime.NewScheme()
-	SchemeBuilder := runtime.NewSchemeBuilder(addKnownTypes)
-	if err := SchemeBuilder.AddToScheme(myScheme); err != nil {
-		message := "Unable to process scheme."
-		k.Status.Tekton.ErrorMessage = message
-		fmt.Println("Error while assessing Tekton readiness. "+message, err)
-		return false, err
-	}
-
-	cl, _ := client.New(tconfig, client.Options{Scheme: myScheme})
-	tekton := &tektonv1alpha1.Config{}
-	err = cl.Get(context.TODO(), client.ObjectKey{
+	tekton := &tektoncdv1alpha1.Config{}
+	err := c.Get(context.TODO(), client.ObjectKey{
 		Name: tektonInstName}, tekton)
 
 	if err != nil {

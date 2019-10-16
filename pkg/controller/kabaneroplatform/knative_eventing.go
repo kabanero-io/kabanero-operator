@@ -3,13 +3,11 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	knepis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
-	knev1alpha1 "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	knev1alpha1 "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Retrieves the current knative eventing instance status.
@@ -19,12 +17,8 @@ func getKnativeEventingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bo
 
 	// Get the knative eventing installation instance.
 	kneInstNamespace, kneInstName := "knative-eventing", "knative-eventing"
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	myScheme := runtime.NewScheme()
-	cl, _ := client.New(config, client.Options{Scheme: myScheme})
-	knepis.AddToScheme(myScheme)
 	kne := &knev1alpha1.KnativeEventing{}
-	err = cl.Get(context.TODO(), client.ObjectKey{
+	err := c.Get(context.TODO(), client.ObjectKey{
 		Namespace: kneInstNamespace,
 		Name:      kneInstName}, kne)
 	if err != nil {

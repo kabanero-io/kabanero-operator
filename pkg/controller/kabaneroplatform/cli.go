@@ -5,6 +5,10 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"math/big"
+	"regexp"
+	"strings"
+
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	mf "github.com/kabanero-io/manifestival"
@@ -12,14 +16,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"math/big"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"regexp"
 )
 
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
@@ -102,7 +102,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	// The CLI wants to know which teams to bind to the admin role
 	if (len(k.Spec.Github.Teams) > 0) && (len(k.Spec.Github.Organization) > 0) {
 		// Build a list of fully qualified team names
-		var teamList string = ""
+		teamList := ""
 		for _, team := range k.Spec.Github.Teams {
 			if len(teamList) > 0 {
 				teamList = teamList + ","
@@ -119,7 +119,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	}
 
 	// Set JwtExpiration for login duration/timeout
-	// Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
+	// Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s).
 	if len(k.Spec.CliServices.SessionExpirationSeconds) > 0 {
 		// If the format is incorrect, set the default
 		matched, err := regexp.MatchString(`^\d+[smh]{1}$`, k.Spec.CliServices.SessionExpirationSeconds)
@@ -155,23 +155,17 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 }
 
 // Tries to see if the CLI route has been assigned a hostname.
-func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger) (bool, error) {
-
-	// Get the knative eventing installation instance.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	myScheme := runtime.NewScheme()
-	cl, _ := client.New(config, client.Options{Scheme: myScheme})
-	routev1.AddToScheme(myScheme)
+func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger, c client.Client) (bool, error) {
 
 	// Check that the route is accepted
 	cliRoute := &routev1.Route{}
 	cliRouteName := types.NamespacedName{Namespace: k.ObjectMeta.Namespace, Name: "kabanero-cli"}
-	err = cl.Get(context.TODO(), cliRouteName, cliRoute)
+	err := c.Get(context.TODO(), cliRouteName, cliRoute)
 	if err == nil {
 		k.Status.Cli.Hostnames = nil
 		// Looking for an ingress that has an admitted status and a hostname
 		for _, ingress := range cliRoute.Status.Ingress {
-			var routeAdmitted bool = false
+			routeAdmitted := false
 			for _, condition := range ingress.Conditions {
 				if condition.Type == routev1.RouteAdmitted && condition.Status == corev1.ConditionTrue {
 					routeAdmitted = true

@@ -3,13 +3,11 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	knsapis "github.com/knative/serving-operator/pkg/apis"
-	knsv1alpha1 "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	knsv1alpha1 "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Retrieves the knative serving instance status.
@@ -19,12 +17,8 @@ func getKnativeServingStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (boo
 
 	// Get the knative serving installation instance.
 	knsInstNamespace, knsInstName := "knative-serving", "knative-serving"
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	myScheme := runtime.NewScheme()
-	cl, _ := client.New(config, client.Options{Scheme: myScheme})
-	knsapis.AddToScheme(myScheme)
 	kns := &knsv1alpha1.KnativeServing{}
-	err = cl.Get(context.TODO(), client.ObjectKey{
+	err := c.Get(context.TODO(), client.ObjectKey{
 		Namespace: knsInstNamespace,
 		Name:      knsInstName}, kns)
 
