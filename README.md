@@ -15,7 +15,7 @@ cd kabanero-operator
 
 # Quickstart - OpenShift 3.11 / OKD 3.11
 
-We recomment you follow the install instructions reference above to set up your cluster the first time.  If you would rather set up manually, please continue with the following steps:
+We recommend you follow the install instructions referenced above to set up your cluster for the first time.  If you would rather set it up manually, please continue with the following steps:
 
 ## Login
 (example)
@@ -48,12 +48,13 @@ kubectl get pods -n kabanero
 (example command output)
 
 ```
-[root@openshist kabanero-operator]# kubectl get pods -n kabanero
-NAME                                           READY     STATUS    RESTARTS   AGE
-kabanero-operator-dd997974-5nfj4               1/1       Running   0          5m
-knative-eventing-operator-658765d7d6-pq5bk     1/1       Running   0          5m
-knative-serving-operator-8c7858985-plvh8       1/1       Running   0          5m
-openshift-pipelines-operator-c56876c69-hf74v   1/1       Running   0          5m
+[admin@openshift kabanero-operator]# kubectl get pods -n kabanero
+NAME                                                        READY     STATUS    RESTARTS   AGE
+controller-manager-0                                        1/1       Running   2          2d
+kabanero-operator-7974456fc-jc2dl                           1/1       Running   0          27m
+knative-eventing-operator-67cdf5dc9f-s4bth                  1/1       Running   0          2d
+knative-serving-operator-b64558bbc-9ndb5                    1/1       Running   0          2d
+openshift-pipelines-operator-66c4d787cf-f2xwt               1/1       Running   0          2d
 ```
 
 ## Deploy the sample
@@ -65,14 +66,16 @@ kubectl apply -n kabanero -f config/samples/default.yaml
 kubectl get pods -n kabanero
 ```
 (example command output)
-[root@openshist kabanero-operator]# kubectl get pods -n kabanero
-NAME                                           READY     STATUS    RESTARTS   AGE
-kabanero-operator-dd997974-4cqnt               1/1       Running   0          2m
-knative-eventing-operator-658765d7d6-6ptqc     1/1       Running   0          2m
-knative-serving-operator-8c7858985-v7zrd       1/1       Running   0          2m
-openshift-pipelines-operator-c56876c69-6jwqw   1/1       Running   0          2m
-tekton-pipelines-controller-5576fbb979-mv8hp   1/1       Running   0          55s
-tekton-pipelines-webhook-78bf9c5f46-9pzlj      1/1       Running   0          55s
+[admin@openshift kabanero-operator]# kubectl get pods -n kabanero
+NAME                                                        READY     STATUS    RESTARTS   AGE
+appsody-operator-79ccd57895-j7d9s                           1/1       Running   0          2d
+controller-manager-0                                        1/1       Running   2          2d
+kabanero-cli-679cbddb4f-gt5b6                               1/1       Running   0          2d
+kabanero-landing-775584bbd4-4m9zb                           1/1       Running   0          2d
+kabanero-operator-7974456fc-jc2dl                           1/1       Running   0          27m
+knative-eventing-operator-67cdf5dc9f-s4bth                  1/1       Running   0          2d
+knative-serving-operator-b64558bbc-9ndb5                    1/1       Running   0          2d
+openshift-pipelines-operator-66c4d787cf-f2xwt               1/1       Running   0          2d
 ```
 
 # Quickstart - minikube
