@@ -150,6 +150,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 							Format: "",
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"statusMessage": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},

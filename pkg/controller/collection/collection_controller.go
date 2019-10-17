@@ -206,7 +206,7 @@ func findMaxVersionCollection(collections []resolvedCollection) *resolvedCollect
 	maxVersion, _ := semver.Make("0.0.0")
 	curVersion, _ := semver.Make("0.0.0")
 
-	for i := range collections {
+	for i, _ := range collections {
 
 		switch {
 		//v1
@@ -406,8 +406,9 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 			switch {
 			//v1
 			case matchingCollection.collection.Manifest.Version == c.Spec.Version:
-				// Activate or deactivate the collection based on the set desired state.
-				// The default action is to activate the collection.
+				// Activate or deactivate the collection based on the collection's current desiredState.
+				// The activateDefaultCollections setting in the CR instance's collection repository entry has
+				// no influence here as that only sets a collection's initial state.
 				desiredCollecitonState := strings.ToLower(c.Spec.DesiredState)
 				switch desiredCollecitonState {
 				case kabanerov1alpha1.CollectionDesiredStateInactive:
@@ -415,19 +416,25 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 					if err != nil {
 						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 					}
+					c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
 				default:
+					if desiredCollecitonState != kabanerov1alpha1.CollectionDesiredStateActive {
+						c.Status.StatusMessage = "An invalid desiredState value of " + c.Spec.DesiredState + " was specified. The default desired state of a collection active."
+					}
 					err = activate(c, &matchingCollection.collection, r.client)
 					if err != nil {
 						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 					}
 					c.Status.ActiveLocation = matchingCollection.repositoryURL
+					c.Status.Status = kabanerov1alpha1.CollectionDesiredStateActive
 				}
 
 				return reconcile.Result{}, nil
 			//v2
 			case matchingCollection.collectionv2.Version == c.Spec.Version:
-				// Activate or deactivate the collection based on the set desired state.
-				// The default action is to activate the collection.
+				// Activate or deactivate the collection based on the collection's current desiredState.
+				// The activateDefaultCollections setting in the CR instance's collection repository entry has
+				// no influence here as that only sets a collection's initial state.
 				desiredCollecitonState := strings.ToLower(c.Spec.DesiredState)
 				switch desiredCollecitonState {
 				case kabanerov1alpha1.CollectionDesiredStateInactive:
@@ -435,13 +442,20 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 					if err != nil {
 						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 					}
+
+					c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
 				default:
+					if desiredCollecitonState != kabanerov1alpha1.CollectionDesiredStateActive {
+						c.Status.StatusMessage = "An invalid desiredState value of " + c.Spec.DesiredState + " was specified. The collection is activated by default."
+					}
+
 					//need a v2 activate
 					err := activatev2(c, &matchingCollection.collectionv2, r.client)
 					if err != nil {
 						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 					}
 					c.Status.ActiveLocation = matchingCollection.repositoryURL
+					c.Status.Status = kabanerov1alpha1.CollectionDesiredStateActive
 				}
 
 				return reconcile.Result{}, nil

@@ -8,7 +8,7 @@ import (
 
 const (
 	// CollectionDesiredStateActive represents a desired collection active state.
-	// It indicates that the collection needs activation. This is the default desired state of a collection.
+	// It indicates that the collection needs activation.
 	CollectionDesiredStateActive = "active"
 
 	// CollectionDesiredStateInactive represents a desired collection inactive state.
@@ -44,6 +44,7 @@ type CollectionStatus struct {
 	ActiveAssets      []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 	AvailableVersion  string                  `json:"availableVersion,omitempty"`
 	AvailableLocation string                  `json:"availableLocation,omitempty"`
+	Status            string                  `json:"status,omitempty"`
 	StatusMessage     string                  `json:"statusMessage,omitempty"`
 	Images            []Image                 `json:"images,omitempty"`
 }
