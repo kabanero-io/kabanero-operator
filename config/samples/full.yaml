@@ -35,7 +35,7 @@ spec:
     tag: "0.2.0"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-service:0.2.0
+    image: kabanero/kabanero-command-line-services:0.2.0
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
