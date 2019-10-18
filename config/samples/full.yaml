@@ -28,14 +28,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.2.0-rc.1"
+    version: "0.2.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "v0.2.0rc1"
+    tag: "0.2.0"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-service:v0.2.0rc1
+    image: kabanero/kabanero-command-line-service:0.2.0
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -82,7 +82,7 @@ spec:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/v0.2.0-rc1/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/0.2.0/kabanero-index.yaml
       # Activates a default set of collections
       activateDefaultCollections: true
   # The information in the Github section is used by the Kabanero CLI to
