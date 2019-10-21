@@ -83,6 +83,8 @@ func createKubeconfigFile(resource *v1alpha1.ClusterResource, logger *zap.Sugare
 	context := &clientcmdapi.Context{
 		Cluster:  resource.Name,
 		AuthInfo: resource.Username,
+		// Namespace isn't written to kubeconfig if this is empty
+		Namespace: resource.Namespace,
 	}
 	c := clientcmdapi.NewConfig()
 	c.Clusters[resource.Name] = cluster

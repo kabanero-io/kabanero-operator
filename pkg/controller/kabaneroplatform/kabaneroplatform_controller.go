@@ -314,7 +314,7 @@ func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Cl
 	// if landing enabled
 	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
 		// Remove landing page customizations for the current namespace.
-		err := removeWebConsoleCustomization(k)
+		err := removeWebConsoleCustomization(k, client)
 		if err != nil {
 			return err
 		}
@@ -348,7 +348,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isTektonReady, _ := getTektonStatus(k, c)
 	isKnativeEventingReady, _ := getKnativeServingStatus(k, c)
 	isKnativeServingReady, _ := getKnativeEventingStatus(k, c)
-	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger)
+	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger, c)
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 	isCheReady, _ := getCheStatus(ctx, k, c)

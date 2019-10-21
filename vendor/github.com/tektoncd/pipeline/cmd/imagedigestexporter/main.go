@@ -55,9 +55,9 @@ func main() {
 			log.Printf("ImageResource %s doesn't have an index.json file: %s", imageResource.Name, err)
 			continue
 		}
-		digest, err := ii.Digest()
+		digest, err := GetDigest(ii)
 		if err != nil {
-			log.Fatalf("Unexpected error getting image digest %v: %v", imageResource, err)
+			log.Fatalf("Unexpected error getting image digest for %s: %v", imageResource.Name, err)
 		}
 		output = append(output, v1alpha1.PipelineResourceResult{Name: imageResource.Name, Digest: digest.String()})
 	}

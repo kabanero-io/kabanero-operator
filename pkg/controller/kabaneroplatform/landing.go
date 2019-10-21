@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -83,7 +82,7 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	}
 
 	// Retrieve the kabanero landing URL.
-	landingURL, err := getLandingURL(k, config)
+	landingURL, err := getLandingURL(k, c, config)
 	if err != nil {
 		return err
 	}
@@ -97,13 +96,13 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	}
 
 	// Update the web console's ConfigMap with custom data.
-	err = customizeWebConsole(k, clientset, config, landingURL)
+	err = customizeWebConsole(k, c, clientset, config, landingURL)
 
 	return err
 }
 
 func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	err := removeWebConsoleCustomization(k)
+	err := removeWebConsoleCustomization(k, c)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
@@ -170,16 +169,13 @@ func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 }
 
 // Retrieves the landing URL from the landing Route.
-func getLandingURL(k *kabanerov1alpha1.Kabanero, config *restclient.Config) (string, error) {
+func getLandingURL(k *kabanerov1alpha1.Kabanero, c client.Client, config *restclient.Config) (string, error) {
 	landingURL := ""
 
 	// Get the Route instance.
-	myScheme := runtime.NewScheme()
-	cl, _ := client.New(config, client.Options{Scheme: myScheme})
-	routev1.AddToScheme(myScheme)
 	landingRoute := &routev1.Route{}
 	landingRouteName := types.NamespacedName{Namespace: k.ObjectMeta.Namespace, Name: "kabanero-landing"}
-	err := cl.Get(context.TODO(), landingRouteName, landingRoute)
+	err := c.Get(context.TODO(), landingRouteName, landingRoute)
 
 	if err != nil {
 		return landingURL, err
@@ -209,12 +205,9 @@ func getLandingURL(k *kabanerov1alpha1.Kabanero, config *restclient.Config) (str
 }
 
 // Returns a copy of the OKD web-console ConfigMap
-func getWebConsoleConfigMap(config *restclient.Config) (*corev1.ConfigMap, error) {
-	myScheme := runtime.NewScheme()
-	cl, _ := client.New(config, client.Options{Scheme: myScheme})
-	corev1.AddToScheme(myScheme)
+func getWebConsoleConfigMap(c client.Client, config *restclient.Config) (*corev1.ConfigMap, error) {
 	configmap := &corev1.ConfigMap{}
-	err := cl.Get(context.TODO(), types.NamespacedName{
+	err := c.Get(context.TODO(), types.NamespacedName{
 		Namespace: "openshift-web-console", Name: "webconsole-config"}, configmap)
 	if err != nil {
 		return nil, err
@@ -229,9 +222,9 @@ func getWebConsoleConfigMap(config *restclient.Config) (*corev1.ConfigMap, error
 }
 
 // Adds customizations to the OpenShift web console.
-func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Clientset, config *restclient.Config, landingURL string) error {
+func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, clientset *kubernetes.Clientset, config *restclient.Config, landingURL string) error {
 	// Get a copy of the web-console ConfigMap.
-	cm, err := getWebConsoleConfigMap(config)
+	cm, err := getWebConsoleConfigMap(c, config)
 	if err != nil {
 		return err
 	}
@@ -316,7 +309,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Cli
 }
 
 // Removes customizations from the openshift console.
-func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero) error {
+func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	// Create a clientset to drive API operations on resources.
 	config, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
@@ -329,7 +322,7 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero) error {
 	}
 
 	// Get a copy of the web-console ConfigMap.
-	cm, err := getWebConsoleConfigMap(config)
+	cm, err := getWebConsoleConfigMap(c, config)
 	if err != nil {
 		return err
 	}
@@ -343,7 +336,7 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero) error {
 	}
 
 	// Update the extensions section of the embedded webconsole-config.yaml entry
-	landingURL, err := getLandingURL(k, config)
+	landingURL, err := getLandingURL(k, c, config)
 	if err != nil {
 		return err
 	}
