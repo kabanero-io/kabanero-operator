@@ -4,30 +4,30 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"errors"
-	"fmt"
-	"github.com/go-logr/logr"
-	"io"
-	"io/ioutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/yaml"
-	"net/http"
-	"strings"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
+
+	"github.com/go-logr/logr"
 	yml "gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // Collection archive manifest.yaml
 type CollectionManifest struct {
-	Contents []CollectionContents                 `yaml:"contents,omitempty"`
+	Contents []CollectionContents `yaml:"contents,omitempty"`
 }
 
 type CollectionContents struct {
-	File   string                 `yaml:"file,omitempty"`
-	Sha256 string                 `yaml:"sha256,omitempty"`
+	File   string `yaml:"file,omitempty"`
+	Sha256 string `yaml:"sha256,omitempty"`
 }
-
 
 func DownloadToByte(url string) ([]byte, error) {
 	r, err := http.Get(url)
@@ -45,8 +45,6 @@ func DownloadToByte(url string) ([]byte, error) {
 func decodeManifests(archive []byte, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]unstructured.Unstructured, error) {
 	manifests := []unstructured.Unstructured{}
 	var collectionmanifest CollectionManifest
-	
-
 
 	// Read the manifest.yaml from the collection archive
 	r := bytes.NewReader(archive)
@@ -57,6 +55,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 	tarReader := tar.NewReader(gzReader)
 
 	foundManifest := false
+	var headers []string
 	for {
 		header, err := tarReader.Next()
 
@@ -68,7 +67,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			return nil, errors.New(fmt.Sprintf("Could not read manifest tar"))
 		}
 
-		fmt.Printf("Header Name: %v", header.Name)
+		headers = append(headers, header.Name)
 
 		switch {
 		case strings.TrimPrefix(header.Name, "./") == "manifest.yaml":
@@ -86,6 +85,9 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			foundManifest = true
 		}
 	}
+
+	fmt.Println("Header names: ", strings.Join(headers, ","))
+
 	if foundManifest != true {
 		return nil, fmt.Errorf("Error reading archive, unable to read manifest.yaml")
 	}
@@ -121,32 +123,32 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			if err == io.EOF && i == 0 || err != nil && err != io.EOF {
 				return nil, fmt.Errorf("Error reading archive %v: %v", header.Name, err.Error())
 			}
-			
+
 			// Checksum. Lookup the read file in the index and compare sha256
 			match := false
 			b_sum := sha256.Sum256(b)
 			for _, content := range collectionmanifest.Contents {
-					if content.File == strings.TrimPrefix(header.Name, "./") {
-						// Older releases may not have a sha256 in the manifest.yaml
-						if content.Sha256 != "" {
-							var c_sum [32]byte
-							decoded, err := hex.DecodeString(content.Sha256)
-							if err != nil {
-								return nil, err
-							}
-							copy(c_sum[:], decoded)
-							if b_sum != c_sum {
-								return nil, fmt.Errorf("Archive file: %v  manifest.yaml checksum: %x  did not match file checksum: %x", header.Name, c_sum, b_sum)
-							}
-							match = true
-						} else {
-							// Would be nice if we could make this a warning message, but it seems like the only
-							// options are error and info.  It's possible that some implementation has other methods
-							// but someone needs to investigate.
-							reqLogger.Info(fmt.Sprintf("Archive file %v was listed in the manifest but had no checksum.  Checksum validation for this file is skipped.", header.Name))
-							match = true
+				if content.File == strings.TrimPrefix(header.Name, "./") {
+					// Older releases may not have a sha256 in the manifest.yaml
+					if content.Sha256 != "" {
+						var c_sum [32]byte
+						decoded, err := hex.DecodeString(content.Sha256)
+						if err != nil {
+							return nil, err
 						}
+						copy(c_sum[:], decoded)
+						if b_sum != c_sum {
+							return nil, fmt.Errorf("Archive file: %v  manifest.yaml checksum: %x  did not match file checksum: %x", header.Name, c_sum, b_sum)
+						}
+						match = true
+					} else {
+						// Would be nice if we could make this a warning message, but it seems like the only
+						// options are error and info.  It's possible that some implementation has other methods
+						// but someone needs to investigate.
+						reqLogger.Info(fmt.Sprintf("Archive file %v was listed in the manifest but had no checksum.  Checksum validation for this file is skipped.", header.Name))
+						match = true
 					}
+				}
 			}
 			if match != true {
 				return nil, fmt.Errorf("File %v was found in the archive, but not in the manifest.yaml", header.Name)
@@ -176,7 +178,7 @@ func GetManifests(url string, checksum string, renderingContext map[string]inter
 	if err != nil {
 		return nil, err
 	}
-	
+
 	b_sum := sha256.Sum256(b)
 	var c_sum [32]byte
 	decoded, err := hex.DecodeString(checksum)
@@ -184,11 +186,11 @@ func GetManifests(url string, checksum string, renderingContext map[string]inter
 		return nil, err
 	}
 	copy(c_sum[:], decoded)
-	
+
 	if b_sum != c_sum {
 		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
 	}
-	
+
 	manifests, err := decodeManifests(b, renderingContext, reqLogger)
 	if err != nil {
 		return nil, err

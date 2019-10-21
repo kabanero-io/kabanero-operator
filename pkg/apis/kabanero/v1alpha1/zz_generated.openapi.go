@@ -89,6 +89,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref common.ReferenceCallba
 							Format: "",
 						},
 					},
+					"desiredState": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
 			},
 		},
@@ -139,6 +145,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 						},
 					},
 					"availableLocation": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"status": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",

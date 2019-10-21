@@ -1,9 +1,10 @@
 package collection
 
 import (
+	"testing"
+
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestIt(t *testing.T) {
