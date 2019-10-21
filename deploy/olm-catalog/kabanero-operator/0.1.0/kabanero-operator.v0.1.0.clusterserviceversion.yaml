@@ -191,6 +191,11 @@ spec:
       kind: Config
       displayName: OpenShift Pipelines Install
       description: OpenShift Pipelines using Tekton
+    - name: appsodyapplications.appsody.dev
+      version: v1beta1
+      kind: AppsodyApplication
+      displayName: Appsody Operator
+      description: Describes application deployment
   install:
     spec:
       deployments:
@@ -278,7 +283,13 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - operator.tekton.dev
+          - tekton.dev
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        - apiGroups:
+          - appsody.dev
           resources:
           - '*'
           verbs:
