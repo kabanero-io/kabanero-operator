@@ -95,8 +95,12 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 		return err
 	}
 
-	// Update the web console's ConfigMap with custom data.
+	// Update the web console's ConfigMap with custom data.  If we could
+	// not find the web console config map, skip it.
 	err = customizeWebConsole(k, c, clientset, config, landingURL)
+	if apierrors.IsNotFound(err) {
+		err = nil
+	}
 
 	return err
 }
