@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: kabanero-operator.v0.1.0
+  name: kabanero-operator.v0.3.0
   namespace: placeholder
   annotations:
     capabilities: Basic Install
@@ -21,12 +21,12 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.1.0",
+            "version": "0.3.0",
             "collections": {
               "repositories": [
                 {
                   "name": "incubator",
-                  "url": "https://github.com/kabanero-io/collections/releases/download/v0.1.0/kabanero-index.yaml",
+                  "url": "https://github.com/kabanero-io/collections/releases/download/v0.3.0/kabanero-index.yaml",
                   "activateDefaultCollections": true
                 }
               ]
@@ -45,11 +45,10 @@ metadata:
         }
       ]
 spec:
-  # TODO: minKubeVersion 1.12 is invalid when used with  server version (1.11.0+d4cacc0)
-  minKubeVersion: 1.11.0
+  minKubeVersion: 1.14.0
   apiservicedefinitions: {}
   maturity: alpha
-  version: 0.1.0
+  version: 0.3.0
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
@@ -230,6 +229,24 @@ spec:
                 name: kabanero-operator
                 resources: {}
               serviceAccountName: kabanero-operator
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          verbs:
+          - get
+          - create
+          - list
+        - apiGroups:
+          - ""
+          resources:
+          - persistentvolumes
+          verbs:
+          - get
+          - create
+        serviceAccountName: kabanero-operator
       permissions:
       - rules:
         - apiGroups:
@@ -245,6 +262,7 @@ spec:
           resources:
           - configmaps
           - services
+          - serviceaccounts
           verbs:
           - get
           - create
