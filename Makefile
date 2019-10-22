@@ -22,8 +22,13 @@ build-image: generate
   # This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
   # Build an OLM private registry for Kabanero
-	cp deploy/crds/kabanero_v1alpha1_*_crd.yaml registry/manifests/kabanero-operator/0.3.0/
-	docker build -t ${REGISTRY_IMAGE} -f registry/Dockerfile registry/
+	mkdir -p build/registry
+	cp -R registry/manifests build/registry/
+	cp registry/Dockerfile build/registry/Dockerfile
+	cp deploy/crds/kabanero_v1alpha1_*_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
+	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
+	rm -R build/registry
 
 push-image:
 ifneq "$(IMAGE)" "kabanero-operator:latest"
