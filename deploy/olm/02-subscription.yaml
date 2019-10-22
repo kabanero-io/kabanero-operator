@@ -1,0 +1,12 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: kabanero-operator
+  namespace: kabanero
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: kabanero-operator
+  source: kabanero-catalog
+  sourceNamespace: openshift-marketplace
+  startingCSV: kabanero-operator.v0.3.0

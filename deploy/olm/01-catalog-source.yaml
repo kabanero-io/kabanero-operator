@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: kabanero-catalog
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: KABANERO_REGISTRY_IMAGE

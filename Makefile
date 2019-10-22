@@ -7,7 +7,7 @@ REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 
-.PHONY: build deploy build-image push-image
+.PHONY: build deploy deploy-olm build-image push-image
 
 build: generate
 	go install ./cmd/manager
@@ -81,6 +81,12 @@ endif
 	rm deploy/operator.yaml.bak || true
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
 	kubectl apply -f deploy/
+
+deploy-olm:
+	kubectl create namespace kabanero || true
+	sed -i.bak -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml
+	rm deploy/olm/01-catalog-source.yaml.bak || true
+	kubectl apply -f deploy/olm/
 
 check: format build #test
 
