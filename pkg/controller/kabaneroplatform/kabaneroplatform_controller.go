@@ -35,10 +35,9 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileKabanero{
-		client:            mgr.GetClient(),
-		scheme:            mgr.GetScheme(),
-		requeueDelayMapV1: make(map[string]RequeueData),
-		requeueDelayMapV2: make(map[string]RequeueData)}
+		client:          mgr.GetClient(),
+		scheme:          mgr.GetScheme(),
+		requeueDelayMap: make(map[string]RequeueData)}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -87,10 +86,9 @@ var _ reconcile.Reconciler = &ReconcileKabanero{}
 type ReconcileKabanero struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client            client.Client
-	scheme            *runtime.Scheme
-	requeueDelayMapV1 map[string]RequeueData
-	requeueDelayMapV2 map[string]RequeueData
+	client          client.Client
+	scheme          *runtime.Scheme
+	requeueDelayMap map[string]RequeueData
 }
 
 // RequeueData stores information that enables reconcile operations to be retried.
@@ -184,25 +182,15 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, nil
 	}
 
-	// Deploy version 1 feature collection resources.
+	// Deploy feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
 		reqLogger.Error(err, "Error reconciling featured collections.")
-		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV1, reqLogger)
+		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMap, reqLogger)
 	}
 
 	// things worked reset requeue data
-	r.requeueDelayMapV1[request.Namespace] = RequeueData{0, time.Now()}
-
-	// Deploy version 2 feature collection resources.
-	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling featured collections V2.")
-		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV2, reqLogger)
-	}
-
-	// things worked reset requeue data
-	r.requeueDelayMapV2[request.Namespace] = RequeueData{0, time.Now()}
+	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
 
 	// Reconcile the appsody operator
 	err = reconcile_appsody(ctx, instance, r.client)

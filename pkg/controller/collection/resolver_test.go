@@ -1,56 +1,14 @@
 package collection
 
 import (
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"testing"
+
+	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 )
 
 func TestResolveIndex(t *testing.T) {
 	repoConfig := kabanerov1alpha1.RepositoryConfig{
 		Name:                       "name",
-		Url:                        "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental",
-		ActivateDefaultCollections: true,
-	}
-
-	index, err := ResolveIndex(repoConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if index == nil {
-		t.Fatal("Returned index was nil")
-	}
-
-	if index.ApiVersion != "v1" {
-		t.Fatal("Expected apiVersion == v1")
-	}
-}
-
-func TestResolveIndexWithSkipCertVerify(t *testing.T) {
-	repoConfig := kabanerov1alpha1.RepositoryConfig{
-		Name:                       "name",
-		Url:                        "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental",
-		ActivateDefaultCollections: true,
-		SkipCertVerification:       true,
-	}
-
-	index, err := ResolveIndex(repoConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if index == nil {
-		t.Fatal("Index not found.")
-	}
-
-	if index.ApiVersion != "v1" {
-		t.Fatal("Expected apiVersion == v1")
-	}
-}
-
-func TestResolveIndexV2(t *testing.T) {
-	repoConfig := kabanerov1alpha1.RepositoryConfig{
-		Name:                       "name",
 		Url:                        "https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml",
 		ActivateDefaultCollections: true,
 	}
@@ -64,26 +22,61 @@ func TestResolveIndexV2(t *testing.T) {
 		t.Fatal("Returned index was nil")
 	}
 
-	if index.ApiVersion != "v2" {
+	if index.APIVersion != "v2" {
 		t.Fatal("Expected apiVersion == v2")
 	}
 }
 
-func TestResolveCollection(t *testing.T) {
-	repoConfig := kabanerov1alpha1.RepositoryConfig{
-		Name:                       "name",
-		Url:                        "https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator-index.yaml",
-		ActivateDefaultCollections: true,
+func TestSearchCollection(t *testing.T) {
+	index := &Index{
+		URL:        "http://some/URL/to/V2/collection/index",
+		APIVersion: "v2",
+		Collections: []Collection{
+			Collection{
+				DefaultImage:    "java-microprofile",
+				DefaultPipeline: "default",
+				DefaultTemplate: "default",
+				Description:     "Test collection",
+				Id:              "java-microprofile",
+				Images: []Images{
+					Images{},
+				},
+				Maintainers: []Maintainers{
+					Maintainers{},
+				},
+				Name: "Eclipse Microprofile",
+				Pipelines: []Pipelines{
+					Pipelines{},
+				},
+			},
+			Collection{
+				DefaultImage:    "java-microprofile2",
+				DefaultPipeline: "default2",
+				DefaultTemplate: "default2",
+				Description:     "Test collection 2",
+				Id:              "java-microprofile2",
+				Images: []Images{
+					Images{},
+				},
+				Maintainers: []Maintainers{
+					Maintainers{},
+				},
+				Name: "Eclipse Microprofile 2",
+				Pipelines: []Pipelines{
+					Pipelines{},
+				},
+			},
+		},
 	}
 
-	collection, err := ResolveCollection(repoConfig, "https://raw.githubusercontent.com/kabanero-io/kabanero-collection/master/experimental/java-microprofile-0.2.1/collection.yaml")
+	collections, err := SearchCollection("java-microprofile2", index)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if collection == nil {
-		t.Fatal("Collection was nil")
+	if len(collections) != 1 {
+		t.Fatal("The expected number of collections is 1, but found: ", len(collections))
 	}
 
-	t.Log(collection)
+	t.Log(collections)
 }

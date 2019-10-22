@@ -12,31 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Finds the highest version (semver) of the collection with the given name, in the provided
-// list of collections.  The caller has verified that the list contains at least one collection
-// with the given name.
-func findMaxVersionCollectionWithName(collections []*collection.CollectionV1, name string) string {
-
-	highestVersion, _ := semver.Make("0.0.0")
-
-	for _, candidate := range collections {
-		if candidate.Manifest.Name == name {
-			candidateVersion, err := semver.ParseTolerant(candidate.Manifest.Version)
-			if err == nil { // TODO: log error?
-				if candidateVersion.Compare(highestVersion) > 0 {
-					highestVersion = candidateVersion
-				}
-			}
-		}
-	}
-
-	return highestVersion.String()
-}
-
-// Finds the highest version (semver) of the V2 collection with the given id, in the provided
+// Finds the highest version (semver) of the collection with the given id, in the provided
 // list of collections.  The caller has verified that the list contains at least one collection
 // with the given id.
-func findMaxVersionCollectionWithIdV2(collections []*collection.IndexedCollectionV2, id string) string {
+func findMaxVersionCollectionWithId(collections []*collection.Collection, id string) string {
 
 	highestVersion, _ := semver.Make("0.0.0")
 
@@ -54,7 +33,7 @@ func findMaxVersionCollectionWithIdV2(collections []*collection.IndexedCollectio
 }
 
 func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	//Resolve the collections which are currently featured across the various indexes
+	// Resolve the collections which are currently featured across the various indexes.
 	featuredCollectionData, err := featuredCollections(k)
 	if err != nil {
 		return err
@@ -62,73 +41,8 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 
 	for _, data := range featuredCollectionData {
 		ownerIsController := true
-		featured := data.indexedCollections
-		for _, c := range featured {
-			//For each collection, assure that a corresponding resource exists
-			name := types.NamespacedName{
-				Name:      c.Manifest.Name,
-				Namespace: k.GetNamespace(),
-			}
 
-			collectionResource := &kabanerov1alpha1.Collection{}
-			err := cl.Get(ctx, name, collectionResource)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					// Not found. Need to create it at the highest supported version found
-					// in the repositories. At the same time, set the collection's desiredState
-					// based on the value of the activateDefaultCollections setting specified in the
-					// collection repo section of the kabanero CR instance.
-					desiredState := kabanerov1alpha1.CollectionDesiredStateActive
-					if !data.repositoryConfig.ActivateDefaultCollections {
-						desiredState = kabanerov1alpha1.CollectionDesiredStateInactive
-					}
-
-					collectionResource = &kabanerov1alpha1.Collection{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      c.Manifest.Name,
-							Namespace: k.GetNamespace(),
-							OwnerReferences: []metav1.OwnerReference{
-								metav1.OwnerReference{
-									APIVersion: k.TypeMeta.APIVersion,
-									Kind:       k.TypeMeta.Kind,
-									Name:       k.ObjectMeta.Name,
-									UID:        k.ObjectMeta.UID,
-									Controller: &ownerIsController,
-								},
-							},
-						},
-						Spec: kabanerov1alpha1.CollectionSpec{
-							Name:         c.Manifest.Name,
-							Version:      findMaxVersionCollectionWithName(featured, c.Manifest.Name),
-							DesiredState: desiredState,
-						},
-					}
-
-					err := cl.Create(ctx, collectionResource)
-					if err != nil {
-						return err
-					}
-				} else {
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	// Resolve the collections which are currently featured across the various indexes.
-	featuredCollectionData, err := featuredCollectionsV2(k)
-	if err != nil {
-		return err
-	}
-
-	for _, data := range featuredCollectionData {
-		ownerIsController := true
-
-		featured := data.indexedCollections
+		featured := data.Collections
 		for _, c := range featured {
 			// For each collection, assure that a corresponding resource exists and it is at
 			// the highest level found among the repositories.
@@ -176,7 +90,7 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 				}
 			}
 
-			collectionResource.Spec.Version = findMaxVersionCollectionWithIdV2(featured, c.Id)
+			collectionResource.Spec.Version = findMaxVersionCollectionWithId(featured, c.Id)
 			err = updateCollection(ctx, collectionResource)
 			if err != nil {
 				return err
@@ -186,52 +100,17 @@ func reconcileFeaturedCollectionsV2(ctx context.Context, k *kabanerov1alpha1.Kab
 	return nil
 }
 
-// Holds V1 collection related data.
-type collectionDataV1 struct {
-	indexedCollections []*collection.CollectionV1
-	repositoryConfig   kabanerov1alpha1.RepositoryConfig
+// Holds collection related data.
+type collectionData struct {
+	Collections      []*collection.Collection
+	repositoryConfig kabanerov1alpha1.RepositoryConfig
 }
 
 // Resolves all featured collections for the given Kabanero instance
-func featuredCollections(k *kabanerov1alpha1.Kabanero) ([]*collectionDataV1, error) {
-	var collections []*collection.CollectionV1
-	var collectionData []*collectionDataV1
+func featuredCollections(k *kabanerov1alpha1.Kabanero) ([]*collectionData, error) {
 
-	for _, r := range k.Spec.Collections.Repositories {
-		data := collectionDataV1{}
-		index, err := collection.ResolveIndex(r)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, c := range index.ListCollections() {
-			c, err := collection.ResolveCollection(r, c.CollectionUrls...)
-			if err != nil {
-				return nil, err
-			}
-
-			collections = append(collections, c)
-		}
-
-		data.repositoryConfig = r
-		data.indexedCollections = collections
-		collectionData = append(collectionData, &data)
-	}
-
-	return collectionData, nil
-}
-
-// Holds V2 collection related data.
-type collectionDataV2 struct {
-	indexedCollections []*collection.IndexedCollectionV2
-	repositoryConfig   kabanerov1alpha1.RepositoryConfig
-}
-
-// Resolves all V2 featured collections for the given Kabanero instance
-func featuredCollectionsV2(k *kabanerov1alpha1.Kabanero) ([]*collectionDataV2, error) {
-
-	var collectionData []*collectionDataV2
-	var collections []*collection.IndexedCollectionV2
+	var cData []*collectionData
+	var collections []*collection.Collection
 
 	for _, r := range k.Spec.Collections.Repositories {
 		index, err := collection.ResolveIndex(r)
@@ -239,15 +118,15 @@ func featuredCollectionsV2(k *kabanerov1alpha1.Kabanero) ([]*collectionDataV2, e
 			return nil, err
 		}
 
-		for _, c := range index.CollectionsV2 {
+		for _, c := range index.Collections {
 			//forced to re-declare the variable on the stack, thereby giving it a new unique memory address.
-			var col collection.IndexedCollectionV2
+			var col collection.Collection
 			col = c
 			collections = append(collections, &col)
 		}
 
-		collectionData = append(collectionData, &collectionDataV2{repositoryConfig: r, indexedCollections: collections})
+		cData = append(cData, &collectionData{repositoryConfig: r, Collections: collections})
 	}
 
-	return collectionData, nil
+	return cData, nil
 }
