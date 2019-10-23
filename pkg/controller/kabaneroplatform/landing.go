@@ -95,12 +95,8 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 		return err
 	}
 
-	// Update the web console's ConfigMap with custom data.  If we could
-	// not find the web console config map, skip it.
+	// Update the web console's ConfigMap with custom data.
 	err = customizeWebConsole(k, c, clientset, config, landingURL)
-	if apierrors.IsNotFound(err) {
-		err = nil
-	}
 
 	return err
 }
@@ -230,6 +226,11 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, clientse
 	// Get a copy of the web-console ConfigMap.
 	cm, err := getWebConsoleConfigMap(c, config)
 	if err != nil {
+		// If couldn't find the web console config map, nothing to do.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		
 		return err
 	}
 
@@ -328,6 +329,11 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 	// Get a copy of the web-console ConfigMap.
 	cm, err := getWebConsoleConfigMap(c, config)
 	if err != nil {
+		// If we couldn't find the config map, there is nothing to do.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		
 		return err
 	}
 
