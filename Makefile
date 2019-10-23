@@ -22,17 +22,23 @@ build-image: generate
   # This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
   # Build an OLM private registry for Kabanero
+  # The intention here is for the '0.3.0' to be a variable that points to the
+  # current version.  The CRDs for the current version are copied from the
+  # originals in 'deploy/crds'.  Then, when we switch to the next version, the
+  # variable changes to '0.4.0' or whatever, and the CRDs for 0.3.0 become
+  # static.
 	mkdir -p build/registry
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
-	cp deploy/crds/kabanero_v1alpha1_*_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
+	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
 	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
 	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
 	rm -R build/registry
 
 push-image:
 ifneq "$(IMAGE)" "kabanero-operator:latest"
-  # Default push
+  # Default push.  Make sure the namespace is there in case using local registry
+	kubectl create namespace kabanero || true
 	docker push $(IMAGE)
 	docker push $(REGISTRY_IMAGE)
 
