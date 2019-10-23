@@ -7,6 +7,17 @@ REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 
+# Internal Docker image in format repository:tag. Repository may contain an internal service reference.
+# Used for external push, and internal deployment pull
+# Example case:
+# export IMAGE=default-route-openshift-image-registry.apps.CLUSTER.example.com/kabanero/kabanero-operator:latest
+# export REGISTRY_IMAGE=default-route-openshift-image-registry.apps.CLUSTER.example.com/openshift-marketplace/kabanero-operator-registry:latest
+# export INTERNAL_IMAGE=image-registry.openshift-image-registry.svc:5000/kabanero/kabanero-operator:latest
+# export INTERNAL_REGISTRY_IMAGE=image-registry.openshift-image-registry.svc:5000/openshift-marketplace/kabanero-operator-registry:latest
+INTERNAL_IMAGE ?=
+INTERNAL_REGISTRY_IMAGE ?=
+
+
 .PHONY: build deploy deploy-olm build-image push-image
 
 build: generate
@@ -26,7 +37,14 @@ build-image: generate
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
 	cp deploy/crds/kabanero_v1alpha1_*_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
+	
+ifdef INTERNAL_IMAGE
+	# Deployment uses internal registry service address
+	sed -e "s!kabanero/kabanero-operator:latest!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+else
 	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+endif
+	
 	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
 	rm -R build/registry
 
@@ -84,9 +102,16 @@ endif
 
 deploy-olm:
 	kubectl create namespace kabanero || true
-	sed -i.bak -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml
-	rm deploy/olm/01-catalog-source.yaml.bak || true
+
 	kubectl apply -f deploy/olm/
+
+# Update deployment to correct image 
+ifdef INTERNAL_REGISTRY_IMAGE
+# Deployment uses internal registry service address
+	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${INTERNAL_REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
+else
+	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
+endif
 
 check: format build #test
 
