@@ -7,14 +7,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestIt(t *testing.T) {
-	r := &ReconcileCollection{indexResolver: func(kabanerov1alpha1.RepositoryConfig) (*CollectionV1Index, error) {
-		return &CollectionV1Index{
-			Collections: map[string][]IndexedCollectionV1{
-				"java-microprofile": []IndexedCollectionV1{
-					IndexedCollectionV1{
-						Name:           "java-microprofile",
-						CollectionUrls: []string{},
+func TestReconcileCollection(t *testing.T) {
+	r := &ReconcileCollection{indexResolver: func(kabanerov1alpha1.RepositoryConfig) (*Index, error) {
+		return &Index{
+			URL:        "http://some/URL/to/V2/collection/index",
+			APIVersion: "v2",
+			Collections: []Collection{
+				Collection{
+					DefaultImage:    "java-microprofile",
+					DefaultPipeline: "default",
+					DefaultTemplate: "default",
+					Description:     "Test collection",
+					Id:              "java-microprofile",
+					Images: []Images{
+						Images{
+							Id:    "java-microprofile",
+							Image: "kabanero/java-microprofile:0.2",
+						},
+					},
+					Maintainers: []Maintainers{
+						Maintainers{
+							Email:    "maintainer@someemail.ibm.com",
+							GithubId: "maintainer",
+							Name:     "Joe Maintainer",
+						},
+					},
+					Name: "Eclipse Microprofile",
+					Pipelines: []Pipelines{
+						Pipelines{},
 					},
 				},
 			},
@@ -23,8 +43,9 @@ func TestIt(t *testing.T) {
 
 	c := &kabanerov1alpha1.Collection{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "java-microprofile",
-			UID:  "1",
+			Name:      "java-microprofile",
+			Namespace: "Kabanero",
+			UID:       "1",
 			OwnerReferences: []metav1.OwnerReference{
 				metav1.OwnerReference{
 					APIVersion: "a/1",
@@ -33,6 +54,10 @@ func TestIt(t *testing.T) {
 					UID:        "1",
 				},
 			},
+		},
+		Spec: kabanerov1alpha1.CollectionSpec{
+			Name:         "somename",
+			DesiredState: "active",
 		},
 	}
 
@@ -43,80 +68,15 @@ func TestIt(t *testing.T) {
 	r.ReconcileCollection(c, k)
 }
 
-// Test equality between an asset with a name, and the kube status
-func TestAssetMatch(t *testing.T) {
-	var sampleStatus = kabanerov1alpha1.RepositoryAssetStatus{Name: "myAsset", Url: "http://myurl.com", Digest: "abcd", Status: "active"}
-	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "abcd"}
-	if !assetMatch(sampleStatus, sampleAsset) {
-		t.Fatal("Status and asset do not match")
-	}
-}
-
-// Test non-equality between assets that are not equal
-func TestAssetNotMatch(t *testing.T) {
-	var sampleStatus = kabanerov1alpha1.RepositoryAssetStatus{Name: "myOtherAsset", Url: "http://myurl.com", Digest: "abcd", Status: "active"}
-	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "abcd"}
-	if assetMatch(sampleStatus, sampleAsset) {
-		t.Fatal("Status and asset should not match")
-	}
-}
-
-// Test equality between asset and status when there is no name
-func TestAssetMatchNoName(t *testing.T) {
-	var sampleStatus = kabanerov1alpha1.RepositoryAssetStatus{Url: "http://myurl.com", Digest: "abcd", Status: "active"}
-	var sampleAsset = AssetManifest{"", "type", "http://myurl.com", "abcd"}
-	if !assetMatch(sampleStatus, sampleAsset) {
-		t.Fatal("Status and asset do not match")
-	}
-}
-
-// Test non-equality between assets that are not equal and do not have a name
-func TestAssetNotMatchNoName(t *testing.T) {
-	var sampleStatus = kabanerov1alpha1.RepositoryAssetStatus{Url: "http://myurl.com", Digest: "abcd", Status: "active"}
-	var sampleAsset = AssetManifest{"", "type", "http://myurl.net", "abcd"}
-	if assetMatch(sampleStatus, sampleAsset) {
-		t.Fatal("Status and asset should not match")
-	}
-}
-
-// Test that a new status is created for an asset that was not present in the status
-func TestUpdateAssetStatusNotExist(t *testing.T) {
-	var status = kabanerov1alpha1.CollectionStatus{}
-	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
-
-	updateAssetStatus(&status, sampleAsset, "")
-
-	if len(status.ActiveAssets) != 1 {
-		t.Fatal("Status should have one asset in it")
-	}
-
-	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Name {
-		t.Fatal("Status name does not equal asset name")
-	}
-
-	if newStatus.Url != sampleAsset.Url {
-		t.Fatal("Status URL does not equal asset URL")
-	}
-
-	if newStatus.Digest != sampleAsset.Digest {
-		t.Fatal("Status digest does not equal asset digest")
-	}
-
-	if newStatus.Status != "active" {
-		t.Fatal("Status of asset is not active: " + newStatus.Status)
-	}
-
-	if newStatus.StatusMessage != "" {
-		t.Fatal("Status message of asset is not empty: " + newStatus.StatusMessage)
-	}
-}
-
 // Test that a status is updated with a new digest
 func TestUpdateAssetStatus(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}}
 	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
-	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
+	var sampleAsset = Pipelines{
+		Id:     "myAsset",
+		Sha256: "12345",
+		Url:    "http://myurl.com",
+	}
 
 	updateAssetStatus(&status, sampleAsset, "")
 
@@ -125,7 +85,7 @@ func TestUpdateAssetStatus(t *testing.T) {
 	}
 
 	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Name {
+	if newStatus.Name != sampleAsset.Id {
 		t.Fatal("Status name does not equal asset name")
 	}
 
@@ -133,8 +93,8 @@ func TestUpdateAssetStatus(t *testing.T) {
 		t.Fatal("Status URL does not equal asset URL")
 	}
 
-	if newStatus.Digest != sampleAsset.Digest {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Digest + ")")
+	if newStatus.Digest != sampleAsset.Sha256 {
+		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Sha256 + ")")
 	}
 
 	if newStatus.Status != "active" {
@@ -150,7 +110,11 @@ func TestUpdateAssetStatus(t *testing.T) {
 func TestUpdateAssetStatusFromFailure(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "failed", StatusMessage: "some error"}}
 	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
-	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
+	var sampleAsset = Pipelines{
+		Id:     "myAsset",
+		Sha256: "12345",
+		Url:    "http://myurl.com",
+	}
 
 	updateAssetStatus(&status, sampleAsset, "")
 
@@ -159,7 +123,7 @@ func TestUpdateAssetStatusFromFailure(t *testing.T) {
 	}
 
 	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Name {
+	if newStatus.Name != sampleAsset.Id {
 		t.Fatal("Status name does not equal asset name")
 	}
 
@@ -167,8 +131,8 @@ func TestUpdateAssetStatusFromFailure(t *testing.T) {
 		t.Fatal("Status URL does not equal asset URL")
 	}
 
-	if newStatus.Digest != sampleAsset.Digest {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Digest + ")")
+	if newStatus.Digest != sampleAsset.Sha256 {
+		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Sha256 + ")")
 	}
 
 	if newStatus.Status != "active" {
@@ -184,7 +148,11 @@ func TestUpdateAssetStatusFromFailure(t *testing.T) {
 func TestUpdateAssetStatusToFailure(t *testing.T) {
 	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}}
 	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
-	var sampleAsset = AssetManifest{"myAsset", "type", "http://myurl.com", "efgh"}
+	var sampleAsset = Pipelines{
+		Id:     "myAsset",
+		Sha256: "12345",
+		Url:    "http://myurl.com",
+	}
 
 	errorMessage := "some failure happened"
 	updateAssetStatus(&status, sampleAsset, errorMessage)
@@ -194,7 +162,7 @@ func TestUpdateAssetStatusToFailure(t *testing.T) {
 	}
 
 	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Name {
+	if newStatus.Name != sampleAsset.Id {
 		t.Fatal("Status name does not equal asset name")
 	}
 
@@ -202,8 +170,8 @@ func TestUpdateAssetStatusToFailure(t *testing.T) {
 		t.Fatal("Status URL does not equal asset URL")
 	}
 
-	if newStatus.Digest != sampleAsset.Digest {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Digest + ")")
+	if newStatus.Digest != sampleAsset.Sha256 {
+		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Sha256 + ")")
 	}
 
 	if newStatus.Status != "failed" {
@@ -248,8 +216,8 @@ func TestNoFailedAssetsEmptyStatus(t *testing.T) {
 // Test that I can find the max version of a collection
 func TestFindMaxVersionCollection(t *testing.T) {
 
-	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.0.1"}}
-	collection2 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.0.2"}}
+	collection1 := Collection{Version: "0.0.1"}
+	collection2 := Collection{Version: "0.0.2"}
 
 	var collections []resolvedCollection
 	collections = append(collections, resolvedCollection{collection: collection1})
@@ -261,15 +229,15 @@ func TestFindMaxVersionCollection(t *testing.T) {
 		t.Fatal("Did not find a max version")
 	}
 
-	if maxCollection.collection.Manifest.Version != "0.0.2" {
-		t.Fatal("Returned max version (" + maxCollection.collection.Manifest.Version + ") was not 0.0.2")
+	if maxCollection.collection.Version != "0.0.2" {
+		t.Fatal("Returned max version (" + maxCollection.collection.Version + ") was not 0.0.2")
 	}
 }
 
 // Test that I can find the max version of a collection when there is only 1 collection
 func TestFindMaxVersionCollectionOne(t *testing.T) {
 
-	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.0.1"}}
+	collection1 := Collection{Version: "0.0.1"}
 
 	var collections []resolvedCollection
 	collections = append(collections, resolvedCollection{collection: collection1})
@@ -280,8 +248,8 @@ func TestFindMaxVersionCollectionOne(t *testing.T) {
 		t.Fatal("Did not find a max version")
 	}
 
-	if maxCollection.collection.Manifest.Version != "0.0.1" {
-		t.Fatal("Returned max version (" + maxCollection.collection.Manifest.Version + ") was not 0.0.1")
+	if maxCollection.collection.Version != "0.0.1" {
+		t.Fatal("Returned max version (" + maxCollection.collection.Version + ") was not 0.0.1")
 	}
 }
 
@@ -299,8 +267,8 @@ func TestFindMaxVersionCollectionEmpty(t *testing.T) {
 // Test that I can specify just a major.minor semver (invalid) and still be OK
 func TestFindMaxVersionCollectionMajorMinor(t *testing.T) {
 
-	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.1"}}
-	collection2 := CollectionV1{Manifest: CollectionV1Manifest{Version: "0.2"}}
+	collection1 := Collection{Version: "0.1"}
+	collection2 := Collection{Version: "0.2"}
 
 	var collections []resolvedCollection
 	collections = append(collections, resolvedCollection{collection: collection1})
@@ -312,16 +280,16 @@ func TestFindMaxVersionCollectionMajorMinor(t *testing.T) {
 		t.Fatal("Did not find a max version")
 	}
 
-	if maxCollection.collection.Manifest.Version != "0.2" {
-		t.Fatal("Returned max version (" + maxCollection.collection.Manifest.Version + ") was not 0.2")
+	if maxCollection.collection.Version != "0.2" {
+		t.Fatal("Returned max version (" + maxCollection.collection.Version + ") was not 0.2")
 	}
 }
 
 // Test that if I just have invalid semvers, I don't find a max version.
 func TestFindMaxVersionCollectionInvalidSemver(t *testing.T) {
 
-	collection1 := CollectionV1{Manifest: CollectionV1Manifest{Version: "blah"}}
-	collection2 := CollectionV1{Manifest: CollectionV1Manifest{Version: "5nope"}}
+	collection1 := Collection{Version: "blah"}
+	collection2 := Collection{Version: "5nope"}
 
 	var collections []resolvedCollection
 	collections = append(collections, resolvedCollection{collection: collection1})
@@ -330,6 +298,6 @@ func TestFindMaxVersionCollectionInvalidSemver(t *testing.T) {
 	maxCollection := findMaxVersionCollection(collections)
 
 	if maxCollection != nil {
-		t.Fatal("Should not have found a max version (" + maxCollection.collection.Manifest.Version + ")")
+		t.Fatal("Should not have found a max version (" + maxCollection.collection.Version + ")")
 	}
 }
