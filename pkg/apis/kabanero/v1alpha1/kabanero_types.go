@@ -26,8 +26,6 @@ type KabaneroSpec struct {
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
 
-	AppsodyOperator AppsodyCustomizationSpec `json:"appsodyOperator,omitempty"`
-
 	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
 
 	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
@@ -62,20 +60,12 @@ type TektonCustomizationSpec struct {
 	Version  string `json:"version,omitempty"`
 }
 
-type AppsodyCustomizationSpec struct {
-	Enable     bool   `json:"enable,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Image      string `json:"image,omitempty"`
-	Repository string `json:"repository,omitempty"`
-	Tag        string `json:"tag,omitempty"`
-}
-
 type KabaneroCliServicesCustomizationSpec struct {
 	//Future: Enable     bool   `json:"enable,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Image      string `json:"image,omitempty"`
-	Repository string `json:"repository,omitempty"`
-	Tag        string `json:"tag,omitempty"`
+	Version                  string `json:"version,omitempty"`
+	Image                    string `json:"image,omitempty"`
+	Repository               string `json:"repository,omitempty"`
+	Tag                      string `json:"tag,omitempty"`
 	SessionExpirationSeconds string `json:"sessionExpirationSeconds,omitempty"`
 }
 
@@ -194,8 +184,8 @@ type AppsodyStatus struct {
 
 // KappnavStatus defines the observed status details of Kubernetes Application Navigator.
 type KappnavStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
 	UiLocations  []string `json:"uiLocations,omitempty"`
 	ApiLocations []string `json:"apiLocations,omitempty"`
 }
