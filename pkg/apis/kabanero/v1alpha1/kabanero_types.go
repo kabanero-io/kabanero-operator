@@ -72,10 +72,10 @@ type AppsodyCustomizationSpec struct {
 
 type KabaneroCliServicesCustomizationSpec struct {
 	//Future: Enable     bool   `json:"enable,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Image      string `json:"image,omitempty"`
-	Repository string `json:"repository,omitempty"`
-	Tag        string `json:"tag,omitempty"`
+	Version                  string `json:"version,omitempty"`
+	Image                    string `json:"image,omitempty"`
+	Repository               string `json:"repository,omitempty"`
+	Tag                      string `json:"tag,omitempty"`
 	SessionExpirationSeconds string `json:"sessionExpirationSeconds,omitempty"`
 }
 
@@ -132,7 +132,7 @@ type KabaneroStatus struct {
 	Cli CliStatus `json:"cli,omitempty"`
 
 	// Kabanero Landing page readiness status.
-	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
+	Landing *KabaneroLandingPageStatus `json:"landing,omitempty"`
 
 	// Appsody instance readiness status.
 	Appsody AppsodyStatus `json:"appsody,omitempty"`
@@ -194,8 +194,8 @@ type AppsodyStatus struct {
 
 // KappnavStatus defines the observed status details of Kubernetes Application Navigator.
 type KappnavStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
 	UiLocations  []string `json:"uiLocations,omitempty"`
 	ApiLocations []string `json:"apiLocations,omitempty"`
 }
