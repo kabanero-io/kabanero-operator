@@ -4,6 +4,7 @@ metadata:
   name: kabaneros.kabanero.io
 spec:
   group: kabanero.io
+  version: v1alpha1
   versions:
   - name: v1alpha1
     served: true
