@@ -2,137 +2,114 @@ package kabaneroplatform
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	mf "github.com/kabanero-io/manifestival"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
-func reconcile_appsody(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	rev, err := resolveSoftwareRevision(k, "appsody-operator", k.Spec.AppsodyOperator.Version)
-	if err != nil {
-		return err
-	}
-
-	//The context which will be used to render any templates
-	templateContext := rev.Identifiers
-
-	image, err := imageUriWithOverrides(k.Spec.AppsodyOperator.Repository, k.Spec.AppsodyOperator.Tag, k.Spec.AppsodyOperator.Image, rev)
-	if err != nil {
-		return err
-	}
-	templateContext["image"] = image
-	templateContext["namespace"] = k.GetObjectMeta().GetNamespace()
-	
-	f, err := rev.OpenOrchestration("appsody.yaml")
-	if err != nil {
-		return err
-	}
-
-	s, err := renderOrchestration(f, templateContext)
-	if err != nil {
-		return err
-	}
-
-	m, err := mf.FromReader(strings.NewReader(s), c)
-	if err != nil {
-		return err
-	}
-
-	//Determine watch namespaces
-	var watchNamespaces string
-	if len(k.Spec.TargetNamespaces) > 0 {
-		watchNamespaces = k.GetObjectMeta().GetNamespace() + "," + strings.Join(k.Spec.TargetNamespaces, ",")
-	} else {
-		watchNamespaces = k.GetObjectMeta().GetNamespace()
-	}
-
-	transforms := []mf.Transformer{
-		transforms.ReplaceEnvVariable("WATCH_NAMESPACE", watchNamespaces),
-		mf.InjectOwner(k),
-		mf.InjectNamespace(k.GetNamespace()),
-	}
-
-	err = m.Transform(transforms...)
-	if err != nil {
-		return err
-	}
-
-	// Enables Appsody
-	err = m.ApplyAll()
-
-	return err
-}
+const (
+	appsodyDeploymentName      = "appsody-operator"
+	appsodyDeploymentNamespace = "openshift-operators"
+	appsodyDeploymentKind      = "Deployment"
+	appsodyDeploymentGroup     = "apps"
+	appsodyDeploymentVersion   = "v1"
+)
 
 // Retrieves the Appsody deployment status.
 func getAppsodyStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	ready := false
-	message := "The Appsody application deployment does not have condition indicating it is available"
 
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "Deployment",
-		Group:   "apps",
-		Version: "v1",
+		Kind:    appsodyDeploymentKind,
+		Group:   appsodyDeploymentGroup,
+		Version: appsodyDeploymentVersion,
 	})
+
+	// Get the Appsody operator deployment.
 	err := c.Get(context.Background(), client.ObjectKey{
-		Namespace: k.ObjectMeta.Namespace,
-		Name:      "appsody-operator",
+		Namespace: appsodyDeploymentNamespace,
+		Name:      appsodyDeploymentName,
 	}, u)
-	if err == nil {
-		conditionsMap, ok, err := unstructured.NestedFieldCopy(u.Object, "status", "conditions")
-		if err == nil && ok {
-			conditions, ok := conditionsMap.([]interface{})
-			if ok {
-				for _, conditionObject := range conditions {
-					aCondition, ok := conditionObject.(map[string]interface{})
-					if ok {
-						typeValue, ok, err := unstructured.NestedString(aCondition, "type")
-						if err == nil && ok {
-							statusValue, ok, err := unstructured.NestedString(aCondition, "status")
-							if err == nil && ok {
-								if typeValue == "Available" && statusValue == "True" {
-									ready = true
-								}
-							}
-						}
-					} else {
-						message = "An error occurred using an Apposdy deployment status condition"
-					}
-				}
-			} else {
-				message = "An error occurred using the Apposdy deployment status conditions"
-			}
-		} else {
-			message = "An error occurred getting the Apposdy deployment status conditions"
-			if err != nil {
-				reqLogger.Error(err, message)
-				message = message + ": " + err.Error()
-			}
-		}
-	} else {
-		if errors.IsNotFound(err) {
-			message = "The Appsody deployment was not found"
-		} else {
-			message = "An error occurred retrieving the Apposdy deployment"
-		}
-		reqLogger.Error(err, message)
-		message = message + ": " + err.Error()
-		ready = false
-	}
-	if ready == true {
-		k.Status.Appsody.Ready = "True"
-		k.Status.Appsody.ErrorMessage = ""
-		err = nil
-	} else {
+
+	if err != nil {
+		message := "Unable to retrieve Appsody deployment object"
+		reqLogger.Error(err, message+". Name: "+appsodyDeploymentName+". Namespace: "+appsodyDeploymentNamespace)
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message
+		k.Status.Appsody.ErrorMessage = message + ": " + err.Error()
+		return false, err
 	}
 
-	return ready, err
+	// Get the status.conditions section.
+	conditions, ok, err := unstructured.NestedSlice(u.Object, "status", "conditions")
+	if err != nil || !ok {
+		message := "Unable to retrieve Appsody deployment status.condition field"
+		reqLogger.Error(err, message+".")
+		k.Status.Appsody.Ready = "False"
+		k.Status.Appsody.ErrorMessage = message + ": " + err.Error()
+		return false, err
+	}
+
+	// Validate that the deployment is available.
+	for _, condition := range conditions {
+		typeValue, err := getNestedString(condition, "type")
+		if err != nil {
+			break
+		}
+
+		if typeValue == "Available" {
+			statusValue, err := getNestedString(condition, "status")
+			if err != nil {
+				break
+			}
+
+			if statusValue == "True" {
+				ready = true
+				k.Status.Appsody.Ready = "True"
+				k.Status.Appsody.ErrorMessage = ""
+			} else {
+				k.Status.Appsody.Ready = "False"
+				message, err := getNestedString(condition, "message")
+				if err != nil {
+					break
+				}
+
+				k.Status.Appsody.ErrorMessage = message
+			}
+
+			break
+		}
+	}
+
+	if err != nil {
+		message := "Unable to retrieve Appsody operator deployment status"
+		reqLogger.Error(err, message+".")
+		k.Status.Appsody.Ready = "False"
+		k.Status.Appsody.ErrorMessage = message + ": " + err.Error()
+		return false, err
+	}
+	return ready, nil
+}
+
+// Wraps an unstructured NestedString call.
+func getNestedString(genObject interface{}, key string) (string, error) {
+	var value string
+	genObjectMap, ok := genObject.(map[string]interface{})
+	if !ok {
+		return value, fmt.Errorf("Unable to retrieve value for key %v because object %v is not a map", key, genObject)
+	}
+
+	value, found, err := unstructured.NestedString(genObjectMap, key)
+	if err != nil {
+		return value, err
+	}
+	if !found {
+		return value, fmt.Errorf("Unable to retrieve value for key %v. Value not found", key)
+	}
+
+	return value, nil
 }

@@ -26,19 +26,6 @@ spec:
             type: object
           spec:
             properties:
-              appsodyOperator:
-                properties:
-                  enable:
-                    type: boolean
-                  image:
-                    type: string
-                  repository:
-                    type: string
-                  tag:
-                    type: string
-                  version:
-                    type: string
-                type: object
               che:
                 properties:
                   cheOperator:
