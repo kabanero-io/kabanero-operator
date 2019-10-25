@@ -42,15 +42,28 @@ build-image: generate
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
 	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
-	
+
 ifdef INTERNAL_IMAGE
-	# Deployment uses internal registry service address
+  # Deployment uses internal registry service address
 	sed -e "s!kabanero/kabanero-operator:latest!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
 else
 	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
 endif
-	
+
 	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
+
+  # If we're doing a Travis build, need to build a second image because the CSV
+  # in the registry image has to point to the tagged operator image.
+ifdef TRAVIS_TAG
+	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_TAG}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_TAG} -f build/registry/Dockerfile build/registry/
+endif
+
+ifdef TRAVIS_BRANCH
+	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_BRANCH}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_BRANCH} -f build/registry/Dockerfile build/registry/
+endif
+
 	rm -R build/registry
 
 push-image:
@@ -64,7 +77,6 @@ ifdef TRAVIS_TAG
   # This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REPOSITORY):$(TRAVIS_TAG)
-	docker tag $(REGISTRY_IMAGE) $(REGISTRY_REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_TAG)
 endif
 
@@ -72,7 +84,6 @@ ifdef TRAVIS_BRANCH
   # This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
-	docker tag $(REGISTRY_IMAGE) $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
 endif
 endif

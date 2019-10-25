@@ -15,17 +15,6 @@ spec:
   - ns1
   - ns2
 
-  appsodyOperator:
-    # Overrides the platform wide settings for version on this component
-    version: "0.2.0"
-
-    # Overrides the image as a separate repository or tag
-    repository: appsody/application-operator
-    tag: "0.2.0"
-
-    # Overrides the image uri
-    image: appsody/application-operator:0.2.0
-
   cliServices:
     # Overrides the setting for version on this component
     version: "0.2.0"

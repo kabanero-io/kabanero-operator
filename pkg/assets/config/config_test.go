@@ -5,7 +5,7 @@ import (
 )
 
 func TestAssets(t *testing.T) {
-	path := "orchestrations/appsody-operator/0.1/appsody.yaml"
+	path := "orchestrations/cli-services/0.1/kabanero-cli.yaml"
 
 	if assets == nil {
 		t.Fatal("Assets were not initialized")

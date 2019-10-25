@@ -192,13 +192,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	// things worked reset requeue data
 	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
 
-	// Reconcile the appsody operator
-	err = reconcile_appsody(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling appsody.")
-		return reconcile.Result{}, err
-	}
-
 	// Deploy the kabanero landing page
 	err = deployLandingPage(instance, r.client)
 	if err != nil {
