@@ -185,11 +185,6 @@ spec:
           path: cli.ready
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: Kabanero Landing page readiness status.
-          displayName: Landing Page Readiness
-          path: landing.ready
-          x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
         - description: Appsody readiness status.
           displayName: Appsody Readiness
           path: appsody.ready

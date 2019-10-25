@@ -230,7 +230,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, clientse
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		
+
 		return err
 	}
 
@@ -333,7 +333,7 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		
+
 		return err
 	}
 
@@ -466,13 +466,13 @@ func isInInterfaceList(urls []interface{}, s string) bool {
 
 // Retrieves the current kabanero landing page status.
 func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
-	// if landing page is disabled set ready to false with a message explaining why.
-	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
-		k.Status.Landing.ErrorMessage = "The landing page is not ready because the configuration disables it."
-		k.Status.Landing.Ready = "False"
-		// Return true so we do not affect the overall status of kabanero.
+	// If disabled. Nothing to do. No need to display status if disabled.
+	if *k.Spec.Landing.Enable == false {
+		k.Status.Landing = nil
 		return true, nil
 	}
+
+	k.Status.Landing = &kabanerov1alpha1.KabaneroLandingPageStatus{}
 	k.Status.Landing.ErrorMessage = ""
 	k.Status.Landing.Ready = "False"
 

@@ -122,7 +122,7 @@ type KabaneroStatus struct {
 	Cli CliStatus `json:"cli,omitempty"`
 
 	// Kabanero Landing page readiness status.
-	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
+	Landing *KabaneroLandingPageStatus `json:"landing,omitempty"`
 
 	// Appsody instance readiness status.
 	Appsody AppsodyStatus `json:"appsody,omitempty"`

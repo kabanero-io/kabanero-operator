@@ -510,7 +510,11 @@ func (in *KabaneroStatus) DeepCopyInto(out *KabaneroStatus) {
 	out.KnativeServing = in.KnativeServing
 	out.Tekton = in.Tekton
 	in.Cli.DeepCopyInto(&out.Cli)
-	out.Landing = in.Landing
+	if in.Landing != nil {
+		in, out := &in.Landing, &out.Landing
+		*out = new(KabaneroLandingPageStatus)
+		**out = **in
+	}
 	out.Appsody = in.Appsody
 	if in.Kappnav != nil {
 		in, out := &in.Kappnav, &out.Kappnav
