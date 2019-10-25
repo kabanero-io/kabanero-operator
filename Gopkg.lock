@@ -88,6 +88,14 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:ef796be125d656ea1556ea57c6b1911092c9c763085644ef9035c63ac3f2b573"
+  name = "github.com/coreos/go-semver"
+  packages = ["semver"]
+  pruneopts = "NT"
+  revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
+  version = "v0.2.0"
+
+[[projects]]
   digest = "1:0c4193043b1a33c7f9ba4ea42b8af2c09bb3d51970212d42e4dac8aa217b4ca5"
   name = "github.com/coreos/prometheus-operator"
   packages = [
@@ -355,14 +363,6 @@
   version = "v0.3.7"
 
 [[projects]]
-  branch = "master"
-  digest = "1:dae0138fbbe600485b882ba294d569d4b438f2ebfa9bd0c4572990d1fa3aa795"
-  name = "github.com/jcrossley3/manifestival"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "c8f99ce4c2a29e0531817d4954a950c1daa4a352"
-
-[[projects]]
   digest = "1:f5b9328966ccea0970b1d15075698eff0ddb3e75889560aad2e9f76b289b536a"
   name = "github.com/joho/godotenv"
   packages = ["."]
@@ -481,6 +481,17 @@
   packages = ["pkg/apis"]
   pruneopts = "NT"
   revision = "fe9d3d9993d493cc8681085643e73b1b3f7c909b"
+
+[[projects]]
+  digest = "1:5f7d166863096a9fb654cedff9e14ea2ec1fe48dc1dd69f7504ef3d87943dc3f"
+  name = "github.com/operator-framework/operator-lifecycle-manager"
+  packages = [
+    "pkg/api/apis/operators",
+    "pkg/api/apis/operators/v1alpha1",
+  ]
+  pruneopts = "NT"
+  revision = "2abd0e2b4d93b4100220204d429d68a9990a160b"
+  version = "v3.11.0"
 
 [[projects]]
   branch = "master"
@@ -1329,7 +1340,6 @@
     "github.com/blang/semver",
     "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
-    "github.com/jcrossley3/manifestival",
     "github.com/kabanero-io/manifestival",
     "github.com/knative/serving-operator/pkg/apis",
     "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
@@ -1337,6 +1347,7 @@
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1",
     "github.com/openshift/api/route/v1",
     "github.com/openshift/tektoncd-pipeline-operator/pkg/apis",
+    "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
