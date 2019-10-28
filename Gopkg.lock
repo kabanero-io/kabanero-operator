@@ -355,14 +355,6 @@
   version = "v0.3.7"
 
 [[projects]]
-  branch = "master"
-  digest = "1:dae0138fbbe600485b882ba294d569d4b438f2ebfa9bd0c4572990d1fa3aa795"
-  name = "github.com/jcrossley3/manifestival"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "c8f99ce4c2a29e0531817d4954a950c1daa4a352"
-
-[[projects]]
   digest = "1:f5b9328966ccea0970b1d15075698eff0ddb3e75889560aad2e9f76b289b536a"
   name = "github.com/joho/godotenv"
   packages = ["."]
@@ -468,12 +460,12 @@
   version = "v0.6.0"
 
 [[projects]]
-  digest = "1:8bc8f43d2332d035857c92581df240f247c287629d5f60c751df609f9b6215c5"
+  branch = "release-4.2"
+  digest = "1:c3f90765e3430aca98ecce95636d0568bf1dd5c004efdb071f99ebad9f54f881"
   name = "github.com/openshift/api"
   packages = ["route/v1"]
   pruneopts = "NT"
-  revision = "0d921e363e951d89f583292c60d013c318df64dc"
-  version = "v3.9.0"
+  revision = "d4a64ec2cbd86f11ea74dfdcf6520d5833d0c6cd"
 
 [[projects]]
   digest = "1:5184989f45163d251cb7644798bbbead001f13febbacaa981efaf6df7fcd0589"
@@ -1329,7 +1321,6 @@
     "github.com/blang/semver",
     "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
-    "github.com/jcrossley3/manifestival",
     "github.com/kabanero-io/manifestival",
     "github.com/knative/serving-operator/pkg/apis",
     "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
