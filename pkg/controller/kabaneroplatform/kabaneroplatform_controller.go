@@ -193,7 +193,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
 
 	// Deploy the kabanero landing page
-	err = deployLandingPage(instance, r.client)
+	err = deployLandingPage(instance, r.client, reqLogger)
 	if err != nil {
 		reqLogger.Error(err, "Error deploying the kabanero landing page.")
 		return reconcile.Result{}, err
@@ -256,7 +256,7 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 	// The instance is being deleted.
 	if foundFinalizer {
 		// Drive kabanero cleanup processing.
-		err := cleanup(ctx, k, client)
+		err := cleanup(ctx, k, client, reqLogger)
 		if err != nil {
 			reqLogger.Error(err, "Error during cleanup processing.")
 			return beingDeleted, err
@@ -291,11 +291,11 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 }
 
 // Handles all cleanup logic for the Kabanero instance.
-func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Client) error {
+func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Client, reqLogger logr.Logger) error {
 	// if landing enabled
 	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
 		// Remove landing page customizations for the current namespace.
-		err := removeWebConsoleCustomization(k, client)
+		err := removeWebConsoleCustomization(k, client, reqLogger)
 		if err != nil {
 			return err
 		}
