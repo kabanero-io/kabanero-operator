@@ -43,23 +43,11 @@ related-software:
       repository: "kabanero/kabanero-command-line-services"
       tag: "0.3.0-alpha.1"
 
-  che-operator:
-  # Compatible with kabanero-che version 0.5.0.
-  - version: "7.2.0"
-    orchestrations: "orchestrations/che/0.1"
-    identifiers:
-      repository: "quay.io/eclipse/che-operator"
-      tag: "7.2.0"
-
-  # kabanero-che deploys a specific version of Eclipse Che. The che-operator version
-  # is in sync with the version of Eclipse Che installed by kabanero-che. 
-  # If a newer version of kabanero-che installs a new version of Eclipse Che 
-  # (kabanero-che:pom.xml), a new che-operator version entry is required.
   kabanero-che:
-  # Uses Eclipse Che version 7.2.0,
   - version: "0.5.0"
     orchestrations: "orchestrations/che/0.1"
     identifiers:
+      eclipseCheTag: "7.2.0"
       repository: "kabanero/kabanero-che"
       tag: "0.5.0"
 

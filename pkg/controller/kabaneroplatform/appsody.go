@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,12 +18,25 @@ const (
 	appsodyDeploymentKind      = "Deployment"
 	appsodyDeploymentGroup     = "apps"
 	appsodyDeploymentVersion   = "v1"
+	appsodySubscriptionName    = "appsody-operator-certified-beta-certified-operators-openshift-marketplace"
 )
 
 // Retrieves the Appsody deployment status.
 func getAppsodyStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	ready := false
 
+	// Get the appsody version.
+	csvVersion, err := getAppsodyOperatorVersion(k, c)
+	if err != nil {
+		message := "Unable to retrieve the version of installed Appsody operator"
+		k.Status.Appsody.Ready = "False"
+		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		reqLogger.Error(err, message)
+		return false, err
+	}
+	k.Status.Appsody.Version = csvVersion
+
+	// Get the Appsody operator deployment.
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    appsodyDeploymentKind,
@@ -30,27 +44,33 @@ func getAppsodyStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger l
 		Version: appsodyDeploymentVersion,
 	})
 
-	// Get the Appsody operator deployment.
-	err := c.Get(context.Background(), client.ObjectKey{
+	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: appsodyDeploymentNamespace,
 		Name:      appsodyDeploymentName,
 	}, u)
 
 	if err != nil {
 		message := "Unable to retrieve Appsody deployment object"
-		reqLogger.Error(err, message+". Name: "+appsodyDeploymentName+". Namespace: "+appsodyDeploymentNamespace)
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ": " + err.Error()
+		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		reqLogger.Error(err, message+". Name: "+appsodyDeploymentName+". Namespace: "+appsodyDeploymentNamespace)
 		return false, err
 	}
 
 	// Get the status.conditions section.
-	conditions, ok, err := unstructured.NestedSlice(u.Object, "status", "conditions")
-	if err != nil || !ok {
+	conditions, found, err := unstructured.NestedSlice(u.Object, "status", "conditions")
+	if err != nil {
 		message := "Unable to retrieve Appsody deployment status.condition field"
-		reqLogger.Error(err, message+".")
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ": " + err.Error()
+		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		reqLogger.Error(err, message)
+		return false, err
+	}
+	if !found {
+		message := "The Appsody deployment entry of status.condition was not found."
+		err = fmt.Errorf(message)
+		k.Status.Appsody.ErrorMessage = err.Error()
+		reqLogger.Error(err, "")
 		return false, err
 	}
 
@@ -87,9 +107,9 @@ func getAppsodyStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger l
 
 	if err != nil {
 		message := "Unable to retrieve Appsody operator deployment status"
-		reqLogger.Error(err, message+".")
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ": " + err.Error()
+		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		reqLogger.Error(err, message)
 		return false, err
 	}
 	return ready, nil
@@ -112,4 +132,27 @@ func getNestedString(genObject interface{}, key string) (string, error) {
 	}
 
 	return value, nil
+}
+
+// Retuns the installed Appsody operator version.
+func getAppsodyOperatorVersion(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
+	cok := client.ObjectKey{
+		Namespace: appsodyDeploymentNamespace,
+		Name:      appsodySubscriptionName}
+
+	installedCSVName, err := kutils.GetInstalledCSVName(c, cok)
+	if err != nil {
+		return "", err
+	}
+
+	cok = client.ObjectKey{
+		Namespace: appsodyDeploymentNamespace,
+		Name:      installedCSVName}
+
+	csvVersion, err := kutils.GetCSVSpecVersion(c, cok)
+	if err != nil {
+		return "", err
+	}
+
+	return csvVersion, nil
 }
