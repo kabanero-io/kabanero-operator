@@ -170,9 +170,14 @@ spec:
           path: knativeEventing.ready
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Serverless readiness status.
+          displayName: Serverless Readiness
+          path: serverless.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
         - description: Knative serving readiness status.
           displayName: Knative Serving Readiness
-          path: knativeServing.ready
+          path: serverless.knativeServing.ready
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
         - description: Tekton readiness status.

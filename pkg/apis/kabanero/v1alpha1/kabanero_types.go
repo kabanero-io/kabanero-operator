@@ -33,6 +33,7 @@ type KabaneroSpec struct {
 	Che CheCustomizationSpec `json:"che,omitempty"`
 }
 
+// InstanceCollectionConfig defines the customization entries for a set of collections.
 type InstanceCollectionConfig struct {
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
@@ -47,6 +48,7 @@ type GithubConfig struct {
 	ApiUrl       string   `json:"apiUrl,omitempty"`
 }
 
+// RepositoryConfig defines customization entries for a collection.
 type RepositoryConfig struct {
 	Name                       string `json:"name,omitempty"`
 	Url                        string `json:"url,omitempty"`
@@ -60,6 +62,7 @@ type TektonCustomizationSpec struct {
 	Version  string `json:"version,omitempty"`
 }
 
+// KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
 type KabaneroCliServicesCustomizationSpec struct {
 	//Future: Enable     bool   `json:"enable,omitempty"`
 	Version                  string `json:"version,omitempty"`
@@ -69,6 +72,7 @@ type KabaneroCliServicesCustomizationSpec struct {
 	SessionExpirationSeconds string `json:"sessionExpirationSeconds,omitempty"`
 }
 
+// KabaneroLandingCustomizationSpec defines customization entries for Kabanero landing page.
 type KabaneroLandingCustomizationSpec struct {
 	Enable  *bool  `json:"enable,omitempty"`
 	Version string `json:"version,omitempty"`
@@ -82,7 +86,7 @@ type CheCustomizationSpec struct {
 	KabaneroChe         KabaneroCheSpec         `json:"kabaneroChe,omitempty"`
 }
 
-// CheOperatorSpec defines customization entries for the Che operator
+// CheOperatorSpec defines customization entries for the Che operator.
 type CheOperatorSpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
@@ -112,8 +116,8 @@ type KabaneroStatus struct {
 	// Knative eventing instance readiness status.
 	KnativeEventing KnativeEventingStatus `json:"knativeEventing,omitempty"`
 
-	// Knative serving instance readiness status.
-	KnativeServing KnativeServingStatus `json:"knativeServing,omitempty"`
+	// OpenShift serverless operator status.
+	Serverless ServerlessStatus `json:"serverless,omitempty"`
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
@@ -153,6 +157,14 @@ type KnativeEventingStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`
+}
+
+// ServerlessStatus defines the observed status details of Open Shift serverless.
+type ServerlessStatus struct {
+	Ready          string               `json:"ready,omitempty"`
+	ErrorMessage   string               `json:"errorMessage,omitempty"`
+	Version        string               `json:"version,omitempty"`
+	KnativeServing KnativeServingStatus `json:"knativeServing,omitempty"`
 }
 
 // KnativeServingStatus defines the observed status details of Knative Serving.

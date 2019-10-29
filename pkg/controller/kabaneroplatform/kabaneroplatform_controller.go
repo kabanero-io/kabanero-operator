@@ -327,7 +327,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	// Gather the status of all resource dependencies.
 	isAppsodyReady, _ := getAppsodyStatus(k, c, reqLogger)
 	isTektonReady, _ := getTektonStatus(k, c)
-	isKnativeServingReady, _ := getKnativeServingStatus(k, c, reqLogger)
+	isServerlessReady, _ := getServerlessStatus(k, c, reqLogger)
 	isKnativeEventingReady, _ := getKnativeEventingStatus(k, c, reqLogger)
 	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger, c)
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
@@ -337,7 +337,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	// Set the overall status.
 	isKabaneroReady := isTektonReady &&
 		isKnativeEventingReady &&
-		isKnativeServingReady &&
+		isServerlessReady &&
 		isCliRouteReady &&
 		isKabaneroLandingReady &&
 		isAppsodyReady &&
