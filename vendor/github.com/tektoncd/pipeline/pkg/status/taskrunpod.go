@@ -23,7 +23,7 @@ import (
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	listers "github.com/tektoncd/pipeline/pkg/client/listers/pipeline/v1alpha1"
-	"github.com/tektoncd/pipeline/pkg/reconciler/v1alpha1/taskrun/resources"
+	"github.com/tektoncd/pipeline/pkg/reconciler/taskrun/resources"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +40,7 @@ func UpdateStatusFromPod(taskRun *v1alpha1.TaskRun, pod *corev1.Pod, resourceLis
 			Type:    apis.ConditionSucceeded,
 			Status:  corev1.ConditionUnknown,
 			Reason:  ReasonRunning,
-			Message: ReasonRunning,
+			Message: "Not all Steps in the Task have finished executing",
 		})
 	}
 
@@ -67,8 +67,8 @@ func UpdateStatusFromPod(taskRun *v1alpha1.TaskRun, pod *corev1.Pod, resourceLis
 		updateIncompleteTaskRun(taskRun, pod)
 	}
 
-	sidecarsCount, readySidecarsCount := countSidecars(pod)
-	return pod.Status.Phase == corev1.PodRunning && readySidecarsCount == sidecarsCount
+	sidecarsCount, readyOrTerminatedSidecarsCount := countSidecars(pod)
+	return pod.Status.Phase == corev1.PodRunning && readyOrTerminatedSidecarsCount == sidecarsCount
 }
 
 func updateCompletedTaskRun(taskRun *v1alpha1.TaskRun, pod *corev1.Pod) {
@@ -98,7 +98,7 @@ func updateIncompleteTaskRun(taskRun *v1alpha1.TaskRun, pod *corev1.Pod) {
 		taskRun.Status.SetCondition(&apis.Condition{
 			Type:    apis.ConditionSucceeded,
 			Status:  corev1.ConditionUnknown,
-			Reason:  ReasonBuilding,
+			Reason:  ReasonRunning,
 			Message: "Not all Steps in the Task have finished executing",
 		})
 	case corev1.PodPending:
@@ -143,16 +143,18 @@ func areStepsComplete(pod *corev1.Pod) bool {
 	return stepsComplete
 }
 
-func countSidecars(pod *corev1.Pod) (total int, ready int) {
+func countSidecars(pod *corev1.Pod) (total int, readyOrTerminated int) {
 	for _, s := range pod.Status.ContainerStatuses {
 		if !resources.IsContainerStep(s.Name) {
 			if s.State.Running != nil && s.Ready {
-				ready++
+				readyOrTerminated++
+			} else if s.State.Terminated != nil {
+				readyOrTerminated++
 			}
 			total++
 		}
 	}
-	return total, ready
+	return total, readyOrTerminated
 }
 
 func getFailureMessage(pod *corev1.Pod) string {

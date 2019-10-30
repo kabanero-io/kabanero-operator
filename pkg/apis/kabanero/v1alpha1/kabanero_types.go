@@ -26,8 +26,6 @@ type KabaneroSpec struct {
 
 	Tekton TektonCustomizationSpec `json:"tekton,omitempty"`
 
-	AppsodyOperator AppsodyCustomizationSpec `json:"appsodyOperator,omitempty"`
-
 	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
 
 	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
@@ -37,6 +35,7 @@ type KabaneroSpec struct {
 	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
 }
 
+// InstanceCollectionConfig defines the customization entries for a set of collections.
 type InstanceCollectionConfig struct {
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
@@ -51,6 +50,7 @@ type GithubConfig struct {
 	ApiUrl       string   `json:"apiUrl,omitempty"`
 }
 
+// RepositoryConfig defines customization entries for a collection.
 type RepositoryConfig struct {
 	Name                       string `json:"name,omitempty"`
 	Url                        string `json:"url,omitempty"`
@@ -64,23 +64,17 @@ type TektonCustomizationSpec struct {
 	Version  string `json:"version,omitempty"`
 }
 
-type AppsodyCustomizationSpec struct {
-	Enable     bool   `json:"enable,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Image      string `json:"image,omitempty"`
-	Repository string `json:"repository,omitempty"`
-	Tag        string `json:"tag,omitempty"`
-}
-
+// KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
 type KabaneroCliServicesCustomizationSpec struct {
 	//Future: Enable     bool   `json:"enable,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Image      string `json:"image,omitempty"`
-	Repository string `json:"repository,omitempty"`
-	Tag        string `json:"tag,omitempty"`
+	Version                  string `json:"version,omitempty"`
+	Image                    string `json:"image,omitempty"`
+	Repository               string `json:"repository,omitempty"`
+	Tag                      string `json:"tag,omitempty"`
 	SessionExpirationSeconds string `json:"sessionExpirationSeconds,omitempty"`
 }
 
+// KabaneroLandingCustomizationSpec defines customization entries for Kabanero landing page.
 type KabaneroLandingCustomizationSpec struct {
 	Enable  *bool  `json:"enable,omitempty"`
 	Version string `json:"version,omitempty"`
@@ -94,7 +88,7 @@ type CheCustomizationSpec struct {
 	KabaneroChe         KabaneroCheSpec         `json:"kabaneroChe,omitempty"`
 }
 
-// CheOperatorSpec defines customization entries for the Che operator
+// CheOperatorSpec defines customization entries for the Che operator.
 type CheOperatorSpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
@@ -132,8 +126,8 @@ type KabaneroStatus struct {
 	// Knative eventing instance readiness status.
 	KnativeEventing KnativeEventingStatus `json:"knativeEventing,omitempty"`
 
-	// Knative serving instance readiness status.
-	KnativeServing KnativeServingStatus `json:"knativeServing,omitempty"`
+	// OpenShift serverless operator status.
+	Serverless ServerlessStatus `json:"serverless,omitempty"`
 
 	// Tekton instance readiness status.
 	Tekton TektonStatus `json:"tekton,omitempty"`
@@ -142,7 +136,7 @@ type KabaneroStatus struct {
 	Cli CliStatus `json:"cli,omitempty"`
 
 	// Kabanero Landing page readiness status.
-	Landing KabaneroLandingPageStatus `json:"landing,omitempty"`
+	Landing *KabaneroLandingPageStatus `json:"landing,omitempty"`
 
 	// Appsody instance readiness status.
 	Appsody AppsodyStatus `json:"appsody,omitempty"`
@@ -178,6 +172,14 @@ type KnativeEventingStatus struct {
 	Version      string `json:"version,omitempty"`
 }
 
+// ServerlessStatus defines the observed status details of Open Shift serverless.
+type ServerlessStatus struct {
+	Ready          string               `json:"ready,omitempty"`
+	ErrorMessage   string               `json:"errorMessage,omitempty"`
+	Version        string               `json:"version,omitempty"`
+	KnativeServing KnativeServingStatus `json:"knativeServing,omitempty"`
+}
+
 // KnativeServingStatus defines the observed status details of Knative Serving.
 type KnativeServingStatus struct {
 	Ready        string `json:"ready,omitempty"`
@@ -207,8 +209,8 @@ type AppsodyStatus struct {
 
 // KappnavStatus defines the observed status details of Kubernetes Application Navigator.
 type KappnavStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
 	UiLocations  []string `json:"uiLocations,omitempty"`
 	ApiLocations []string `json:"apiLocations,omitempty"`
 }

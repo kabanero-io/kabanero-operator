@@ -5,8 +5,8 @@ metadata:
 spec:
   version: 0.1.0
   
-  appsodyOperator:
-    # Overrides the internally determined Appsody version with the provided value
+  cliServices:
+    # Overrides the internally determined CLI services version with the provided value
     version: "0.1.0"
 ---
 apiVersion: kabanero.io/v1alpha1
@@ -14,37 +14,37 @@ kind: Kabanero
 metadata:
   name: kabanero1
 spec:
-  appsodyOperator:
-    # Overrides the internally determined Appsody image with the provided value
-    image: appsody/appsody-operator:0.1.0
+  cliServices:
+    # Overrides the internally determined CLI services image with the provided value
+    image: kabanero/kabanero-command-line-services:0.1.0
 ---
 apiVersion: kabanero.io/v1alpha1
 kind: Kabanero
 metadata:
   name: kabanero2
 spec:
-  appsodyOperator:
-    # Overrides only the repository used by the appsody operator.
+  cliServices:
+    # Overrides only the repository used by the CLI services.
     # The tag will be internally determined
-    repository: appsody/appsody-operator
+    repository: kabanero/kabanero-command-line-services
 ---
 apiVersion: kabanero.io/v1alpha1
 kind: Kabanero
 metadata:
   name: kabanero2
 spec:
-  appsodyOperator:
-    # Overrides only the tag used in the appsody operator deployment
+  cliServices:
+    # Overrides only the tag used in the CLI services deployment
     # The repository will be internally determined
-    tag: "0.1.2"
+    tag: "0.1.1"
 ---
 apiVersion: kabanero.io/v1alpha1
 kind: Kabanero
 metadata:
   name: kabanero3
 spec:
-  appsodyOperator:
+  cliServices:
     # When both image and repository overrides are present, the image attribute
     # will take precedence
-    image: appsody/appsody-operator:0.1.0
-    repository: appsody/appsody-operator
+    image: kabanero/kabanero-command-line-services:0.1.0
+    repository: kabanero/kabanero-command-line-services

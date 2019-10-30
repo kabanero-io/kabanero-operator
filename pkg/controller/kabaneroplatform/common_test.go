@@ -2,11 +2,12 @@ package kabaneroplatform
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/assets/config"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
-	"strings"
-	"testing"
 )
 
 func TestImageUriWithOverrides(t *testing.T) {
@@ -92,7 +93,7 @@ func TestRenderOrchestration(t *testing.T) {
 	}{
 		{
 			name:                   "default",
-			filename:               "orchestrations/appsody-operator/0.1/appsody.yaml",
+			filename:               "orchestrations/che/0.1/che-operator.yaml",
 			context:                map[string]interface{}{"image": "image: myimage:0.1.0"},
 			expectedResultContains: "image: myimage:0.1.0",
 		},
@@ -132,7 +133,7 @@ func TestResolveSoftwareRevision(t *testing.T) {
 			k := &kabanerov1alpha1.Kabanero{
 				Spec: kabanerov1alpha1.KabaneroSpec{},
 			}
-			rev, err := resolveSoftwareRevision(k, "appsody-operator", "")
+			rev, err := resolveSoftwareRevision(k, "cli-services", "")
 			_ = rev
 			if err != nil {
 				t.Fatal("Unexpected error: ", err)

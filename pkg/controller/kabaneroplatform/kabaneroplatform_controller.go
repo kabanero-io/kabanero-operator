@@ -35,10 +35,9 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileKabanero{
-		client:            mgr.GetClient(),
-		scheme:            mgr.GetScheme(),
-		requeueDelayMapV1: make(map[string]RequeueData),
-		requeueDelayMapV2: make(map[string]RequeueData)}
+		client:          mgr.GetClient(),
+		scheme:          mgr.GetScheme(),
+		requeueDelayMap: make(map[string]RequeueData)}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -87,10 +86,9 @@ var _ reconcile.Reconciler = &ReconcileKabanero{}
 type ReconcileKabanero struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client            client.Client
-	scheme            *runtime.Scheme
-	requeueDelayMapV1 map[string]RequeueData
-	requeueDelayMapV2 map[string]RequeueData
+	client          client.Client
+	scheme          *runtime.Scheme
+	requeueDelayMap map[string]RequeueData
 }
 
 // RequeueData stores information that enables reconcile operations to be retried.
@@ -184,32 +182,15 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, nil
 	}
 
-	// Deploy version 1 feature collection resources.
+	// Deploy feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
 		reqLogger.Error(err, "Error reconciling featured collections.")
-		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV1, reqLogger)
+		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMap, reqLogger)
 	}
 
 	// things worked reset requeue data
-	r.requeueDelayMapV1[request.Namespace] = RequeueData{0, time.Now()}
-
-	// Deploy version 2 feature collection resources.
-	err = reconcileFeaturedCollectionsV2(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling featured collections V2.")
-		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMapV2, reqLogger)
-	}
-
-	// things worked reset requeue data
-	r.requeueDelayMapV2[request.Namespace] = RequeueData{0, time.Now()}
-
-	// Reconcile the appsody operator
-	err = reconcile_appsody(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling appsody.")
-		return reconcile.Result{}, err
-	}
+	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
 
 	// Deploy the kabanero landing page
 	err = deployLandingPage(instance, r.client)
@@ -264,11 +245,16 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 	if !beingDeleted {
 		if !foundFinalizer {
 			k.ObjectMeta.Finalizers = append(k.ObjectMeta.Finalizers, kabaneroFinalizer)
+			// Need to cache the Group/Version/Kind here because the Update call
+			// will clear them.  This is fixed in controller-runtime v0.2.0 /
+			// operator-sdk 0.11.0.  TODO
+			gvk := k.GroupVersionKind()
 			err := client.Update(ctx, k)
 			if err != nil {
 				reqLogger.Error(err, "Unable to set the kabanero operator finalizer.")
 				return beingDeleted, err
 			}
+			k.SetGroupVersionKind(gvk)
 		}
 
 		return beingDeleted, nil
@@ -293,12 +279,19 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 		}
 
 		k.ObjectMeta.Finalizers = newFinalizerList
+
+		// Need to cache the Group/Version/Kind here because the Update call
+		// will clear them.  This is fixed in controller-runtime v0.2.0 /
+		// operator-sdk 0.11.0.  TODO
+		gvk := k.GroupVersionKind()
 		err = client.Update(ctx, k)
 
 		if err != nil {
 			reqLogger.Error(err, "Error while attempting to remove the finalizer.")
 			return beingDeleted, err
 		}
+
+		k.SetGroupVersionKind(gvk)
 	}
 
 	return beingDeleted, nil
@@ -309,7 +302,7 @@ func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Cl
 	// if landing enabled
 	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
 		// Remove landing page customizations for the current namespace.
-		err := removeWebConsoleCustomization(k)
+		err := removeWebConsoleCustomization(k, client)
 		if err != nil {
 			return err
 		}
@@ -341,9 +334,9 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	// Gather the status of all resource dependencies.
 	isAppsodyReady, _ := getAppsodyStatus(k, c, reqLogger)
 	isTektonReady, _ := getTektonStatus(k, c)
-	isKnativeEventingReady, _ := getKnativeServingStatus(k, c)
-	isKnativeServingReady, _ := getKnativeEventingStatus(k, c)
-	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger)
+	isServerlessReady, _ := getServerlessStatus(k, c, reqLogger)
+	isKnativeEventingReady, _ := getKnativeEventingStatus(k, c, reqLogger)
+	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger, c)
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 	isCheReady, _ := getCheStatus(ctx, k, c)
@@ -352,7 +345,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	// Set the overall status.
 	isKabaneroReady := isTektonReady &&
 		isKnativeEventingReady &&
-		isKnativeServingReady &&
+		isServerlessReady &&
 		isCliRouteReady &&
 		isKabaneroLandingReady &&
 		isAppsodyReady &&

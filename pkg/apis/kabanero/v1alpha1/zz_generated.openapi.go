@@ -89,6 +89,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref common.ReferenceCallba
 							Format: "",
 						},
 					},
+					"desiredState": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
 			},
 		},
@@ -139,6 +145,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 						},
 					},
 					"availableLocation": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"status": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
@@ -253,11 +265,6 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroSpec(ref common.ReferenceCallback
 							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonCustomizationSpec"),
 						},
 					},
-					"appsodyOperator": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.AppsodyCustomizationSpec"),
-						},
-					},
 					"cliServices": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroCliServicesCustomizationSpec"),
@@ -282,7 +289,7 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.AppsodyCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CheCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.GithubConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.InstanceCollectionConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroCliServicesCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroLandingCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.WebhookCustomizationSpec"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CheCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.GithubConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.InstanceCollectionConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroCliServicesCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroLandingCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.WebhookCustomizationSpec"},
 	}
 }
 
@@ -304,10 +311,10 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroStatus(ref common.ReferenceCallba
 							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeEventingStatus"),
 						},
 					},
-					"knativeServing": {
+					"serverless": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Knative serving instance readiness status.",
-							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeServingStatus"),
+							Description: "OpenShift serverless operator status.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.ServerlessStatus"),
 						},
 					},
 					"tekton": {
@@ -356,6 +363,6 @@ func schema_pkg_apis_kabanero_v1alpha1_KabaneroStatus(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.AppsodyStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CheStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroLandingPageStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KappnavStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeServingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.WebhookStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.AppsodyStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CheStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KabaneroLandingPageStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KappnavStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.KnativeEventingStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.ServerlessStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.TektonStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.WebhookStatus"},
 	}
 }

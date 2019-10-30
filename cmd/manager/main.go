@@ -13,7 +13,11 @@ import (
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller"
 
+	knsapis "github.com/knative/serving-operator/pkg/apis"
+	kneapis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
 	routev1 "github.com/openshift/api/route/v1"
+	tektonapis "github.com/openshift/tektoncd-pipeline-operator/pkg/apis"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -26,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	
+
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
 
@@ -47,7 +51,7 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
-	
+
 	if len(GitTag) > 0 {
 		log.Info(fmt.Sprintf("kabanero-operator Git tag: %s", GitTag))
 	}
@@ -129,7 +133,7 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	
+
 	if err := pipelinev1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -139,7 +143,27 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	
+
+	if err := kneapis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := knsapis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := corev1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := tektonapis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")

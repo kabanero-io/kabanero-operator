@@ -29,19 +29,6 @@ spec:
           type: object
         spec:
           properties:
-            appsodyOperator:
-              properties:
-                enable:
-                  type: boolean
-                image:
-                  type: string
-                repository:
-                  type: string
-                tag:
-                  type: string
-                version:
-                  type: string
-              type: object
             che:
               properties:
                 cheOperator:
@@ -235,8 +222,8 @@ spec:
                 version:
                   type: string
               type: object
-            knativeServing:
-              description: Knative serving instance readiness status.
+            landing:
+              description: Kabanero Landing page readiness status.
               properties:
                 errorMessage:
                   type: string
@@ -245,11 +232,20 @@ spec:
                 version:
                   type: string
               type: object
-            landing:
-              description: Kabanero Landing page readiness status.
+            serverless:
+              description: OpenShift serverless operator status.
               properties:
                 errorMessage:
                   type: string
+                knativeServing:
+                  properties:
+                    errorMessage:
+                      type: string
+                    ready:
+                      type: string
+                    version:
+                      type: string
+                  type: object
                 ready:
                   type: string
                 version:

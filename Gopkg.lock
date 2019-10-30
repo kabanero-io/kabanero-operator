@@ -88,6 +88,14 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:ef796be125d656ea1556ea57c6b1911092c9c763085644ef9035c63ac3f2b573"
+  name = "github.com/coreos/go-semver"
+  packages = ["semver"]
+  pruneopts = "NT"
+  revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
+  version = "v0.2.0"
+
+[[projects]]
   digest = "1:0c4193043b1a33c7f9ba4ea42b8af2c09bb3d51970212d42e4dac8aa217b4ca5"
   name = "github.com/coreos/prometheus-operator"
   packages = [
@@ -126,6 +134,14 @@
   pruneopts = "NT"
   revision = "b9bbc5664f49b6deec52393bd68f39830687a347"
   version = "v2.9.3"
+
+[[projects]]
+  digest = "1:448bf60e9dce6d5fd9dfa8fd9eb9a23163424ff4e4f142456405781e942e3998"
+  name = "github.com/evanphx/json-patch"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "026c730a0dcc5d11f93f1cf1cc65b01247ea7b6f"
+  version = "v4.5.0"
 
 [[projects]]
   digest = "1:81466b4218bf6adddac2572a30ac733a9255919bc2f470b4827a317bd4ee1756"
@@ -347,14 +363,6 @@
   version = "v0.3.7"
 
 [[projects]]
-  branch = "master"
-  digest = "1:dae0138fbbe600485b882ba294d569d4b438f2ebfa9bd0c4572990d1fa3aa795"
-  name = "github.com/jcrossley3/manifestival"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "c8f99ce4c2a29e0531817d4954a950c1daa4a352"
-
-[[projects]]
   digest = "1:f5b9328966ccea0970b1d15075698eff0ddb3e75889560aad2e9f76b289b536a"
   name = "github.com/joho/godotenv"
   packages = ["."]
@@ -417,6 +425,14 @@
   version = "v1.0.4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:0e9bfc47ab9941ecc3344e580baca5deb4091177e84dd9773b48b38ec26b93d5"
+  name = "github.com/mattbaird/jsonpatch"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
+
+[[projects]]
   digest = "1:ea1db000388d88b31db7531c83016bef0d6db0d908a07794bfc36aca16fbf935"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
@@ -462,9 +478,20 @@
 [[projects]]
   digest = "1:5184989f45163d251cb7644798bbbead001f13febbacaa981efaf6df7fcd0589"
   name = "github.com/openshift/tektoncd-pipeline-operator"
-  packages = ["pkg/apis/operator/v1alpha1"]
+  packages = ["pkg/apis"]
   pruneopts = "NT"
   revision = "fe9d3d9993d493cc8681085643e73b1b3f7c909b"
+
+[[projects]]
+  digest = "1:5f7d166863096a9fb654cedff9e14ea2ec1fe48dc1dd69f7504ef3d87943dc3f"
+  name = "github.com/operator-framework/operator-lifecycle-manager"
+  packages = [
+    "pkg/api/apis/operators",
+    "pkg/api/apis/operators/v1alpha1",
+  ]
+  pruneopts = "NT"
+  revision = "2abd0e2b4d93b4100220204d429d68a9990a160b"
+  version = "v3.11.0"
 
 [[projects]]
   branch = "master"
@@ -602,6 +629,28 @@
   pruneopts = "NT"
   revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
   version = "v1.0.3"
+
+[[projects]]
+  branch = "master"
+  digest = "1:497c5085d48473b4cf28bc487bf0af29b2431aaf09716dc74d7c3d2c514e2513"
+  name = "github.com/tektoncd/operator"
+  packages = ["pkg/apis/operator/v1alpha1"]
+  pruneopts = "NT"
+  revision = "be5a46fc149abf86e0855e1bb7f60b08b20acbb5"
+
+[[projects]]
+  digest = "1:3d7f5b90ebcd83ddf98147a2d5c6fe5205252ecafe0147bafdc3a918864141bd"
+  name = "github.com/tektoncd/pipeline"
+  packages = [
+    "pkg/apis/config",
+    "pkg/apis/pipeline",
+    "pkg/apis/pipeline/v1alpha1",
+    "pkg/list",
+    "pkg/names",
+  ]
+  pruneopts = "NT"
+  revision = "9ff6aca4b7aa1f573fb9ff2e0d7f868fa9467417"
+  version = "v0.7.0"
 
 [[projects]]
   digest = "1:8bcb2616463bc981681c4b26f2aa817be8167682b76fb7884ec3fafdc9f82372"
@@ -774,6 +823,17 @@
   revision = "2d16b83fe98cd1bed9e2ce9fdc86bd438d14aab7"
 
 [[projects]]
+  branch = "master"
+  digest = "1:c0619d0c0c2f585812ce9f844eafb9c5660f5bd723c9ac0cd60b7fac665d2ac6"
+  name = "golang.org/x/xerrors"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "NT"
+  revision = "1b5146add8981d58be77b16229c0ff0f8bebd8c1"
+
+[[projects]]
   digest = "1:81d407dcb2347a544350b7fb394e0eb065a34c75dc235fd4c6061ea72024a485"
   name = "google.golang.org/api"
   packages = ["support/bundler"]
@@ -916,6 +976,9 @@
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset",
+    "pkg/client/clientset/clientset/scheme",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
   ]
   pruneopts = "NT"
   revision = "0fe22c71c47604641d9aa352c785b7912c200562"
@@ -958,6 +1021,7 @@
     "pkg/util/mergepatch",
     "pkg/util/naming",
     "pkg/util/net",
+    "pkg/util/rand",
     "pkg/util/runtime",
     "pkg/util/sets",
     "pkg/util/strategicpatch",
@@ -980,6 +1044,52 @@
   packages = [
     "discovery",
     "dynamic",
+    "informers",
+    "informers/admissionregistration",
+    "informers/admissionregistration/v1alpha1",
+    "informers/admissionregistration/v1beta1",
+    "informers/apps",
+    "informers/apps/v1",
+    "informers/apps/v1beta1",
+    "informers/apps/v1beta2",
+    "informers/auditregistration",
+    "informers/auditregistration/v1alpha1",
+    "informers/autoscaling",
+    "informers/autoscaling/v1",
+    "informers/autoscaling/v2beta1",
+    "informers/autoscaling/v2beta2",
+    "informers/batch",
+    "informers/batch/v1",
+    "informers/batch/v1beta1",
+    "informers/batch/v2alpha1",
+    "informers/certificates",
+    "informers/certificates/v1beta1",
+    "informers/coordination",
+    "informers/coordination/v1beta1",
+    "informers/core",
+    "informers/core/v1",
+    "informers/events",
+    "informers/events/v1beta1",
+    "informers/extensions",
+    "informers/extensions/v1beta1",
+    "informers/internalinterfaces",
+    "informers/networking",
+    "informers/networking/v1",
+    "informers/policy",
+    "informers/policy/v1beta1",
+    "informers/rbac",
+    "informers/rbac/v1",
+    "informers/rbac/v1alpha1",
+    "informers/rbac/v1beta1",
+    "informers/scheduling",
+    "informers/scheduling/v1alpha1",
+    "informers/scheduling/v1beta1",
+    "informers/settings",
+    "informers/settings/v1alpha1",
+    "informers/storage",
+    "informers/storage/v1",
+    "informers/storage/v1alpha1",
+    "informers/storage/v1beta1",
     "kubernetes",
     "kubernetes/scheme",
     "kubernetes/typed/admissionregistration/v1alpha1",
@@ -1014,6 +1124,34 @@
     "kubernetes/typed/storage/v1",
     "kubernetes/typed/storage/v1alpha1",
     "kubernetes/typed/storage/v1beta1",
+    "listers/admissionregistration/v1alpha1",
+    "listers/admissionregistration/v1beta1",
+    "listers/apps/v1",
+    "listers/apps/v1beta1",
+    "listers/apps/v1beta2",
+    "listers/auditregistration/v1alpha1",
+    "listers/autoscaling/v1",
+    "listers/autoscaling/v2beta1",
+    "listers/autoscaling/v2beta2",
+    "listers/batch/v1",
+    "listers/batch/v1beta1",
+    "listers/batch/v2alpha1",
+    "listers/certificates/v1beta1",
+    "listers/coordination/v1beta1",
+    "listers/core/v1",
+    "listers/events/v1beta1",
+    "listers/extensions/v1beta1",
+    "listers/networking/v1",
+    "listers/policy/v1beta1",
+    "listers/rbac/v1",
+    "listers/rbac/v1alpha1",
+    "listers/rbac/v1beta1",
+    "listers/scheduling/v1alpha1",
+    "listers/scheduling/v1beta1",
+    "listers/settings/v1alpha1",
+    "listers/storage/v1",
+    "listers/storage/v1alpha1",
+    "listers/storage/v1beta1",
     "pkg/apis/clientauthentication",
     "pkg/apis/clientauthentication/v1alpha1",
     "pkg/apis/clientauthentication/v1beta1",
@@ -1125,7 +1263,14 @@
   branch = "master"
   digest = "1:5df41911fd0a84bcb7943ae1f08e4cdc1fead94e164be5953e02f79d923453aa"
   name = "knative.dev/pkg"
-  packages = ["kmp"]
+  packages = [
+    "apis",
+    "apis/duck",
+    "apis/duck/v1beta1",
+    "apis/v1alpha1",
+    "configmap",
+    "kmp",
+  ]
   pruneopts = "NT"
   revision = "12ee58e32cc8bfaaf88b057be003611e6b7d867d"
 
@@ -1195,14 +1340,14 @@
     "github.com/blang/semver",
     "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
-    "github.com/jcrossley3/manifestival",
     "github.com/kabanero-io/manifestival",
     "github.com/knative/serving-operator/pkg/apis",
     "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis",
     "github.com/openshift-knative/knative-eventing-operator/pkg/apis/eventing/v1alpha1",
     "github.com/openshift/api/route/v1",
-    "github.com/openshift/tektoncd-pipeline-operator/pkg/apis/operator/v1alpha1",
+    "github.com/openshift/tektoncd-pipeline-operator/pkg/apis",
+    "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
@@ -1211,20 +1356,27 @@
     "github.com/operator-framework/operator-sdk/version",
     "github.com/shurcooL/vfsgen",
     "github.com/spf13/pflag",
+    "github.com/tektoncd/operator/pkg/apis/operator/v1alpha1",
+    "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/runtime/serializer/json",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/util/jsonpath",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",
@@ -1236,8 +1388,10 @@
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/controller",
+    "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
+    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
     "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
