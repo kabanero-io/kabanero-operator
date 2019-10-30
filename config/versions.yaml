@@ -101,4 +101,4 @@ related-software:
     orchestrations: "orchestrations/webhook/0.1"
     identifiers:
       repository: "kabanero/kabanero-webhook"
-      tag: "latest"
+      tag: "0.1"
