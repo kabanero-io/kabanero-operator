@@ -467,7 +467,7 @@ func isInInterfaceList(urls []interface{}, s string) bool {
 // Retrieves the current kabanero landing page status.
 func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
 	// If disabled. Nothing to do. No need to display status if disabled.
-	if *k.Spec.Landing.Enable == false {
+	if (k.Spec.Landing.Enable != nil) && (*k.Spec.Landing.Enable == false) {
 		k.Status.Landing = nil
 		return true, nil
 	}
