@@ -30,6 +30,13 @@ kabanero:
     landing: "0.2.0"
     che-operator: "7.2.0"
     kabanero-che: "0.5.0"
+- version: "0.2.1"
+  related-versions: 
+    appsody-operator: "0.2.0"
+    cli-services: "0.2.0"
+    landing: "0.2.0"
+    che-operator: "7.2.0"
+    kabanero-che: "0.5.0"
 
 related-software:
   appsody-operator:
