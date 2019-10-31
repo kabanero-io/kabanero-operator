@@ -5,4 +5,4 @@
 IFS=’:’ read -ra REPOSITORY <<< "$REGISTRY_IMAGE"
 
 # Set the tag for the kabanero CatalogSource
-sed -i.bak -e "s,kabanero/kabanero-operator-registry:latest,kabanero/kabanero-operator-registry:$TRAVIS_TAG," deploy/kabanero-operators.yaml
+sed -i.bak -e "s,kabanero/kabanero-operator-registry:latest,kabanero/kabanero-operator-registry:$TRAVIS_TAG," deploy/kabanero-subscriptions.yaml
