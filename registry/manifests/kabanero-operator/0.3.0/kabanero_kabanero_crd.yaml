@@ -106,6 +106,10 @@ spec:
                   version:
                     type: string
                 type: object
+              targetNamespaces:
+                items:
+                  type: string
+                type: array
               tekton:
                 properties:
                   disabled:
@@ -115,6 +119,19 @@ spec:
                 type: object
               version:
                 type: string
+              webhook:
+                properties:
+                  enable:
+                    type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
             type: object
           status:
             properties:
@@ -179,10 +196,18 @@ spec:
               kappnav:
                 description: Kabanero Application Navigator instance readiness status.
                 properties:
+                  apiLocations:
+                    items:
+                      type: string
+                    type: array
                   errorMessage:
                     type: string
                   ready:
                     type: string
+                  uiLocations:
+                    items:
+                      type: string
+                    type: array
                 type: object
               knativeEventing:
                 description: Knative eventing instance readiness status.
@@ -231,6 +256,18 @@ spec:
                   ready:
                     type: string
                   version:
+                    type: string
+                type: object
+              webhook:
+                description: Webhook instance status
+                properties:
+                  errorMessage:
+                    type: string
+                  hostnames:
+                    items:
+                      type: string
+                    type: array
+                  ready:
                     type: string
                 type: object
             type: object
