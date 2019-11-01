@@ -93,9 +93,9 @@ func TestRenderOrchestration(t *testing.T) {
 	}{
 		{
 			name:                   "default",
-			filename:               "orchestrations/che/0.1/che-operator.yaml",
-			context:                map[string]interface{}{"image": "image: myimage:0.1.0"},
-			expectedResultContains: "image: myimage:0.1.0",
+			filename:               "orchestrations/che/0.1/codewind-che-cr.yaml",
+			context:                map[string]interface{}{"repository": "myimage"},
+			expectedResultContains: "cheImage: myimage",
 		},
 	}
 
