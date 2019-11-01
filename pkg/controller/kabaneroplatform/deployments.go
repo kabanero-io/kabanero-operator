@@ -3,6 +3,7 @@ package kabaneroplatform
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,7 +46,7 @@ func getOwnerReference(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger 
 // 3) Image pull policy is "Always"
 // 4) Single replica
 // 5) Owner is a Kabanero instance (Supplied)
-func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Clientset, c client.Client, name string, image string, env []corev1.EnvVar, envFrom []corev1.EnvFromSource, reqLogger logr.Logger) error {
+func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Clientset, c client.Client, name string, image string, env []corev1.EnvVar, envFrom []corev1.EnvFromSource, livenessProbe *corev1.Probe, reqLogger logr.Logger) error {
 	cl := clientset.AppsV1().Deployments(k.ObjectMeta.Namespace)
 
 	// Check if the Deployment resource already exists.
@@ -122,7 +123,8 @@ func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Client
 	dInstance.Spec.Template.Spec.Containers[0].Env = env
 	dInstance.Spec.Template.Spec.Containers[0].EnvFrom = envFrom
 	dInstance.Spec.Template.Spec.Containers[0].Image = image
-	
+	dInstance.Spec.Template.Spec.Containers[0].LivenessProbe = livenessProbe
+
 	if deploymentExists == false {
 		reqLogger.Info(fmt.Sprintf("createDeployment: Deployment for create: %v", dInstance))
 
