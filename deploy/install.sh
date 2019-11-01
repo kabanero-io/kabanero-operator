@@ -174,6 +174,6 @@ echo "*  of the Kabanero CR.  If you have cloned and curated a collection set,  
 echo "*  apply the Kabanero CR that you created.  Or, to create the default      "
 echo "*  instance:                                                               "
 echo "*                                                                          "
-echo "*      oc apply -n kabanero -f ${SAMPLE_KAB_INSTANCE}                  "
+echo "*      oc apply -n kabanero -f ${SAMPLE_KAB_INSTANCE_URL}                  "
 echo "*                                                                          "
 echo "***************************************************************************"
