@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-webhook
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: kabanero-webhook-serving-cert
+spec:
+  selector:
+    name: kabanero-webhook
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 9443
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kabanero-webhook
+spec:
+  to:
+    kind: Service
+    name: kabanero-webhook
+  tls:
+    termination: reencrypt
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-webhook
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - kabanero-webhook
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-webhook
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-webhook
+subjects:
+- kind: ServiceAccount
+  name: kabanero-webhook
+roleRef:
+  kind: Role
+  name: kabanero-webhook
+  apiGroup: rbac.authorization.k8s.io
+---  
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kabanero-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kabanero-webhook
+  template:
+    metadata:
+      labels:
+        name: kabanero-webhook
+    spec:
+      serviceAccountName: kabanero-webhook
+      containers:
+        - name: kabanero-webhook
+          image: {{ .image }}
+          imagePullPolicy: Always
+          env:
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+          - mountPath: /etc/tls
+            name: kabanero-webhook-serving-cert
+            readOnly: true
+      volumes:
+      - name: kabanero-webhook-serving-cert
+        secret:
+          secretName: kabanero-webhook-serving-cert
+

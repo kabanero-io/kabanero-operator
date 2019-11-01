@@ -19,6 +19,14 @@ kabanero:
     landing: "0.2.0"
     che-operator: "7.2.0"
     kabanero-che: "0.5.0"
+- version: "0.3.0"
+  related-versions: 
+    appsody-operator: "0.2.0"
+    cli-services: "0.2.0-rc.1"
+    landing: "0.2.0"
+    che-operator: "7.2.0"
+    kabanero-che: "0.5.0"
+    webhook: "0.1.0"
 
 related-software:
   landing:
@@ -54,3 +62,10 @@ related-software:
     identifiers:
       repository: "kabanero/kabanero-che"
       tag: "0.5.0"
+
+  webhook:
+  - version: "0.1.0"
+    orchestrations: "orchestrations/webhook/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-webhook"
+      tag: "0.1"
