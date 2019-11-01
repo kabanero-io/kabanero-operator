@@ -22,11 +22,11 @@ kabanero:
 
 related-software:
   landing:
-  - version: "0.2.0"
+  - version: "0.3.0-rc.1"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
       repository: "kabanero/landing"
-      tag: "0.2.0"
+      tag: "0.3.0-rc.1"
 
   cli-services: 
   - version: "0.3.0-alpha.1"
