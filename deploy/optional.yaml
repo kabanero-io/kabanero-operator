@@ -6,7 +6,7 @@
 #
 
 # -----------------------------------------------------------------------
-# KAppNav 0.1.0
+# KAppNav 0.1.2
 # -----------------------------------------------------------------------
 apiVersion: v1
 kind: Namespace
@@ -15,14 +15,15 @@ metadata:
   labels:
     kabanero.io/component: kappnav
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: kappnavs.charts.helm.k8s.io
+  name: kappnavs.kappnav.io
   labels:
     kabanero.io/component: kappnav
 spec:
-  group: charts.helm.k8s.io
+  group: kappnav.io
   names:
     kind: KAppNav
     listKind: KAppNavList
@@ -103,7 +104,7 @@ spec:
       containers:
         - name: helm-operator
           # Replace this with the built image name
-          image: kappnav/operator:0.1.0
+          image: kappnav/operator:0.1.2
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -117,7 +118,8 @@ spec:
             - name: OPERATOR_NAME
               value: "helm-operator"
 ---
-apiVersion: charts.helm.k8s.io/v1alpha1
+
+apiVersion: kappnav.io/v1alpha1
 kind: KAppNav
 metadata:
   name: instance
@@ -138,13 +140,13 @@ spec:
 
   appNavApi:
     repository: kappnav/apis
-    tag: 0.1.0
+    tag: 0.1.2
     resources:
       constraints:
         enabled: false
       requests:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 10m
+        memory: 256Mi
       limits:
         cpu: 500m
         memory: 512Mi
@@ -155,13 +157,13 @@ spec:
 
   appNavController:
     repository: kappnav/controller
-    tag: 0.1.0
+    tag: 0.1.2
     resources:
       constraints:
         enabled: false
       requests:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 10m
+        memory: 16Mi
       limits:
         cpu: 500m
         memory: 512Mi
@@ -172,15 +174,15 @@ spec:
 
   appNavUI:
     repository: kappnav/ui
-    tag: 0.1.0
+    tag: 0.1.2
     service:
       type: ClusterIP
     resources:
       constraints:
         enabled: false
       requests:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 50m
+        memory: 64Mi
       limits:
         cpu: 500m
         memory: 512Mi
@@ -192,13 +194,13 @@ spec:
 
   appNavInit:
     repository: kappnav/init
-    tag: 0.1.0
+    tag: 0.1.2
     resources:
       constraints:
         enabled: false
       requests:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 10m
+        memory: 128Mi
       limits:
         cpu: 500m
         memory: 512Mi
@@ -231,5 +233,5 @@ spec:
   ## OpenShift web console variables
   ###############################################################################
   console:
-    okdFeaturedApp: disabled
-    okdAppLauncher: disabled
+    okdFeaturedApp: enabled
+    okdAppLauncher: enabled

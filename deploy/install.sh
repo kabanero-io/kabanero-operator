@@ -8,6 +8,9 @@ KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.c
 SLEEP_LONG="${SLEEP_LONG:-5}"
 SLEEP_SHORT="${SLEEP_SHORT:-2}"
 
+# Optional components (yes/no)
+ENABLE_KAPPNAV="${ENABLE_KAPPNAV:-no}"
+
 # Check Subscriptions: subscription-name, namespace
 checksub () {
 	echo "Waiting for Subscription $1 InstallPlan to complete."
@@ -150,6 +153,12 @@ done
 oc new-project tekton-pipelines || true
 oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
 oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
+
+# Install KAppNav if selected
+if [ "$ENABLE_KAPPNAV" == "yes" ]
+then
+  oc apply -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/optional.yaml --selector=kabanero.io/component=kappnav
+fi
 
 # Install complete.  give instructions for how to create an instance.
 SAMPLE_KAB_INSTANCE_URL=https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/config/samples/default.yaml

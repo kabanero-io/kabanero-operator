@@ -48,6 +48,30 @@ if [ "$APPSODY_UNINSTALL" -eq 1 ] ; then
     fi
 fi
 
+# Remove KAppNav if it was installed by the Kabanero install script.  Delete the instances first, allowing the
+# operator to run its finalizer.  Then delete the operator, then the cluster level resources.
+if [ `oc get crds kappnavs.kappnav.io --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
+    oc delete kappnavs --selector=kabanero.io/component=kappnav --namespace kappnav --ignore-not-found
+
+    # Wait for the kappnav instances to be deleted, to give the kappnav operator a chance to
+    # process its finalizer.
+    echo "Waiting for KAppNav instances to stop...."
+    LOOP_COUNT=0
+    while [ `oc get kappnav --namespace kappnav --selector=kabanero.io/component=kappnav --no-headers --ignore-not-found | wc -l` -gt 0 ]
+    do
+        sleep 5
+        LOOP_COUNT=`expr $LOOP_COUNT + 1`
+        if [ $LOOP_COUNT -gt 20 ] ; then
+            echo "Timed out waiting for KAppNav instances to stop"
+            exit 1
+        fi
+    done
+
+fi
+oc delete serviceaccounts,deployments --selector=kabanero.io/component=kappnav --namespace kappnav --ignore-not-found
+oc delete clusterroles,clusterrolebindings,crds --selector=kabanero.io/component=kappnav --ignore-not-found
+oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
+
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=22-cr-knative-serving,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=21-cr-servicemeshmemberrole,kabanero.io/namespace!=true
