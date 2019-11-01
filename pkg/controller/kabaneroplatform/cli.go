@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -145,8 +146,25 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	aesSecretKeySource := corev1.EnvVarSource{SecretKeyRef: &aesSecretKeySelector}
 	env = append(env, corev1.EnvVar{Name: "AESEncryptionKey", ValueFrom: &aesSecretKeySource})
 
+	// Add livenessProbe
+	httpAction := corev1.HTTPGetAction{}
+	httpAction.Path = "/v1/liveliness"
+	httpAction.Port = intstr.FromInt(9443)
+	httpAction.Scheme = corev1.URISchemeHTTPS
+
+	probeHandler := corev1.Handler{}
+	probeHandler.HTTPGet = &httpAction
+
+	livenessProbe := &corev1.Probe{}
+	livenessProbe.Handler = probeHandler
+	livenessProbe.InitialDelaySeconds = 60
+	livenessProbe.TimeoutSeconds = 1
+	livenessProbe.PeriodSeconds = 30
+	livenessProbe.SuccessThreshold = 1
+	livenessProbe.FailureThreshold = 3
+
 	// Go ahead and make or update the deployment object
-	err = createDeployment(k, clientset, cl, "kabanero-cli", image, env, nil, reqLogger)
+	err = createDeployment(k, clientset, cl, "kabanero-cli", image, env, nil, livenessProbe, reqLogger)
 	if err != nil {
 		return err
 	}
