@@ -139,19 +139,6 @@ do
 	sleep $SLEEP_SHORT
 done
 
-# Kabanero
-oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-kabanero
-
-# Check the Kabanero is ready
-unset READY
-until [ "$READY" == "True" ]
-do
-	echo "Waiting for Kabanero kabanero to be ready."
-	READY=$(oc get kabanero kabanero -n kabanero --output=jsonpath={.status.kabaneroInstance.ready})
-	sleep $SLEEP_SHORT
-done
-
-
 # Github Sources
 oc apply -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
@@ -172,3 +159,21 @@ if [ "$ENABLE_KAPPNAV" == "yes" ]
 then
   oc apply -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/optional.yaml --selector=kabanero.io/component=kappnav
 fi
+
+# Install complete.  give instructions for how to create an instance.
+SAMPLE_KAB_INSTANCE_URL=https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/config/samples/default.yaml
+
+# Turn off debugging, and wait 3 seconds for it to flush output, before
+# printing instructions.
+set +x
+sleep 3
+echo "***************************************************************************"
+echo "*                                                                          "
+echo "*  The installation script is complete.  You can now create an instance    "
+echo "*  of the Kabanero CR.  If you have cloned and curated a collection set,   "
+echo "*  apply the Kabanero CR that you created.  Or, to create the default      "
+echo "*  instance:                                                               "
+echo "*                                                                          "
+echo "*      oc apply -n kabanero -f ${SAMPLE_KAB_INSTANCE}                  "
+echo "*                                                                          "
+echo "***************************************************************************"
