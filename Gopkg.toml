@@ -69,6 +69,10 @@ required = [
   # revision (PR #84) version 0.5.2.
   revision = "fe9d3d9993d493cc8681085643e73b1b3f7c909b"
 
+[[override]]
+  name = "github.com/openshift/api"
+  branch = "release-4.2"
+
 [[constraint]]
   name = "github.com/operator-framework/operator-sdk"
   # The version rule is used for a specific release and the master branch for in between releases.

@@ -9,7 +9,7 @@ import (
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
-	yaml "gopkg.in/yaml.v2"
+	consolev1 "github.com/openshift/api/console/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,7 +96,7 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	}
 
 	// Update the web console's ConfigMap with custom data.
-	err = customizeWebConsole(k, c, clientset, config, landingURL)
+	err = customizeWebConsole(k, c, landingURL)
 
 	return err
 }
@@ -204,270 +204,241 @@ func getLandingURL(k *kabanerov1alpha1.Kabanero, c client.Client, config *restcl
 	return landingURL, err
 }
 
-// Returns a copy of the OKD web-console ConfigMap
-func getWebConsoleConfigMap(c client.Client, config *restclient.Config) (*corev1.ConfigMap, error) {
-	configmap := &corev1.ConfigMap{}
+// Returns a copy of a ConsoleLink object
+func getConsoleLink(c client.Client, linkName string) (*consolev1.ConsoleLink, error) {
+	consoleLink := &consolev1.ConsoleLink{}
 	err := c.Get(context.TODO(), types.NamespacedName{
-		Namespace: "openshift-web-console", Name: "webconsole-config"}, configmap)
+		Namespace: "", Name: linkName}, consoleLink)
 	if err != nil {
 		return nil, err
 	}
 
-	cmCopy := configmap.DeepCopy()
-	if cmCopy == nil {
-		err = errors.New("getWebConsoleConfigMap: Failed to copy web-console configuration data")
-	}
-
-	return cmCopy, err
+	return consoleLink, nil
 }
 
 // Adds customizations to the OpenShift web console.
-func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, clientset *kubernetes.Clientset, config *restclient.Config, landingURL string) error {
-	// Get a copy of the web-console ConfigMap.
-	cm, err := getWebConsoleConfigMap(c, config)
+func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingURL string) error {
+
+	// See if we've added the apps link yet.
+	clientOp := c.Update
+	consoleLink, err := getConsoleLink(c, "kabanero-app-menu-link")
 	if err != nil {
-		// If couldn't find the web console config map, nothing to do.
-		if apierrors.IsNotFound(err) {
-			return nil
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 
-		return err
+		consoleLink = &consolev1.ConsoleLink{}
+		consoleLink.Name = "kabanero-app-menu-link"
+		consoleLink.Spec.Location = "ApplicationMenu"
+		consoleLink.Spec.Text = "Landing Page"
+		consoleLink.Spec.ApplicationMenu = &consolev1.ApplicationMenuSpec{}
+		consoleLink.Spec.ApplicationMenu.Section = "Kabanero"
+		clientOp = c.Create
+
+		kllog.Info("Creating ConsoleLink kabanero-app-menu-link")
 	}
 
-	// Get the embedded yaml entry in the web console ConfigMap yaml.
-	wccyaml := cm.Data["webconsole-config.yaml"]
-
-	m := make(map[string]interface{})
-	err = yaml.Unmarshal([]byte(wccyaml), &m)
+	// Stuff that could change (dependent on the landingURL)
+	consoleLink.Spec.Href = landingURL
+	consoleLink.Spec.ApplicationMenu.ImageURL = landingURL + "/img/favicon/favicon-16x16.png"
+	err = clientOp(context.TODO(), consoleLink)
 	if err != nil {
 		return err
 	}
 
-	// Update the extensions section of the embedded webconsole-config.yaml entry
-	scripts, ssheets := getCustomizationURLs(landingURL)
+	// See if we've added the help links yet.
+	clientOp = c.Update
+	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-docs")
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
 
-	for k, v := range m {
-		if k == "extensions" {
-			extmap := v.(map[interface{}]interface{})
-			for kk, vv := range extmap {
-				if kk == "scriptURLs" {
-					eScripts := scripts
-					sun := make([]interface{}, (len(eScripts)))
-					var ix = 0
-					if vv != nil {
-						su := vv.([]interface{})
-						eScripts = getEffectiveCustomizationURLs(su, scripts)
-						sun = make([]interface{}, (len(su) + len(eScripts)))
+		consoleLink = &consolev1.ConsoleLink{}
+		consoleLink.Name = "kabanero-help-menu-docs"
+		consoleLink.Spec.Location = "HelpMenu"
+		consoleLink.Spec.Text = "Kabanero Docs"
+		clientOp = c.Create
 
-						for i := 0; i < len(su); i++ {
-							sun[ix] = su[ix]
-							ix++
-						}
-					}
-					for _, u := range eScripts {
-						sun[ix] = u
-						ix++
-					}
-					extmap[kk] = sun
-				}
-				if kk == "stylesheetURLs" {
-					eSsheets := ssheets
-					sun := make([]interface{}, (len(eSsheets)))
-					var ix = 0
-					if vv != nil {
-						su := vv.([]interface{})
-						eSsheets = getEffectiveCustomizationURLs(su, ssheets)
-						sun = make([]interface{}, (len(su) + len(eSsheets)))
+		kllog.Info("Creating ConsoleLink kabanero-help-menu-docs")
+	}
 
-						for i := 0; i < len(su); i++ {
-							sun[ix] = su[ix]
-							ix++
-						}
-					}
+	// Stuff that could change (dependent on the landing URL)
+	consoleLink.Spec.Href = landingURL + "/docs"
+	err = clientOp(context.TODO(), consoleLink)
+	if err != nil {
+		return err
+	}
 
-					for _, u := range eSsheets {
-						sun[ix] = u
-						ix++
-					}
-					extmap[kk] = sun
-				}
-			}
-			m[k] = extmap
-			break
+	clientOp = c.Update
+	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-guides")
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		consoleLink = &consolev1.ConsoleLink{}
+		consoleLink.Name = "kabanero-help-menu-guides"
+		consoleLink.Spec.Location = "HelpMenu"
+		consoleLink.Spec.Text = "Kabanero Guides"
+		clientOp = c.Create
+	}
+
+	// Stuff that could change (dependent on the landing URL)
+	consoleLink.Spec.Href = landingURL + "/guides"
+	err = clientOp(context.TODO(), consoleLink)
+	if err != nil {
+		return err
+	}
+
+	/* Disabling the console logo customization for now.
+	// Make sure we have a config map with the Kabanero pepper icon in it.
+	configMapName := "kabanero-icon"
+
+	// Check if the map already exists.  We are going to make the map
+	// and put the image in it, once.  If the image changes, we will not
+	// update it.
+	configMapInstance := &corev1.ConfigMap{}
+	gvk := schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"}
+	key := client.ObjectKey{Name: configMapName, Namespace: "openshift-config"}
+	err = utils.UnstructuredGet(c, gvk, key, configMapInstance, kllog)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) == false {
+			return err
+		}
+
+		// Not found.  Make a new one.
+		configMapInstance = &corev1.ConfigMap{}
+		configMapInstance.ObjectMeta.Name = configMapName
+		configMapInstance.ObjectMeta.Namespace = "openshift-config"
+		configMapInstance.BinaryData = make(map[string][]byte)
+
+		// Grab the pepper icon from the landing page.
+		pepperIconUrl := landingURL + "/img/Kabanero_Logo_White_Text.png"
+		req, err := http.NewRequest(http.MethodGet, pepperIconUrl, nil)
+		if err != nil {
+			return err
+		}
+
+		// Can't trust the landing page certificate, localhost.
+		config := &tls.Config{InsecureSkipVerify: true}
+		transport := &http.Transport{TLSClientConfig: config}
+		client := &http.Client{Transport: transport}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf(fmt.Sprintf("Could not resolve %v. Http status code: %v", pepperIconUrl, resp.StatusCode))
+		}
+
+		r := resp.Body
+		b, err := ioutil.ReadAll(r)
+		if err != nil {
+			return err
+		}
+
+		configMapInstance.BinaryData["kabanero.png"] = b
+
+		// TODO: Close response?  cleanup?
+
+		err = c.Create(context.TODO(), configMapInstance)
+		if err != nil {
+			return err
 		}
 	}
+	
+	
+	// Grab the console object so we can change the icon
+	consoleInstance := &operatorv1.Console{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "cluster"}, consoleInstance)
 
-	// Update our copy of the web console yaml and update it.
-	upatedCMBytes, err := yaml.Marshal(m)
-	cm.Data["webconsole-config.yaml"] = string(upatedCMBytes)
-	_, err = yaml.Marshal(cm)
-
+	// Should be a console instance.... if not, error.
 	if err != nil {
 		return err
 	}
 
-	kllog.Info(fmt.Sprintf("customizeWebConsole: ConfigMap for update: %v", cm))
+	if consoleInstance.Spec.Customization.CustomLogoFile.Name != configMapName {
+		consoleInstance.Spec.Customization.CustomLogoFile.Name = configMapName
+		consoleInstance.Spec.Customization.CustomLogoFile.Key = "kabanero.png"
 
-	_, err = clientset.CoreV1().ConfigMaps("openshift-web-console").Update(cm)
+		err = c.Update(context.TODO(), consoleInstance)
 
-	return err
+		if err != nil {
+			return err
+		}
+	}
+  */
+	
+	return nil
 }
 
 // Removes customizations from the openshift console.
 func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	// Create a clientset to drive API operations on resources.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	// Get a copy of the web-console ConfigMap.
-	cm, err := getWebConsoleConfigMap(c, config)
-	if err != nil {
-		// If we couldn't find the config map, there is nothing to do.
-		if apierrors.IsNotFound(err) {
-			return nil
+	// Since these are cluster level objects, they cannot set a namespace-level owner and must be
+	// removed manually.
+	consoleLink, err := getConsoleLink(c, "kabanero-app-menu-link")
+	if err == nil {
+		err = c.Delete(context.TODO(), consoleLink)
+		if err != nil {
+			kllog.Error(err, "Unable to delete ConsoleLink")
 		}
-
-		return err
+	}
+	
+	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-docs")
+	if err == nil {
+		err = c.Delete(context.TODO(), consoleLink)
+		if err != nil {
+			kllog.Error(err, "Unable to delete ConsoleLink")
+		}
 	}
 
-	// Get the embedded yaml entry in the web console ConfigMap yaml.
-	wccyaml := cm.Data["webconsole-config.yaml"]
-	m := make(map[string]interface{})
-	err = yaml.Unmarshal([]byte(wccyaml), &m)
-	if err != nil {
-		return err
+	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-guides")
+	if err == nil {
+		err = c.Delete(context.TODO(), consoleLink)
+		if err != nil {
+			kllog.Error(err, "Unable to delete ConsoleLink")
+		}
 	}
 
-	// Update the extensions section of the embedded webconsole-config.yaml entry
-	landingURL, err := getLandingURL(k, c, config)
-	if err != nil {
-		return err
-	}
-	scripts, ssheets := getCustomizationURLs(landingURL)
+	/* Disabling the console logo customization for now.
+	// Remove web console config map and customization.
+	consoleInstance := &operatorv1.Console{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "cluster"}, consoleInstance)
 
-	for k, v := range m {
-		if k == "extensions" {
-			extmap := v.(map[interface{}]interface{})
-			for kk, vv := range extmap {
-				if kk == "scriptURLs" {
-					if vv != nil {
-						su := vv.([]interface{})
-						var esu []interface{}
-						for _, s := range su {
-							if isInStringList(scripts, s.(string)) {
-								continue
-							} else {
-								esu = append(esu, s)
-							}
-						}
-						extmap[kk] = esu
-					}
-				}
+	// Should be a console instance....
+	if err == nil {
+		configMapName := "kabanero-icon"
+		if consoleInstance.Spec.Customization.CustomLogoFile.Name == configMapName {
+			// Delete our icon...
+			consoleInstance.Spec.Customization.CustomLogoFile.Name = ""
+			consoleInstance.Spec.Customization.CustomLogoFile.Key = ""
 
-				if kk == "stylesheetURLs" {
-					if vv != nil {
-						ssu := vv.([]interface{})
-						var essu []interface{}
+			err = c.Update(context.TODO(), consoleInstance)
 
-						for _, ss := range ssu {
-							if isInStringList(ssheets, ss.(string)) {
-								continue
-							} else {
-								essu = append(essu, ss)
-							}
-						}
-						extmap[kk] = essu
-					}
-				}
+			// Delete the config map holding our icon...
+			configMapInstance := &corev1.ConfigMap{}
+			gvk := schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"}
+			key := client.ObjectKey{Name: configMapName, Namespace: "openshift-config"}
+			err = utils.UnstructuredGet(c, gvk, key, configMapInstance, kllog)
+			if err != nil {
+				c.Delete(context.TODO(), configMapInstance)
 			}
-			m[k] = extmap
-			break
 		}
 	}
-
-	// Update our copy of the web console yaml and update it.
-	upatedCMBytes, err := yaml.Marshal(m)
-	cm.Data["webconsole-config.yaml"] = string(upatedCMBytes)
-	_, err = yaml.Marshal(cm)
-
-	if err != nil {
-		return err
-	}
-
-	kllog.Info(fmt.Sprintf("removeWebConsoleCustomization: ConfigMap for update: %v", cm))
-
-	_, err = clientset.CoreV1().ConfigMaps("openshift-web-console").Update(cm)
-
-	return err
-}
-
-// Gets the customization URLs.
-func getCustomizationURLs(landingURL string) ([]string, []string) {
-	scripts := []string{
-		"LANDING_URL/appnav/openshift/featuredApp.js",
-		"LANDING_URL/appnav/openshift/appLauncher.js",
-		"LANDING_URL/appnav/openshift/projectNavigation.js",
-	}
-
-	ssheets := []string{
-		"LANDING_URL/appnav/openshift/appNavIcon.css",
-	}
-
-	// Replace script URLs with the correct host name.
-	for i, url := range scripts {
-		scripts[i] = strings.Replace(url, "LANDING_URL", landingURL, -1)
-	}
-
-	// Replace stylesheet URLs with the correct host name.
-	for i, url := range ssheets {
-		ssheets[i] = strings.Replace(url, "LANDING_URL", landingURL, -1)
-	}
-
-	return scripts, ssheets
-}
-
-// Returns the customization URLs that are not currently defined.
-func getEffectiveCustomizationURLs(extUrls []interface{}, urls []string) []string {
-	var eUrls []string
-
-	for _, url := range urls {
-		if !isInInterfaceList(extUrls, url) {
-			eUrls = append(eUrls, url)
-		}
-	}
-	return eUrls
-}
-
-// Checks if the given string is contained in the given array.
-func isInStringList(urls []string, s string) bool {
-	for _, url := range urls {
-		if url == s {
-			return true
-		}
-	}
-	return false
-}
-
-func isInInterfaceList(urls []interface{}, s string) bool {
-	for _, url := range urls {
-		if url == s {
-			return true
-		}
-	}
-	return false
+  */
+	
+	return nil
 }
 
 // Retrieves the current kabanero landing page status.
 func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
 	// If disabled. Nothing to do. No need to display status if disabled.
-	if *k.Spec.Landing.Enable == false {
+	if (k.Spec.Landing.Enable != nil) && (*k.Spec.Landing.Enable == false) {
 		k.Status.Landing = nil
 		return true, nil
 	}

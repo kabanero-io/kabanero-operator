@@ -16,6 +16,8 @@ import (
 	knsapis "github.com/knative/serving-operator/pkg/apis"
 	kneapis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
 	routev1 "github.com/openshift/api/route/v1"
+	consolev1 "github.com/openshift/api/console/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	tektonapis "github.com/openshift/tektoncd-pipeline-operator/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 
@@ -164,6 +166,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := consolev1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := operatorv1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
