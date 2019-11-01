@@ -16,17 +16,17 @@ kabanero:
 - version: "0.3.0"
   related-versions: 
     cli-services: "0.3.0-rc.2"
-    landing: "0.2.0"
+    landing: "0.3.0-rc.1"
     kabanero-che: "0.5.0"
     webhook: "0.1.0"
 
 related-software:
   landing:
-  - version: "0.2.0"
+  - version: "0.3.0-rc.1"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
       repository: "kabanero/landing"
-      tag: "0.2.0"
+      tag: "0.3.0-rc.1"
 
   cli-services: 
   - version: "0.3.0-rc.2"
