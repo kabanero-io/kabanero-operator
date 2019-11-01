@@ -49,7 +49,6 @@ if [ "$APPSODY_UNINSTALL" -eq 1 ] ; then
 fi
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
-oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=23-cr-kabanero,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=22-cr-knative-serving,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=21-cr-servicemeshmemberrole,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=20-cr-servicemeshcontrolplane,kabanero.io/namespace!=true
