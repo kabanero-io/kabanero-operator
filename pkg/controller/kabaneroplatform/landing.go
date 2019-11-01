@@ -6,17 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	consolev1 "github.com/openshift/api/console/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -28,10 +24,10 @@ import (
 var kllog = rlog.Log.WithName("kabanero-landing")
 
 // Deploys resources and customizes to the Openshift web console.
-func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	// if enable is false do not deploy the landing page
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
-		err := cleanupLandingPage(k, c, reqLogger)
+		err := cleanupLandingPage(k, c)
 		return err
 	}
 	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.Landing.Version)
@@ -100,13 +96,13 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger 
 	}
 
 	// Update the web console's ConfigMap with custom data.
-	err = customizeWebConsole(k, c, landingURL, reqLogger)
+	err = customizeWebConsole(k, c, landingURL)
 
 	return err
 }
 
-func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
-	err := removeWebConsoleCustomization(k, c, reqLogger)
+func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+	err := removeWebConsoleCustomization(k, c)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
@@ -221,7 +217,7 @@ func getConsoleLink(c client.Client, linkName string) (*consolev1.ConsoleLink, e
 }
 
 // Adds customizations to the OpenShift web console.
-func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingURL string, reqLogger logr.Logger) error {
+func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingURL string) error {
 
 	// See if we've added the apps link yet.
 	clientOp := c.Update
@@ -239,7 +235,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 		consoleLink.Spec.ApplicationMenu.Section = "Kabanero"
 		clientOp = c.Create
 
-		reqLogger.Info("Creating ConsoleLink kabanero-app-menu-link")
+		kllog.Info("Creating ConsoleLink kabanero-app-menu-link")
 	}
 
 	// Stuff that could change (dependent on the landingURL)
@@ -264,7 +260,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 		consoleLink.Spec.Text = "Kabanero Docs"
 		clientOp = c.Create
 
-		reqLogger.Info("Creating ConsoleLink kabanero-help-menu-docs")
+		kllog.Info("Creating ConsoleLink kabanero-help-menu-docs")
 	}
 
 	// Stuff that could change (dependent on the landing URL)
@@ -305,7 +301,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 	configMapInstance := &corev1.ConfigMap{}
 	gvk := schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"}
 	key := client.ObjectKey{Name: configMapName, Namespace: "openshift-config"}
-	err = utils.UnstructuredGet(c, gvk, key, configMapInstance, reqLogger)
+	err = utils.UnstructuredGet(c, gvk, key, configMapInstance, kllog)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) == false {
@@ -381,14 +377,14 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 }
 
 // Removes customizations from the openshift console.
-func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	// Since these are cluster level objects, they cannot set a namespace-level owner and must be
 	// removed manually.
 	consoleLink, err := getConsoleLink(c, "kabanero-app-menu-link")
 	if err == nil {
 		err = c.Delete(context.TODO(), consoleLink)
 		if err != nil {
-			reqLogger.Error(err, "Unable to delete ConsoleLink")
+			kllog.Error(err, "Unable to delete ConsoleLink")
 		}
 	}
 	
@@ -396,7 +392,7 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 	if err == nil {
 		err = c.Delete(context.TODO(), consoleLink)
 		if err != nil {
-			reqLogger.Error(err, "Unable to delete ConsoleLink")
+			kllog.Error(err, "Unable to delete ConsoleLink")
 		}
 	}
 
@@ -404,10 +400,11 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 	if err == nil {
 		err = c.Delete(context.TODO(), consoleLink)
 		if err != nil {
-			reqLogger.Error(err, "Unable to delete ConsoleLink")
+			kllog.Error(err, "Unable to delete ConsoleLink")
 		}
 	}
 
+	/* Disabling the console logo customization for now.
 	// Remove web console config map and customization.
 	consoleInstance := &operatorv1.Console{}
 	err = c.Get(context.Background(), types.NamespacedName{
@@ -427,12 +424,13 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 			configMapInstance := &corev1.ConfigMap{}
 			gvk := schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"}
 			key := client.ObjectKey{Name: configMapName, Namespace: "openshift-config"}
-			err = utils.UnstructuredGet(c, gvk, key, configMapInstance, reqLogger)
+			err = utils.UnstructuredGet(c, gvk, key, configMapInstance, kllog)
 			if err != nil {
 				c.Delete(context.TODO(), configMapInstance)
 			}
 		}
 	}
+  */
 	
 	return nil
 }

@@ -193,7 +193,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
 
 	// Deploy the kabanero landing page
-	err = deployLandingPage(instance, r.client, reqLogger)
+	err = deployLandingPage(instance, r.client)
 	if err != nil {
 		reqLogger.Error(err, "Error deploying the kabanero landing page.")
 		return reconcile.Result{}, err
@@ -295,7 +295,7 @@ func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Cl
 	// if landing enabled
 	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
 		// Remove landing page customizations for the current namespace.
-		err := removeWebConsoleCustomization(k, client, reqLogger)
+		err := removeWebConsoleCustomization(k, client)
 		if err != nil {
 			return err
 		}
