@@ -90,7 +90,7 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	// Create a Deployment. The landing application requires knowledge of the landingURL
 	// post route creation.
 	env := []corev1.EnvVar{{Name: "LANDING_URL", Value: landingURL}}
-	err = createDeployment(k, clientset, c, "kabanero-landing", image, env, nil, kllog)
+	err = createDeployment(k, clientset, c, "kabanero-landing", image, env, nil, nil, kllog)
 	if err != nil {
 		return err
 	}
