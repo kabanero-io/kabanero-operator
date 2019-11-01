@@ -31,17 +31,6 @@ spec:
           properties:
             che:
               properties:
-                cheOperator:
-                  properties:
-                    image:
-                      type: string
-                    repository:
-                      type: string
-                    tag:
-                      type: string
-                    version:
-                      type: string
-                  type: object
                 cheOperatorInstance:
                   properties:
                     cheWorkspaceClusterRole:
@@ -144,6 +133,8 @@ spec:
                 errorMessage:
                   type: string
                 ready:
+                  type: string
+                version:
                   type: string
               type: object
             che:

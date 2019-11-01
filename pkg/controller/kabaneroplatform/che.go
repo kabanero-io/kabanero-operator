@@ -31,18 +31,18 @@ var chelog = rlog.Log.WithName("kabanero-che")
 
 const (
 	// Software names as the appear in versions.yaml.
-	versionSoftwareNameCheOperator = "che-operator"
 	versionSoftwareNameKabaneroChe = "kabanero-che"
 
 	// Yaml file names for deployment.
-	yamlNameCheOperatorCRD         = "che-operator-crd.yaml"
-	yamlNameCheOperatorDeployments = "che-operator.yaml"
-	yamlNameCodewindRoleBinding    = "codewind-role-binding.yaml"
-	yamlNameCodewindClusterRole    = "codewind-cluster-role.yaml"
-	yamlNameCodewindCheOperatorCR  = "codewind-che-cr.yaml"
+	yamlNameCodewindRoleBinding   = "codewind-role-binding.yaml"
+	yamlNameCodewindClusterRole   = "codewind-cluster-role.yaml"
+	yamlNameCodewindCheOperatorCR = "codewind-che-cr.yaml"
 
 	// Deployed Resource names.
 	nameCodewindCheOperatorCR = "codewind-che"
+
+	// OLM related names.
+	cheOperatorsubscriptionName = "eclipse-che"
 )
 
 func initializeChe(k *kabanerov1alpha1.Kabanero) {
@@ -62,33 +62,12 @@ func reconcileChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling Che install.")
 
-	// Deploy the Che operator.
-	rev, err := resolveSoftwareRevision(k, versionSoftwareNameCheOperator, k.Spec.Che.CheOperator.Version)
+	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
-		logger.Error(err, "Che operator deloyment failed. Unable to resolve softeare revision.")
 		return err
 	}
 
-	templateCtx := rev.Identifiers
-	image, err := imageUriWithOverrides(k.Spec.Che.CheOperator.Repository, k.Spec.Che.CheOperator.Tag, k.Spec.Che.CheOperator.Image, rev)
-	if err != nil {
-		logger.Error(err, "Che operator deloyment failed. Unable to process image overrides.")
-		return err
-	}
-	templateCtx["image"] = image
-
-	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCheOperatorCRD, true)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to Apply Che CRD. Revision: %v. TemplateCtx: %v", rev, templateCtx))
-		return err
-	}
-
-	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCheOperatorDeployments, true)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to Apply Che operator deployment resource. Revision: %v. TemplateCtx: %v", rev, templateCtx))
-		return err
-	}
-
+	templateCtx := unstructured.Unstructured{}.Object
 	// Deploy the cluster role with the required permissions for codewind.
 	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCodewindClusterRole, true)
 	if err != nil {
@@ -96,7 +75,7 @@ func reconcileChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 		return err
 	}
 
-	// Deploy the cluster role with the required permissions for codewind.
+	// Deploy the role binding for codewind.
 	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCodewindRoleBinding, true)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to Apply RoleBinding. Revision: %v. TemplateCtx: %v", rev, templateCtx))
@@ -130,29 +109,22 @@ func deployCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c clie
 		return err
 	}
 	if !deployed {
-		// Get the version of the Che Operator. The operator version is kept in sync with the version
-		// of eclipse-che deployed by kabanero-che. This version is used to update
-		// some fields (devfileRegistryImage, pluginRegistryImage, identityProviderImage) in the
-		// Che operator CR deployment yaml to keep in sync with the operator/che versions.
-		rev, err := resolveSoftwareRevision(k, versionSoftwareNameCheOperator, k.Spec.Che.CheOperator.Version)
+		rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 		if err != nil {
 			return err
 		}
-		operatorVersion := rev.Version
 
-		// Get information about Kabanero-Che. Use this version of the revision object for further actions.
-		rev, err = resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
-		if err != nil {
-			return err
-		}
 		templateCtx := rev.Identifiers
-		image, err := imageUriWithOverrides(k.Spec.Che.CheOperator.Repository, k.Spec.Che.KabaneroChe.Tag, k.Spec.Che.KabaneroChe.Image, rev)
+		image, err := imageUriWithOverrides(k.Spec.Che.KabaneroChe.Repository, k.Spec.Che.KabaneroChe.Tag, k.Spec.Che.KabaneroChe.Image, rev)
 		if err != nil {
 			return err
 		}
+
+		// Set the needed key/value pairs to be replaced when the yaml is processed.
+		// Note that eclipseCheTag should already be part of the templateCtx as it is read in
+		// as part of revision Identifiers.
 		templateCtx["image"] = image
 		templateCtx["workspaceClusterRole"] = getWorkspaceClusterRole(k)
-		templateCtx["cheTag"] = operatorVersion
 
 		err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCodewindCheOperatorCR, true)
 		if err != nil {
@@ -298,31 +270,37 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 	// never 'empty' for json tagging 'omitempty' to take effect.
 	// We need to create the structure here before we use it.
 	k.Status.Che = &kabanerov1alpha1.CheStatus{}
-	k.Status.Che.ErrorMessage = ""
-	k.Status.Che.Ready = "False"
 
-	// Retrieve the Che operator version being used.
-	rev, err := resolveSoftwareRevision(k, versionSoftwareNameCheOperator, k.Spec.Che.CheOperator.Version)
+	k.Status.Che.Ready = "False"
+	k.Status.Che.ErrorMessage = ""
+
+	// Retrieve the version of the Che operator.
+	cheOperatorVersion, err := getCheOperatorVersion(k, c)
 	if err != nil {
+		k.Status.Che.ErrorMessage = "Unable to retrieve the version of installed Che operator. Error: " + err.Error()
 		return false, err
 	}
 
-	k.Status.Che.CheOperator.Version = rev.Version
+	k.Status.Che.CheOperator.Version = cheOperatorVersion
 
 	// Retrieve the kabanero Che version being used.
-	rev, err = resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
+	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
+		k.Status.Che.ErrorMessage = "Unable to retrieve the Kabanero Che version. Error: " + err.Error()
 		return false, err
 	}
 
-	image, err := imageUriWithOverrides(k.Spec.Che.CheOperator.Repository, k.Spec.Che.KabaneroChe.Tag, k.Spec.Che.KabaneroChe.Image, rev)
+	image, err := imageUriWithOverrides(k.Spec.Che.KabaneroChe.Repository, k.Spec.Che.KabaneroChe.Tag, k.Spec.Che.KabaneroChe.Image, rev)
 	if err != nil {
+		k.Status.Che.ErrorMessage = "Unable to establish the Kabanero Che image name. Error: " + err.Error()
 		return false, err
 	}
 
 	imageParts := strings.Split(image, ":")
 	if len(imageParts) != 2 {
-		return false, fmt.Errorf("Image %v is not valid", image)
+		err = fmt.Errorf("Image %v is not valid", image)
+		k.Status.Che.ErrorMessage = err.Error()
+		return false, err
 	}
 
 	k.Status.Che.KabaneroChe.Version = rev.Version
@@ -330,7 +308,7 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 	k.Status.Che.KabaneroCheInstance.CheImageTag = imageParts[1]
 	k.Status.Che.KabaneroCheInstance.CheWorkspaceClusterRole = getWorkspaceClusterRole(k)
 
-	// Get Kabanero Che instance to discern the state of the Che installation.
+	// Get Kabanero Che instance to find the state of the Che installation.
 	cheInst, err := getCheInstance(ctx, k, c, nameCodewindCheOperatorCR)
 
 	if err != nil {
@@ -340,9 +318,15 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 	}
 
 	// Get the cheClusterRunning status from the resource.
-	cheClusterRunning, ok, err := unstructured.NestedString(cheInst.Object, "status", "cheClusterRunning")
-	if err != nil || !ok {
+	cheClusterRunning, found, err := unstructured.NestedString(cheInst.Object, "status", "cheClusterRunning")
+	if err != nil {
 		custErr := fmt.Errorf("Unable to retrieve status.cheClusterRunning from the Che instance, Error: %v", err)
+		k.Status.Che.ErrorMessage = custErr.Error()
+		return false, custErr
+	}
+
+	if !found {
+		custErr := fmt.Errorf("The value of Che instance entry status.cheClusterRunning was not found")
 		k.Status.Che.ErrorMessage = custErr.Error()
 		return false, custErr
 	}
@@ -376,27 +360,14 @@ func cleanupChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Clie
 	return nil
 }
 
-// Delete the Kabanero Che operator deployment yamls.
+// Delete the Kabanero Che instance associated yamls.
 func deleteCheOperatorResources(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	rev, err := resolveSoftwareRevision(k, versionSoftwareNameCheOperator, k.Spec.Che.CheOperator.Version)
+	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
 		return err
 	}
 
-	templateCtx := rev.Identifiers
-	image, err := imageUriWithOverrides(k.Spec.Che.CheOperator.Repository, k.Spec.Che.CheOperator.Tag, k.Spec.Che.CheOperator.Image, rev)
-	if err != nil {
-		return err
-	}
-
-	templateCtx["image"] = image
-
-	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCodewindRoleBinding, false)
-	if err != nil {
-		return err
-	}
-
-	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCheOperatorDeployments, false)
+	err = processYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, yamlNameCodewindRoleBinding, false)
 	if err != nil {
 		return err
 	}
@@ -406,20 +377,12 @@ func deleteCheOperatorResources(ctx context.Context, k *kabanerov1alpha1.Kabaner
 
 // Delete the Kabanero Che CR instance.
 func deleteCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	rev, err := resolveSoftwareRevision(k, versionSoftwareNameCheOperator, k.Spec.Che.CheOperator.Version)
+	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
 		return err
 	}
 
-	templateCtx := rev.Identifiers
-	image, err := imageUriWithOverrides(k.Spec.Che.CheOperator.Repository, k.Spec.Che.CheOperator.Tag, k.Spec.Che.CheOperator.Image, rev)
-	if err != nil {
-		return err
-	}
-
-	templateCtx["image"] = image
-
-	err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCodewindCheOperatorCR, false)
+	err = processYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, yamlNameCodewindCheOperatorCR, false)
 	if err != nil {
 		return err
 	}
@@ -486,14 +449,14 @@ func validateCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c cl
 		return custErr
 	}
 
-	// Load the Che instance object spec.server entry.
-	server, ok, err := unstructured.NestedFieldCopy(cheInst.Object, "spec", "server")
-	if err != nil || !ok {
+	// Load the Che instance spec.server entry.
+	server, found, err := unstructured.NestedFieldCopy(cheInst.Object, "spec", "server")
+	if err != nil {
 		custErr := fmt.Errorf("Unable to retrieve spec.server from the Che instance, Error: %v", err)
 		return custErr
 	}
-	if server == nil {
-		custErr := fmt.Errorf("Retrieve a nil spec.server from the Che instance, Error: %v", err)
+	if !found {
+		custErr := fmt.Errorf("The value of Che instance entry spec.server was not found, Error: %v", err)
 		return custErr
 	}
 
@@ -520,30 +483,95 @@ func validateCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c cl
 		return fmt.Errorf("Image %v is not valid", image)
 	}
 
+	eclipseCheSoftwareTag := findKeyInMap(rev.Identifiers, "eclipseCheTag")
+	if len(eclipseCheSoftwareTag) == 0 {
+		return fmt.Errorf("The eclipseCheTag key could not be found in the version identifier list")
+	}
+
 	// Validate that the repository image and image tag are what we expect it to be.
-	// If the user updated this information, replace it is configured.
+	// If the user updated this information, replace it if configured.
 	imageChecked := false
 	tagChecked := false
+	clusterRoleChecked := false
+	devRegImageChecked := false
+	plugRegImageChecked := false
+
 	for key, val := range serverOptions {
 		if key == "cheImage" {
 			if val != imageParts[0] {
-				unstructured.SetNestedField(cheInst.Object, imageParts[0], "spec", "server", "cheImage")
+				err := unstructured.SetNestedField(cheInst.Object, imageParts[0], "spec", "server", "cheImage")
+				if err != nil {
+					return err
+				}
 				imageChecked = true
 			}
 		} else if key == "cheImageTag" {
 			if val != imageParts[1] {
-				unstructured.SetNestedField(cheInst.Object, imageParts[1], "spec", "server", "cheImageTag")
+				err := unstructured.SetNestedField(cheInst.Object, imageParts[1], "spec", "server", "cheImageTag")
+				if err != nil {
+					return err
+				}
 				tagChecked = true
 			}
 		} else if key == "cheWorkspaceClusterRole" {
 			wscr := getWorkspaceClusterRole(k)
 			if val != wscr {
-				unstructured.SetNestedField(cheInst.Object, wscr, "spec", "server", "cheWorkspaceClusterRole")
-				tagChecked = true
+				err := unstructured.SetNestedField(cheInst.Object, wscr, "spec", "server", "cheWorkspaceClusterRole")
+				if err != nil {
+					return err
+				}
+				clusterRoleChecked = true
 			}
+		} else if key == "devfileRegistryImage" {
+			err := validateSoftwareImageTag(cheInst.Object, val, eclipseCheSoftwareTag, "spec", "server", "devfileRegistryImage")
+			if err != nil {
+				return err
+			}
+			devRegImageChecked = true
+		} else if key == "pluginRegistryImage" {
+			err := validateSoftwareImageTag(cheInst.Object, val, eclipseCheSoftwareTag, "spec", "server", "pluginRegistryImage")
+			if err != nil {
+				return err
+			}
+			plugRegImageChecked = true
 		}
 
-		if imageChecked && tagChecked {
+		if imageChecked && tagChecked && clusterRoleChecked && devRegImageChecked && plugRegImageChecked {
+			break
+		}
+	}
+
+	// Load the Che instance spec.auth entry.
+	auth, ok, err := unstructured.NestedFieldCopy(cheInst.Object, "spec", "auth")
+	if err != nil || !ok {
+		custErr := fmt.Errorf("Unable to retrieve spec.auth from the Che instance, Error: %v", err)
+		return custErr
+	}
+	if server == nil {
+		custErr := fmt.Errorf("Retrieve a nil spec.auth from the Che instance, Error: %v", err)
+		return custErr
+	}
+
+	authOptions, ok := auth.(map[string]interface{})
+
+	if !ok {
+		custErr := fmt.Errorf("Error casting auth options into the appropriate type")
+		return custErr
+	}
+
+	// Validate that the image tags are what we expect it to be.
+	// If the user updated this information, replace it if configured.
+	idRegImageChecked := false
+	for key, val := range authOptions {
+		if key == "identityProviderImage" {
+			err := validateSoftwareImageTag(cheInst.Object, val, eclipseCheSoftwareTag, "spec", "auth", "identityProviderImage")
+			if err != nil {
+				return err
+			}
+			idRegImageChecked = true
+		}
+
+		if idRegImageChecked {
 			break
 		}
 	}
@@ -566,4 +594,63 @@ func getWorkspaceClusterRole(k *kabanerov1alpha1.Kabanero) string {
 	}
 
 	return wscr
+}
+
+// Validates that the input image contains the correct tag.
+func validateSoftwareImageTag(instance map[string]interface{}, imageInterface interface{}, tag string, fields ...string) error {
+	image := imageInterface.(string)
+	if !strings.Contains(image, tag) {
+		imageParts := strings.Split(image, ":")
+		if len(imageParts) != 2 {
+			return fmt.Errorf("Image %v is not valid", image)
+		}
+
+		newImage := string(imageParts[0]) + ":" + tag
+		if strings.HasPrefix(newImage, "'") {
+			newImage += "'"
+		} else if strings.HasPrefix(newImage, "\"") {
+			newImage = "\""
+		}
+
+		err := unstructured.SetNestedField(instance, newImage, fields...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Retuns the installed Che operator version.
+func getCheOperatorVersion(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
+	cok := client.ObjectKey{
+		Namespace: k.Namespace,
+		Name:      cheOperatorsubscriptionName}
+
+	installedCSVName, err := kutils.GetInstalledCSVName(c, cok)
+	if err != nil {
+		return "", err
+	}
+
+	cok = client.ObjectKey{
+		Namespace: k.Namespace,
+		Name:      installedCSVName}
+
+	csvVersion, err := kutils.GetCSVSpecVersion(c, cok)
+	if err != nil {
+		return "", err
+	}
+
+	return csvVersion, nil
+}
+
+// Finds the value of the input key in the input map.
+func findKeyInMap(template map[string]interface{}, key string) string {
+	for key, val := range template {
+		if key == "eclipseCheTag" {
+			return val.(string)
+		}
+	}
+
+	return ""
 }

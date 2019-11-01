@@ -49,7 +49,7 @@ func TestStaticVersionData(t *testing.T) {
 }
 
 func TestKabaneroRevisions(t *testing.T) {
-	rev := Data.KabaneroRevision("0.1.2")
+	rev := Data.KabaneroRevision("0.3.0")
 	if rev == nil {
 		t.Fatal("Revision was nil")
 	}

@@ -83,17 +83,8 @@ type KabaneroLandingCustomizationSpec struct {
 // CheCustomizationSpec defines customization entries for Che.
 type CheCustomizationSpec struct {
 	Enable              *bool                   `json:"enable,omitempty"`
-	CheOperator         CheOperatorSpec         `json:"cheOperator,omitempty"`
 	CheOperatorInstance CheOperatorInstanceSpec `json:"cheOperatorInstance,omitempty"`
 	KabaneroChe         KabaneroCheSpec         `json:"kabaneroChe,omitempty"`
-}
-
-// CheOperatorSpec defines customization entries for the Che operator.
-type CheOperatorSpec struct {
-	Version    string `json:"version,omitempty"`
-	Image      string `json:"image,omitempty"`
-	Repository string `json:"repository,omitempty"`
-	Tag        string `json:"tag,omitempty"`
 }
 
 // CheOperatorInstanceSpec defines customization entries for the Che operator instance.
@@ -205,6 +196,7 @@ type KabaneroLandingPageStatus struct {
 type AppsodyStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 // KappnavStatus defines the observed status details of Kubernetes Application Navigator.
@@ -224,12 +216,12 @@ type CheStatus struct {
 	KabaneroCheInstance KabaneroCheInstanceStatus `json:"kabaneroCheInstance,omitempty"`
 }
 
-// CheOperatorStatus defines the observed status details of Che.
+// CheOperatorStatus defines the observed status details of the Che operator.
 type CheOperatorStatus struct {
 	Version string `json:"version,omitempty"`
 }
 
-// KabaneroCheStatus defines the observed status details of Che.
+// KabaneroCheStatus defines the observed status details of Kabanero Che.
 type KabaneroCheStatus struct {
 	Version string `json:"version,omitempty"`
 }
