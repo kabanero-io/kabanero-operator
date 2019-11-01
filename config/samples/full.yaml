@@ -9,7 +9,7 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: "0.2.0"
+  version: "0.3.0"
 
   targetNamespaces:
   - ns1
@@ -17,14 +17,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.2.0"
+    version: "0.3.0-alpha.1"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.2.0"
+    tag: "0.3.0-alpha.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.2.0
+    image: kabanero/kabanero-command-line-services:0.3.0-alpha.1
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 

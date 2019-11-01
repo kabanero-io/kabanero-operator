@@ -9,32 +9,19 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.2.0"
+default: "0.3.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
-- version: "0.1.1"
+- version: "0.3.0"
   related-versions: 
-    cli-services: "0.1.0"
-    landing: "0.1.0"
-- version: "0.1.2"
-  related-versions: 
-    cli-services: "0.1.0"
-    landing: "0.1.0"
-- version: "0.2.0"
-  related-versions: 
-    cli-services: "0.2.0"
+    cli-services: "0.3.0-alpha.1"
     landing: "0.2.0"
     che-operator: "7.2.0"
     kabanero-che: "0.5.0"
 
 related-software:
   landing:
-  - version: "0.1.0"
-    orchestrations: "orchestrations/landing/0.1"
-    identifiers:
-      repository: "kabanero/landing"
-      tag: "0.1.0"
   - version: "0.2.0"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
@@ -42,31 +29,11 @@ related-software:
       tag: "0.2.0"
 
   cli-services: 
-  - version: "0.2.0"
+  - version: "0.3.0-alpha.1"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.2.0"
-  - version: "0.2.0-rc.1"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-command-line-services"
-      tag: "v0.2.0rc1"
-  - version: "0.1.1-rc.1"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-command-line-services"
-      tag: "0.1.1-rc.1"
-  - version: "0.1.1"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero-io/kabanero-cli"
-      tag: "0.1.0"
-  - version: "0.1.0"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-command-line-services"
-      tag: "0.1.0"
+      tag: "0.3.0-alpha.1"
 
   che-operator:
   # Compatible with kabanero-che version 0.5.0.
