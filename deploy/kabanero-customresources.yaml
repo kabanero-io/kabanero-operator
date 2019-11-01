@@ -94,18 +94,3 @@ metadata:
   labels:
     kabanero.io/install: 22-cr-knative-serving
 ---
-apiVersion: kabanero.io/v1alpha1
-kind: Kabanero
-metadata:
-  name: kabanero
-  namespace: kabanero
-  labels:
-    kabanero.io/install: 23-cr-kabanero
-spec:
-  version: "0.2.0"
-  collections: 
-    repositories: 
-    - name: central
-      url: https://github.com/kabanero-io/collections/releases/download/0.2.0/kabanero-index.yaml
-      activateDefaultCollections: true
----
