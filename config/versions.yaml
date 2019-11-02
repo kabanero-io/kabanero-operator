@@ -17,7 +17,7 @@ kabanero:
   related-versions: 
     cli-services: "0.3.0-rc.2"
     landing: "0.3.0-rc.1"
-    kabanero-che: "0.5.0"
+    kabanero-che: "0.5.1"
     webhook: "0.1.0"
 
 related-software:
@@ -36,12 +36,12 @@ related-software:
       tag: "0.3.0-rc.2"
 
   kabanero-che:
-  - version: "0.5.0"
+  - version: "0.5.1"
     orchestrations: "orchestrations/che/0.1"
     identifiers:
-      eclipseCheTag: "7.2.0"
+      eclipseCheTag: "7.3.0"
       repository: "kabanero/kabanero-che"
-      tag: "0.5.0"
+      tag: "0.5.1"
 
   webhook:
   - version: "0.1.0"

@@ -42,14 +42,14 @@ spec:
 
     kabaneroChe:
       # Overrides the platform wide settings for version on this component.
-      version: "0.5.0"
+      version: "0.5.1"
 
       # Overrides the image as a separate repository or tag.
       repository: kabanero/kabanero-che
-      tag: "0.5.0"
+      tag: "0.5.1"
 
       # Overrides the image uri.
-      image: kabanero/kabanero-che:0.5.0
+      image: kabanero/kabanero-che:0.5.1
 
     cheOperatorInstance:
       # Overrides the workspaceClusterRole to be used when deploying an instance of the Che CR.
