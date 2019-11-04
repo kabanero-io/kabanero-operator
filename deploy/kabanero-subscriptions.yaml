@@ -82,7 +82,6 @@ spec:
   name: knative-eventing-operator
   source: community-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: knative-eventing-operator.v0.8.0
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -97,7 +96,6 @@ spec:
   name: serverless-operator
   source: kabanero-catalog
   sourceNamespace: openshift-marketplace
-  startingCSV: serverless-operator.v1.1.0
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -114,7 +112,6 @@ spec:
   name: openshift-pipelines-operator
   source: community-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: openshift-pipelines-operator.v0.7.0
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -163,7 +160,6 @@ spec:
   name: eclipse-che
   source: community-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: eclipse-che.v7.3.0
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
