@@ -14,6 +14,7 @@ import (
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -187,9 +188,11 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 
 // Check to see if the status contains any assets that are failed
 func failedAssets(status kabanerov1alpha1.CollectionStatus) bool {
-	for _, assetStatus := range status.ActiveAssets {
-		if assetStatus.Status == assetStatusFailed {
-			return true
+	for _, pipelineStatus := range status.ActivePipelines {
+		for _, assetStatus := range pipelineStatus.ActiveAssets {
+			if assetStatus.Status == assetStatusFailed {
+				return true
+			}
 		}
 	}
 
@@ -426,107 +429,110 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 // Check if the asset read from a manifest is equal to the asset in the status
 // object.  They are equal if they have the same name, or if the name is
 // nil, if the URLs are equal.
-func assetMatch(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset Pipelines) bool {
-	if len(asset.Id) == 0 {
-		return asset.Url == assetStatus.Url
-	}
-
-	return asset.Id == assetStatus.Name
+func assetMatch(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset CollectionAsset) bool {
+	return asset.Name == assetStatus.Name
 }
 
-func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, asset Pipelines, message string) {
-	log.Info(fmt.Sprintf("Updating status for asset %v", asset.Id))
+func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, pipeline Pipelines, asset CollectionAsset, message string, assetStatus string) {
+	log.Info(fmt.Sprintf("Updating status for asset %v in pipeline %v", asset.Name, pipeline.Id))
 
 	// Assume that if there is a message, it's an error condition
 	assetStatusMessage := message
-	assetStatus := assetStatusActive
-	if len(assetStatusMessage) > 0 {
-		assetStatus = assetStatusFailed
+
+	// First, find the right pipeline in the Collection status
+	var matchingPipeline *kabanerov1alpha1.PipelineStatus
+	var matchingPipelineIndex int
+	for matchingPipelineIndex, _ = range status.ActivePipelines {
+		if status.ActivePipelines[matchingPipelineIndex].Name == pipeline.Id {
+			matchingPipeline = &status.ActivePipelines[matchingPipelineIndex]
+			break
+		}
 	}
 
-	// First find the asset in the Collection status.
-	for index, curAssetStatus := range status.ActiveAssets {
+	// If couldn't find the pipeline, create one and its associated asset.
+	if matchingPipeline == nil {
+		matchingPipeline = &kabanerov1alpha1.PipelineStatus{Name: pipeline.Id, Url: pipeline.Url, Digest: pipeline.Sha256}
+		matchingPipeline.ActiveAssets = append(matchingPipeline.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Name, asset.Sha256, assetStatus, assetStatusMessage})
+		status.ActivePipelines = append(status.ActivePipelines, *matchingPipeline)
+		return
+	}
+
+	// Next find the asset in the Pipeline status.
+	for index, curAssetStatus := range matchingPipeline.ActiveAssets {
 		if assetMatch(curAssetStatus, asset) {
 			// We found it - update the digest and asset status.
-			status.ActiveAssets[index].Digest = asset.Sha256
-			status.ActiveAssets[index].Status = assetStatus
-			status.ActiveAssets[index].StatusMessage = assetStatusMessage
+			status.ActivePipelines[matchingPipelineIndex].ActiveAssets[index].Digest = asset.Sha256
+			status.ActivePipelines[matchingPipelineIndex].ActiveAssets[index].Status = assetStatus
+			status.ActivePipelines[matchingPipelineIndex].ActiveAssets[index].StatusMessage = assetStatusMessage
 			return
 		}
 	}
 
 	// If the asset was not found, create a status for it
-	status.ActiveAssets = append(status.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Id, asset.Url, asset.Sha256, assetStatus, assetStatusMessage})
+	status.ActivePipelines[matchingPipelineIndex].ActiveAssets = append(status.ActivePipelines[matchingPipelineIndex].ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{asset.Name, asset.Sha256, assetStatus, assetStatusMessage})
 }
 
-// Returns a set of resources from the input collection asset in Manifest form.
-func getResourceManifestFromAsset(collectionResource *kabanerov1alpha1.Collection, collection *Collection, c client.Client, asset kabanerov1alpha1.RepositoryAssetStatus) (mf.Manifest, error) {
+// Deactivates a collection.
+func deactivate(collectionResource *kabanerov1alpha1.Collection, collection *Collection, c client.Client) error {
 	renderingContext := map[string]interface{}{
 		"CollectionId":   collection.Id,
 		"CollectionName": collection.Name,
 	}
 
-	// Retrieve manifests as unstructured
-	manifests, err := GetManifests(asset.Url, asset.Digest, renderingContext, log)
-	if err != nil {
-		return mf.Manifest{}, err
-	}
+	// Maintain a list of failed "stuff" here.  We'll replace it later.
+	failedCollectionStatus := &kabanerov1alpha1.CollectionStatus{}
+	
+	// failedAssets := []kabanerov1alpha1.RepositoryAssetStatus{}
+	for _, pipeline := range collectionResource.Status.ActivePipelines {
 
-	m, err := mf.FromResources(manifests, c)
-	if err != nil {
-		return mf.Manifest{}, err
-	}
-
-	log.Info(fmt.Sprintf("Resources: %v", m.Resources))
-
-	transforms := []mf.Transformer{
-		mf.InjectOwner(collectionResource),
-		mf.InjectNamespace(collectionResource.GetNamespace()),
-	}
-
-	err = m.Transform(transforms...)
-	if err != nil {
-		return mf.Manifest{}, err
-	}
-
-	return m, nil
-}
-
-// Deactivates a collection.
-func deactivate(collectionResource *kabanerov1alpha1.Collection, collection *Collection, c client.Client) error {
-	failedAssets := []kabanerov1alpha1.RepositoryAssetStatus{}
-	for _, asset := range collectionResource.Status.ActiveAssets {
-
-		m, err := getResourceManifestFromAsset(collectionResource, collection, c, asset)
+		manifests, err := GetManifests(pipeline.Url, pipeline.Digest, renderingContext, log)
 		if err != nil {
+			log.Error(err, "Failed to get manifests for pipeline " + pipeline.Name + ": ")
 			return err
 		}
 
-		failedResourceDeletion := []string{}
-		for _, spec := range m.Resources {
-			log.Info(fmt.Sprintf("Deleting resource: %v", spec))
+		sourcePipeline := Pipelines{Id: pipeline.Name, Sha256: pipeline.Digest, Url: pipeline.Url}
 
-			err := m.Delete(&spec)
-			if err != nil {
-				failedResourceDeletion = append(failedResourceDeletion, spec.GetName()+": "+err.Error())
-				log.Error(err, "Error deleting resource "+spec.GetName()+" from "+asset.Url)
+		// Iterate and delete each asset
+		for _, asset := range pipeline.ActiveAssets {
+
+			// Go find the unstructured data for this asset
+			for _, assetYaml := range manifests {
+				if asset.Name == assetYaml.Name {
+					sourceAsset := CollectionAsset{Name: asset.Name, Sha256: asset.Digest}
+					m, err := mf.FromResources([]unstructured.Unstructured{assetYaml.Yaml}, c)
+					if err != nil {
+						updateAssetStatus(failedCollectionStatus, sourcePipeline, sourceAsset, err.Error(), assetStatusUnknown)
+						continue
+					}
+					
+					log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+					transforms := []mf.Transformer{
+						mf.InjectNamespace(collectionResource.GetNamespace()),
+					}
+
+					err = m.Transform(transforms...)
+					if err != nil {
+						updateAssetStatus(failedCollectionStatus, sourcePipeline, sourceAsset, err.Error(), assetStatusUnknown)
+						continue
+					}
+
+					err = m.DeleteAll()
+					if err != nil {
+						updateAssetStatus(failedCollectionStatus, sourcePipeline, sourceAsset, err.Error(), assetStatusUnknown)
+					}
+				}
 			}
 		}
-
-		if len(failedResourceDeletion) != 0 {
-			asset.Status = assetStatusUnknown
-			asset.StatusMessage = "Failed to deactivate collection. The following resources failed deactivation: " + strings.Join(failedResourceDeletion, ", ")
-			failedAssets = append(failedAssets, asset)
-		}
-
 	}
 
-	// Deletion processing completed. Leave only the failed assets in the asset list for users to get an idea of what failed.
-	if len(failedAssets) != 0 {
-		collectionResource.Status.ActiveAssets = failedAssets
+	// See if anything went wrong.  If so, update the asset status and return.
+	if len(failedCollectionStatus.ActivePipelines) > 0 {
+		collectionResource.Status.ActivePipelines = failedCollectionStatus.ActivePipelines
 		return fmt.Errorf("Failed to deactivate collection. One or more assets were not removed")
 	}
-
+	
 	// Everything went fine. Clear the status section and print a message stating that deactivation completed.
 	cstatus := kabanerov1alpha1.CollectionStatus{}
 	collectionResource.Status = cstatus
@@ -557,93 +563,106 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		var transformedManifests []transformedRemoteManifest
 		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
 
-		for _, asset := range collectionResource.Status.ActiveAssets {
-			log.Info(fmt.Sprintf("Preparing to delete asset %v", asset.Url))
+		for _, pipeline := range collectionResource.Status.ActivePipelines {
 
 			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(asset.Url, asset.Digest, renderingContext, log)
+			manifests, err := GetManifests(pipeline.Url, pipeline.Digest, renderingContext, log)
 			if err != nil {
-				log.Error(err, errorMessage, "resource", asset.Url)
+				log.Error(err, errorMessage, "resource", pipeline.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
 				return nil // Forces status to be updated
 			}
+			
+			for _, asset := range pipeline.ActiveAssets {
+				log.Info(fmt.Sprintf("Preparing to delete asset %v in pipeline %v", asset.Name, pipeline.Name))
 
+				// Construct dummy Manifest and client, due to client being private struct field
+				m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
+				if err != nil {
+					log.Error(err, errorMessage, "resource", asset.Name)
+					collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+					return nil // Forces status to be updated
+				}
+
+ 				// Look for the correct manifest and assign it to the manifestival object
+				for _, assetYaml := range manifests {
+					if asset.Name == assetYaml.Name {
+				
+						// Assign the real manifests
+						m.Resources = []unstructured.Unstructured{assetYaml.Yaml}
+
+						log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+						transforms := []mf.Transformer{
+							mf.InjectNamespace(collectionResource.GetNamespace()),
+						}
+
+						err = m.Transform(transforms...)
+						if err != nil {
+							log.Error(err, errorMessage, "resource", asset.Name)
+							collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
+							return nil // Forces status to be updated
+						}
+
+						// Queue the resolved manifest to be deleted in the next step.
+						transformedManifests = append(transformedManifests, transformedRemoteManifest{m, "" /* asset.Url */})
+					}
+				}
+			}
+		}
+
+		// TODO: More work here, need to actually delete something....
+		
+		// Indicate there is not currently an active version of this collection.
+		collectionResource.Status.ActiveVersion = ""
+		collectionResource.Status.ActivePipelines = nil
+		collectionResource.Status.Images = nil
+	}
+
+	// Now apply the new version
+	for _, pipeline := range collection.Pipelines {
+		log.Info(fmt.Sprintf("Applying assets %v", pipeline.Url))
+
+		// Retrieve manifests as unstructured
+		manifests, err := GetManifests(pipeline.Url, pipeline.Sha256, renderingContext, log)
+		if err != nil {
+			return err
+		}
+
+		// Apply each yaml individually so that we can debug problems applying a particular asset.
+		for _, asset := range manifests {
+		
 			// Construct dummy Manifest and client, due to client being private struct field
 			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
 			if err != nil {
-				log.Error(err, errorMessage, "resource", asset.Url)
-				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-				return nil // Forces status to be updated
+				return err
 			}
 
-			// Assign the real manifests
-			m.Resources = manifests
+			// Assign the real manifest
+			m.Resources = []unstructured.Unstructured{asset.Yaml}
 
 			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
 			transforms := []mf.Transformer{
+				mf.InjectOwner(collectionResource),
 				mf.InjectNamespace(collectionResource.GetNamespace()),
 			}
 
 			err = m.Transform(transforms...)
 			if err != nil {
-				log.Error(err, errorMessage, "resource", asset.Url)
-				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-				return nil // Forces status to be updated
+				return err
 			}
 
-			// Queue the resolved manifest to be deleted in the next step.
-			transformedManifests = append(transformedManifests, transformedRemoteManifest{m, asset.Url})
-		}
+			log.Info(fmt.Sprintf("Applying resources: %v", m.Resources))
 
-		// Indicate there is not currently an active version of this collection.
-		collectionResource.Status.ActiveVersion = ""
-		collectionResource.Status.ActiveAssets = nil
-		collectionResource.Status.Images = nil
-	}
-
-	// Now apply the new version
-	for _, asset := range collection.Pipelines {
-		log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
-
-		// Retrieve manifests as unstructured
-		manifests, err := GetManifests(asset.Url, asset.Sha256, renderingContext, log)
-		if err != nil {
-			return err
-		}
-
-		// Construct dummy Manifest and client, due to client being private struct field
-		m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
-		if err != nil {
-			return err
-		}
-
-		// Assign the real manifests
-		m.Resources = manifests
-
-		log.Info(fmt.Sprintf("Resources: %v", m.Resources))
-
-		transforms := []mf.Transformer{
-			mf.InjectOwner(collectionResource),
-			mf.InjectNamespace(collectionResource.GetNamespace()),
-		}
-
-		err = m.Transform(transforms...)
-		if err != nil {
-			return err
-		}
-
-		for _, spec := range m.Resources {
-			log.Info(fmt.Sprintf("Applying resource: %v", spec))
-
-			err := m.Apply(&spec)
+			err = m.ApplyAll()
 			if err != nil {
 				// Update the asset status with the error message
-				log.Error(err, "Error installing the resource", "resource", asset.Url)
-				updateAssetStatus(&collectionResource.Status, asset, err.Error())
+				log.Error(err, "Error installing the resource", "resource", asset.Name)
+				updateAssetStatus(&collectionResource.Status, pipeline, asset, err.Error(), assetStatusFailed)
 			} else {
 				// Update the digest for this asset in the status
-				updateAssetStatus(&collectionResource.Status, asset, "")
+				updateAssetStatus(&collectionResource.Status, pipeline, asset, "", assetStatusActive)
 			}
 		}
 	}
