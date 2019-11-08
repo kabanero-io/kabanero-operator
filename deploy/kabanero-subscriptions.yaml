@@ -91,10 +91,10 @@ metadata:
   labels:
     kabanero.io/install: 12-subscription
 spec:
-  channel: kabanero-release-0.3.0
+  channel: techpreview
   installPlanApproval: Automatic
   name: serverless-operator
-  source: kabanero-catalog
+  source: redhat-operators
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1

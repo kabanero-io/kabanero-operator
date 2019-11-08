@@ -94,3 +94,30 @@ metadata:
   labels:
     kabanero.io/install: 22-cr-knative-serving
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all
+  namespace: kabanero
+  labels:
+    kabanero.io/install: 23-cr-network-policy
+spec:
+  podSelector: {}
+  ingress:
+  - {}
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all
+  namespace: tekton-pipelines
+  labels:
+    kabanero.io/install: 23-cr-network-policy
+spec:
+  podSelector: {}
+  ingress:
+  - {}
+  policyTypes:
+  - Ingress
