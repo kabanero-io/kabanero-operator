@@ -120,19 +120,13 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 							Format: "",
 						},
 					},
-					"activeDigest": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"activeAssets": {
+					"activePipelines": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.RepositoryAssetStatus"),
+										Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.PipelineStatus"),
 									},
 								},
 							},
@@ -178,7 +172,7 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Image", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.RepositoryAssetStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Image", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.PipelineStatus"},
 	}
 }
 

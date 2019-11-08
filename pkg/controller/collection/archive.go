@@ -29,6 +29,13 @@ type CollectionContents struct {
 	Sha256 string `yaml:"sha256,omitempty"`
 }
 
+// This is the rendered asset, including its sha256 from the manifest.
+type CollectionAsset struct {
+	Name string
+	Sha256 string
+	Yaml unstructured.Unstructured
+}
+
 func DownloadToByte(url string) ([]byte, error) {
 	r, err := http.Get(url)
 	if err != nil {
@@ -42,8 +49,8 @@ func DownloadToByte(url string) ([]byte, error) {
 //Read the manifests from a tar.gz archive
 //It would be better to use the manifest.yaml as the index, and check the signatures
 //For now, ignore manifest.yaml and return all other yaml files from the archive
-func decodeManifests(archive []byte, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]unstructured.Unstructured, error) {
-	manifests := []unstructured.Unstructured{}
+func decodeManifests(archive []byte, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]CollectionAsset, error) {
+	manifests := []CollectionAsset{}
 	var collectionmanifest CollectionManifest
 
 	// Read the manifest.yaml from the collection archive
@@ -127,9 +134,11 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			// Checksum. Lookup the read file in the index and compare sha256
 			match := false
 			b_sum := sha256.Sum256(b)
+			assetSumString := ""
 			for _, content := range collectionmanifest.Contents {
 				if content.File == strings.TrimPrefix(header.Name, "./") {
 					// Older releases may not have a sha256 in the manifest.yaml
+					assetSumString = content.Sha256
 					if content.Sha256 != "" {
 						var c_sum [32]byte
 						decoded, err := hex.DecodeString(content.Sha256)
@@ -167,13 +176,13 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			if err != nil {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
-			manifests = append(manifests, out)
+			manifests = append(manifests, CollectionAsset{Name: header.Name, Yaml: out, Sha256: assetSumString})
 		}
 	}
 	return manifests, nil
 }
 
-func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]unstructured.Unstructured, error) {
+func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]CollectionAsset, error) {
 	b, err := DownloadToByte(url)
 	if err != nil {
 		return nil, err

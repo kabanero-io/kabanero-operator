@@ -37,25 +37,36 @@ spec:
             type: object
           status:
             properties:
-              activeAssets:
+              activeLocation:
+                type: string
+              activePipelines:
                 items:
                   properties:
-                    assetDigest:
+                    activeAssets:
+                      items:
+                        properties:
+                          assetDigest:
+                            type: string
+                          assetName:
+                            type: string
+                          status:
+                            type: string
+                          statusMessage:
+                            type: string
+                        type: object
+                      type: array
+                    digest:
                       type: string
-                    assetName:
-                      type: string
-                    status:
-                      type: string
-                    statusMessage:
+                    name:
                       type: string
                     url:
                       type: string
+                  required:
+                  - name
+                  - url
+                  - digest
                   type: object
                 type: array
-              activeDigest:
-                type: string
-              activeLocation:
-                type: string
               activeVersion:
                 type: string
               availableLocation:
@@ -71,6 +82,8 @@ spec:
                       type: string
                   type: object
                 type: array
+              status:
+                type: string
               statusMessage:
                 type: string
             type: object
