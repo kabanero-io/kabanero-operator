@@ -21,12 +21,12 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.2.0",
+            "version": "0.3.0",
             "collections": {
               "repositories": [
                 {
                   "name": "incubator",
-                  "url": "https://github.com/kabanero-io/collections/releases/download/0.2.0/kabanero-index.yaml",
+                  "url": "https://github.com/kabanero-io/collections/releases/download/0.3.0-rc.3/kabanero-index.yaml",
                   "activateDefaultCollections": true
                 }
               ]
