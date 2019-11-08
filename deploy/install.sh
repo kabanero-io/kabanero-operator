@@ -154,6 +154,9 @@ oc new-project tekton-pipelines || true
 oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
 oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
 
+# Network policy for kabanero and tekton pipelines namespaces
+oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-network-policy
+
 # Install KAppNav if selected
 if [ "$ENABLE_KAPPNAV" == "yes" ]
 then
