@@ -39,6 +39,7 @@ build-image: generate
   # variable changes to '0.4.0' or whatever, and the CRDs for 0.3.0 become
   # static.
 	mkdir -p build/registry
+	cp LICENSE build/registry/LICENSE
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
 	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
