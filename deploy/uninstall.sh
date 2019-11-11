@@ -72,6 +72,22 @@ oc delete serviceaccounts,deployments --selector=kabanero.io/component=kappnav -
 oc delete clusterroles,clusterrolebindings,crds --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 
+# Github Sources
+oc delete --all-namespaces=true githubsources.sources.eventing.knative.dev --all
+echo "Waiting for githubsources instances to be deleted...."
+LOOP_COUNT=0
+while [ `oc get githubsources.sources.eventing.knative.dev --all-namespaces | wc -l` -gt 0 ]
+do
+  sleep $SLEEP_LONG
+  LOOP_COUNT=`expr $LOOP_COUNT + 1`
+  if [ $LOOP_COUNT -gt 10 ] ; then
+    echo "Timed out waiting for githubsources.sources.eventing.knative.dev instances to be deleted"
+    exit 1
+  fi
+done
+oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
+
+
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=23-cr-network-policy,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=22-cr-knative-serving,kabanero.io/namespace!=true
@@ -104,15 +120,9 @@ if [ `oc get crds kabaneros.kabanero.io --no-headers --ignore-not-found | wc -l`
 fi
 
 
-
-
-
 # Tekton Dashboard
 oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
 oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
-
-# Github Sources
-oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
 ### Subscriptions
 
