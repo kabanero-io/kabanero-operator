@@ -457,6 +457,10 @@ func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, pipeline Pipel
 		return
 	}
 
+	// Update the URL and digest of the pipeline in case the URL changed.
+	status.ActivePipelines[matchingPipelineIndex].Url = pipeline.Url
+	status.ActivePipelines[matchingPipelineIndex].Digest = pipeline.Sha256
+	
 	// Next find the asset in the Pipeline status.
 	for index, curAssetStatus := range matchingPipeline.ActiveAssets {
 		if assetMatch(curAssetStatus, asset) {

@@ -91,6 +91,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 			}
 
 			collectionResource.Spec.Version = findMaxVersionCollectionWithId(featured, c.Id)
+			collectionResource.Spec.RepositoryUrl = data.repositoryConfig.Url
 			err = updateCollection(ctx, collectionResource)
 			if err != nil {
 				return err
