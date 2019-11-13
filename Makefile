@@ -147,3 +147,32 @@ endif
 dependency-report: 
 	go get -u github.com/pmezard/licenses
 	licenses ./pkg/... | cut -c49- > 3RD_PARTY
+
+
+# Integration Tests
+# Requires kube login context an existing cluster
+# Requires internal registry with default route
+# Requires jq
+
+# Install Test
+int-test-install: creds build-image push-image int-install
+
+creds:
+	tests/00-credentials.sh
+
+int-install:
+	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
+
+
+# Uninstall Test
+int-test-uninstall: creds int-uninstall
+
+int-uninstall:
+	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/uninstall.sh
+
+# Collections
+int-test-collections: int-test-java-microprofile
+
+int-test-java-microprofile:
+	tests/10-java-microprofile.sh
+
