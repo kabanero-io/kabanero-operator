@@ -36,12 +36,12 @@ related-software:
       tag: "0.3.0-rc.2"
 
   kabanero-che:
-  - version: "0.5.1"
+  - version: "0.6.0"
     orchestrations: "orchestrations/che/0.1"
     identifiers:
-      eclipseCheTag: "7.3.0"
+      eclipseCheTag: "7.3.1"
       repository: "kabanero/kabanero-che"
-      tag: "0.5.1"
+      tag: "0.6.0"
 
   webhook:
   - version: "0.1.0"
