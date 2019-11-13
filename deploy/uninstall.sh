@@ -184,6 +184,17 @@ oc delete -n kabanero operatorgroup kabanero
 # Delete CatalogSource
 oc delete -n openshift-marketplace catalogsource kabanero-catalog
 
+
+# Ensure CSV Cleanup in all namespaces
+OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator servicemeshoperator elasticsearch-operator)
+for OPERATOR in "${OPERATORS[@]}"
+do
+  CSV=$(oc --all-namespaces=true get csv --output=jsonpath={.items[*].metadata.name} | tr " " "\n" | grep ${OPERATOR} | head -1)
+  if [ -n "${CSV}" ]; then
+    oc --all-namespaces=true delete csv --field-selector=metadata.name="${CSV}"
+  fi
+done
+
 # Cleanup from the openshift service mesh readme
 oc delete validatingwebhookconfiguration/openshift-operators.servicemesh-resources.maistra.io
 oc delete -n openshift-operators daemonset/istio-node

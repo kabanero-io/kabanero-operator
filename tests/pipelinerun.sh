@@ -1,0 +1,97 @@
+#!/bin/bash
+
+set -Eeox pipefail
+
+### Configuration ###
+
+SLEEP_LONG="${SLEEP_LONG:-15}"
+SLEEP_SHORT="${SLEEP_SHORT:-2}"
+
+# Resultant Appsody container image #
+DOCKER_IMAGE="${DOCKER_IMAGE:-image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile}"
+
+# Appsody project GitHub repository #
+APP_REPO="${APP_REPO:-https://github.com/kabanero-io/sample-java-microprofile/}"
+
+PIPELINE_RUN="${PIPELINE_RUN:-java-microprofile-build-deploy-pipeline-run-kabanero}"
+PIPELINE_REF="${PIPELINE_REF:-java-microprofile-build-push-deploy-pipeline}"
+DOCKER_IMAGE_REF="${DOCKER_IMAGE_REF:-java-microprofile-docker-image}"
+GITHUB_SOURCE_REF="${GITHUB_SOURCE_REF:-java-microprofile-git-source}"
+
+### Tekton Example ###
+namespace=kabanero
+
+# Cleanup
+oc -n ${namespace} delete pipelinerun ${PIPELINE_RUN} || true
+oc -n ${namespace} delete pipelineresource ${DOCKER_IMAGE_REF} ${GITHUB_SOURCE_REF} || true
+
+# Pipeline Resources: Source repo and destination container image
+cat <<EOF | oc -n ${namespace} apply -f -
+apiVersion: v1
+items:
+- apiVersion: tekton.dev/v1alpha1
+  kind: PipelineResource
+  metadata:
+    name: ${DOCKER_IMAGE_REF}
+  spec:
+    params:
+    - name: url
+      value: ${DOCKER_IMAGE}
+    type: image
+- apiVersion: tekton.dev/v1alpha1
+  kind: PipelineResource
+  metadata:
+    name: ${GITHUB_SOURCE_REF}
+  spec:
+    params:
+    - name: revision
+      value: master
+    - name: url
+      value: ${APP_REPO}
+    type: git
+kind: List
+EOF
+
+
+# Manual Pipeline Run
+cat <<EOF | oc -n ${namespace} apply -f -
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  name: ${PIPELINE_RUN}
+  namespace: kabanero
+spec:
+  pipelineRef:
+    name: ${PIPELINE_REF}
+  resources:
+  - name: git-source
+    resourceRef:
+      name: ${GITHUB_SOURCE_REF}
+  - name: docker-image
+    resourceRef:
+      name: ${DOCKER_IMAGE_REF}
+  serviceAccount: kabanero-operator
+  timeout: 60m
+EOF
+
+
+
+# Run Completion
+unset STATUS
+unset TYPE
+unset REASON
+until [ "$STATUS" == "True" ] && [ "$TYPE" == "Succeeded" ] && [ "$REASON" == "Succeeded" ]
+do
+	echo "Waiting for PipelineRun ${PIPELINE_RUN} to Complete"
+	STATUS=$(oc -n ${namespace} get pipelinerun ${PIPELINE_RUN} --output=jsonpath={.status.conditions[-1:].status})
+	TYPE=$(oc -n ${namespace} get pipelinerun ${PIPELINE_RUN} --output=jsonpath={.status.conditions[-1:].type})
+	REASON=$(oc -n ${namespace} get pipelinerun ${PIPELINE_RUN} --output=jsonpath={.status.conditions[-1:].reason})
+	if [ "$STATUS" == "False" ] && [ "$TYPE" == "Succeeded" ] && [ "$REASON" == "Failed" ]; then
+		echo "PipelineRun ${PIPELINE_RUN} Failed"
+		exit 1
+	fi
+	sleep $SLEEP_LONG
+done
+
+
+# Application endpoint test
