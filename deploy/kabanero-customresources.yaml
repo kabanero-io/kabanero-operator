@@ -128,7 +128,7 @@ metadata:
   name: kabanero-pipelines-sample-sa
   namespace: kabanero
   labels:
-    kabanero.io/install: 24-pipeline-sa
+    kabanero.io/install: 24-pipelines-sa
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -136,7 +136,7 @@ metadata:
   name: kabanero-pipelines-role 
   namespace: kabanero
   labels:
-    kabanero.io/install: 24-pipeline-sa  
+    kabanero.io/install: 24-pipelines-sa  
 rules:
 - apiGroups:
   - security.openshift.io
@@ -290,7 +290,7 @@ kind: ClusterRoleBinding
 metadata:
   name: kabanero-pipelines-cluster-role-binding
   labels:
-    kabanero.io/install: 24-pipeline-sa
+    kabanero.io/install: 24-pipelines-sa
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
