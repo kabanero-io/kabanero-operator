@@ -70,123 +70,164 @@ func TestReconcileCollection(t *testing.T) {
 
 // Test that a status is updated with a new digest
 func TestUpdateAssetStatus(t *testing.T) {
-	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}}
-	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
-	var sampleAsset = Pipelines{
-		Id:     "myAsset",
+
+	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{
+		Name:   "myAsset",
+		Digest: "678910",
+		Status: "active"},
+	}
+
+	var samplePipeline = Pipelines{
+		Id:     "myPipeline",
 		Sha256: "12345",
 		Url:    "http://myurl.com",
 	}
 
-	updateAssetStatus(&status, sampleAsset, "")
-
-	if len(status.ActiveAssets) != 1 {
-		t.Fatal("Status should have one asset in it")
+	var sampleCollectionAsset = CollectionAsset{
+		Name:   "myAsset",
+		Sha256: "678910",
 	}
 
-	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Id {
+	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myPipeline", Url: "http://myurl.com", Digest: "12345", ActiveAssets: sampleAsset}}
+
+	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
+
+	updateAssetStatus(&status, samplePipeline, sampleCollectionAsset, "", "active")
+
+	if len(status.ActivePipelines) != 1 {
+		t.Fatal("Status should have one asset in it. Currentl Length: ", status.ActivePipelines)
+	}
+
+	newStatus := status.ActivePipelines[0]
+	if newStatus.Name != samplePipeline.Id {
 		t.Fatal("Status name does not equal asset name")
 	}
 
-	if newStatus.Url != sampleAsset.Url {
+	if newStatus.Url != samplePipeline.Url {
 		t.Fatal("Status URL does not equal asset URL")
 	}
 
-	if newStatus.Digest != sampleAsset.Sha256 {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Sha256 + ")")
+	if newStatus.Digest != samplePipeline.Sha256 {
+		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + samplePipeline.Sha256 + ")")
 	}
 
-	if newStatus.Status != "active" {
-		t.Fatal("Asset status is not active: " + newStatus.Status)
+	if newStatus.ActiveAssets[0].Status != "active" {
+		t.Fatal("Asset status is not active: " + newStatus.ActiveAssets[0].Status)
 	}
 
-	if newStatus.StatusMessage != "" {
-		t.Fatal("Asset status message is not empty: " + newStatus.StatusMessage)
+	if newStatus.ActiveAssets[0].StatusMessage != "" {
+		t.Fatal("Asset status message is not empty: " + newStatus.ActiveAssets[0].StatusMessage)
 	}
 }
 
 // Test that a previous asset failure can be resolved in the status.
 func TestUpdateAssetStatusFromFailure(t *testing.T) {
-	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "failed", StatusMessage: "some error"}}
-	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
-	var sampleAsset = Pipelines{
-		Id:     "myAsset",
+	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{
+		Name:          "myAsset",
+		Digest:        "678910",
+		Status:        "failed",
+		StatusMessage: "someError"},
+	}
+
+	var samplePipeline = Pipelines{
+		Id:     "myPipeline",
 		Sha256: "12345",
 		Url:    "http://myurl.com",
 	}
 
-	updateAssetStatus(&status, sampleAsset, "")
+	var sampleCollectionAsset = CollectionAsset{
+		Name:   "myAsset",
+		Sha256: "678910",
+	}
+	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myPipeline", Url: "http://myurl.com", Digest: "12345", ActiveAssets: sampleAsset}}
+	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
 
-	if len(status.ActiveAssets) != 1 {
+	updateAssetStatus(&status, samplePipeline, sampleCollectionAsset, "", "active")
+
+	if len(status.ActivePipelines) != 1 {
 		t.Fatal("Status should have one asset in it")
 	}
 
-	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Id {
+	newStatus := status.ActivePipelines[0]
+	if newStatus.Name != samplePipeline.Id {
 		t.Fatal("Status name does not equal asset name")
 	}
 
-	if newStatus.Url != sampleAsset.Url {
+	if newStatus.Url != samplePipeline.Url {
 		t.Fatal("Status URL does not equal asset URL")
 	}
 
-	if newStatus.Digest != sampleAsset.Sha256 {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Sha256 + ")")
+	if newStatus.Digest != samplePipeline.Sha256 {
+		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + samplePipeline.Sha256 + ")")
 	}
 
-	if newStatus.Status != "active" {
-		t.Fatal("Asset status is not active: " + newStatus.Status)
+	if newStatus.ActiveAssets[0].Status != "active" {
+		t.Fatal("Asset status is not active: " + newStatus.ActiveAssets[0].Status)
 	}
 
-	if newStatus.StatusMessage != "" {
-		t.Fatal("Asset status message is not empty: " + newStatus.StatusMessage)
+	if newStatus.ActiveAssets[0].StatusMessage != "" {
+		t.Fatal("Asset status message is not empty: " + newStatus.ActiveAssets[0].StatusMessage)
 	}
 }
 
 // Test that a previous active asset can be updated with a failure
 func TestUpdateAssetStatusToFailure(t *testing.T) {
-	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}}
-	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
-	var sampleAsset = Pipelines{
-		Id:     "myAsset",
+	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{
+		Name:   "myAsset",
+		Digest: "678910",
+		Status: "active"},
+	}
+
+	var samplePipeline = Pipelines{
+		Id:     "myPipeline",
 		Sha256: "12345",
 		Url:    "http://myurl.com",
 	}
 
-	errorMessage := "some failure happened"
-	updateAssetStatus(&status, sampleAsset, errorMessage)
+	var sampleCollectionAsset = CollectionAsset{
+		Name:   "myAsset",
+		Sha256: "678910",
+	}
+	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myPipeline", Url: "http://myurl.com", Digest: "12345", ActiveAssets: sampleAsset}}
+	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
 
-	if len(status.ActiveAssets) != 1 {
+	errorMessage := "some failure happened"
+	updateAssetStatus(&status, samplePipeline, sampleCollectionAsset, errorMessage, "failed")
+
+	if len(status.ActivePipelines) != 1 {
 		t.Fatal("Status should have one asset in it")
 	}
 
-	newStatus := status.ActiveAssets[0]
-	if newStatus.Name != sampleAsset.Id {
+	newStatus := status.ActivePipelines[0]
+	if newStatus.Name != samplePipeline.Id {
 		t.Fatal("Status name does not equal asset name")
 	}
 
-	if newStatus.Url != sampleAsset.Url {
+	if newStatus.Url != samplePipeline.Url {
 		t.Fatal("Status URL does not equal asset URL")
 	}
 
-	if newStatus.Digest != sampleAsset.Sha256 {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + sampleAsset.Sha256 + ")")
+	if newStatus.Digest != samplePipeline.Sha256 {
+		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + samplePipeline.Sha256 + ")")
 	}
 
-	if newStatus.Status != "failed" {
-		t.Fatal("Asset status is not failed: " + newStatus.Status)
+	if newStatus.ActiveAssets[0].Status != "failed" {
+		t.Fatal("Asset status is not active: " + newStatus.ActiveAssets[0].Status)
 	}
 
-	if newStatus.StatusMessage != errorMessage {
-		t.Fatal("Asset status message is not correct, should be " + errorMessage + " but is: " + newStatus.StatusMessage)
+	if newStatus.ActiveAssets[0].StatusMessage != errorMessage {
+		t.Fatal("Asset status message is not empty: " + newStatus.ActiveAssets[0].StatusMessage)
 	}
 }
 
 // Test that failed assets are detected in the Collection instance status
 func TestFailedAssets(t *testing.T) {
-	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}, {Name: "myOtherAsset", Url: "http://myotherurl.com", Digest: "2345", Status: "failed"}}
-	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
+	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Digest: "678910", Status: "active"},
+		{Name: "myAsset2", Digest: "678911", Status: "failed", StatusMessage: "some failure"},
+	}
+
+	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", ActiveAssets: sampleAsset}}
+	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
 
 	if failedAssets(status) == false {
 		t.Fatal("Should be one failed asset in the status")
@@ -195,8 +236,12 @@ func TestFailedAssets(t *testing.T) {
 
 // Test that no failed assets are detected in the Collection instance status
 func TestNoFailedAssets(t *testing.T) {
-	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", Status: "active"}, {Name: "myOtherAsset", Url: "http://myotherurl.com", Digest: "2345", Status: "active"}}
-	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
+	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{Name: "myAsset", Digest: "678910", Status: "active"},
+		{Name: "myAsset2", Digest: "678911", Status: "active"},
+	}
+
+	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", ActiveAssets: sampleAsset}}
+	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
 
 	if failedAssets(status) {
 		t.Fatal("Should be no failed asset in the status")
@@ -205,8 +250,8 @@ func TestNoFailedAssets(t *testing.T) {
 
 // Test that an empty status yields no failed assets
 func TestNoFailedAssetsEmptyStatus(t *testing.T) {
-	var sampleAssetStatus = []kabanerov1alpha1.RepositoryAssetStatus{}
-	var status = kabanerov1alpha1.CollectionStatus{ActiveAssets: sampleAssetStatus}
+	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{}}}
+	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
 
 	if failedAssets(status) {
 		t.Fatal("Should be no failed asset in the status")
