@@ -38,8 +38,8 @@ rules:
   verbs: ["get", "list", "create", "update", "delete", "patch"]
 
 - apiGroups: [""]
-  resources: ["persistentvolumeclaims"]
-  verbs: ["delete", "create", "patch", "get", "list"]
+  resources: ["persistentvolumeclaims", "persistentvolumeclaims/finalizers", "persistentvolumeclaims/status"]
+  verbs: ["*"]
 
 - apiGroups: ["icp.ibm.com"]
   resources: ["images"]
