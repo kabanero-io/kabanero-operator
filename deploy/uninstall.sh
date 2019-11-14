@@ -162,7 +162,7 @@ unsubscribe kabanero-operator kabanero
 
 unsubscribe serverless-operator openshift-operators
 
-unsubscribe openshift-pipelines-operator-dev-preview-community-operators-openshift-marketplace openshift-operators
+unsubscribe openshift-pipelines openshift-operators
 
 unsubscribe knative-eventing-operator-alpha-community-operators-openshift-marketplace openshift-operators
 
