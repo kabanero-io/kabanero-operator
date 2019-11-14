@@ -100,17 +100,17 @@ spec:
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: openshift-pipelines-operator-dev-preview-community-operators-openshift-marketplace
+  name: openshift-pipelines
   namespace: openshift-operators
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: dev-preview
+  channel: kabanero-0.3
   config:
     resources: {}
   installPlanApproval: Automatic
   name: openshift-pipelines-operator
-  source: community-operators
+  source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1

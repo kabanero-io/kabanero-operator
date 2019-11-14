@@ -95,7 +95,7 @@ checksub serverless-operator openshift-operators
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=13-subscription
 
 # Verify Subscriptions
-checksub openshift-pipelines-operator-dev-preview-community-operators-openshift-marketplace openshift-operators
+checksub openshift-pipelines openshift-operators
 checksub appsody-operator-certified-beta-certified-operators-openshift-marketplace openshift-operators
 
 # Install 14-subscription (che, kabanero)
