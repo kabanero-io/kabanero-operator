@@ -27,16 +27,19 @@ type CollectionSpec struct {
 
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
 type PipelineStatus struct {
-	Name          string `json:"name,omitEmpty"`
-	Url           string `json:"url,omitEmpty"`
-	Digest        string `json:"digest,omitEmpty"`
-	ActiveAssets  []RepositoryAssetStatus `json:"activeAssets,omitempty"`
+	Name         string                  `json:"name,omitEmpty"`
+	Url          string                  `json:"url,omitEmpty"`
+	Digest       string                  `json:"digest,omitEmpty"`
+	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
 
 // RepositoryAssetStatus defines the observed state of a single asset
 // in a respository, in the collection.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`
+	Group         string `json:"group,omitempty"`
+	Version       string `json:"version,omitempty"`
+	Kind          string `json:"kind,omitempty"`
 	Digest        string `json:"assetDigest,omitempty"`
 	Status        string `json:"status,omitempty"`
 	StatusMessage string `json:"statusMessage,omitempty"`
@@ -45,14 +48,14 @@ type RepositoryAssetStatus struct {
 // CollectionStatus defines the observed state of Collection
 // +k8s:openapi-gen=true
 type CollectionStatus struct {
-	ActiveVersion     string                  `json:"activeVersion,omitempty"`
-	ActiveLocation    string                  `json:"activeLocation,omitempty"`
-	ActivePipelines   []PipelineStatus        `json:"activePipelines,omitempty"`
-	AvailableVersion  string                  `json:"availableVersion,omitempty"`
-	AvailableLocation string                  `json:"availableLocation,omitempty"`
-	Status            string                  `json:"status,omitempty"`
-	StatusMessage     string                  `json:"statusMessage,omitempty"`
-	Images            []Image                 `json:"images,omitempty"`
+	ActiveVersion     string           `json:"activeVersion,omitempty"`
+	ActiveLocation    string           `json:"activeLocation,omitempty"`
+	ActivePipelines   []PipelineStatus `json:"activePipelines,omitempty"`
+	AvailableVersion  string           `json:"availableVersion,omitempty"`
+	AvailableLocation string           `json:"availableLocation,omitempty"`
+	Status            string           `json:"status,omitempty"`
+	StatusMessage     string           `json:"statusMessage,omitempty"`
+	Images            []Image          `json:"images,omitempty"`
 }
 
 // Image defines a container image used by a collection

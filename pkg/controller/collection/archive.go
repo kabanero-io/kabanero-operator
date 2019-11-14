@@ -31,9 +31,12 @@ type CollectionContents struct {
 
 // This is the rendered asset, including its sha256 from the manifest.
 type CollectionAsset struct {
-	Name string
-	Sha256 string
-	Yaml unstructured.Unstructured
+	Name    string
+	Group   string
+	Version string
+	Kind    string
+	Sha256  string
+	Yaml    unstructured.Unstructured
 }
 
 func DownloadToByte(url string) ([]byte, error) {
@@ -176,7 +179,9 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			if err != nil {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
-			manifests = append(manifests, CollectionAsset{Name: header.Name, Yaml: out, Sha256: assetSumString})
+
+			gvk := out.GroupVersionKind()
+			manifests = append(manifests, CollectionAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
 		}
 	}
 	return manifests, nil

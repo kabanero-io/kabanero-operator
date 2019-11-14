@@ -52,9 +52,15 @@ spec:
                           type: string
                         assetName:
                           type: string
+                        group:
+                          type: string
+                        kind:
+                          type: string
                         status:
                           type: string
                         statusMessage:
+                          type: string
+                        version:
                           type: string
                       type: object
                     type: array
