@@ -284,6 +284,21 @@ rules:
   - delete
   - patch
   - watch
+- apiGroups:
+  - ""
+  - image.openshift.io
+  resources:
+  - imagestreams/layers
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  - image.openshift.io
+  resources:
+  - imagestreams
+  verbs:
+  - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
