@@ -17,7 +17,7 @@ kabanero:
   related-versions: 
     cli-services: "0.3.0-rc.2"
     landing: "0.3.0-rc.1"
-    kabanero-che: "0.5.1"
+    kabanero-che: "0.6.0"
     webhook: "0.1.0"
 
 related-software:
