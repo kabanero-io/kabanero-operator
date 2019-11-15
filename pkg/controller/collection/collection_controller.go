@@ -701,6 +701,7 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 	}
 
 	// Now apply the new version
+	var assetFailedMessage string
 	for _, asset := range collection.Pipelines {
 		log.Info(fmt.Sprintf("Applying asset %v", asset.Url))
 
@@ -738,11 +739,12 @@ func activatev2(collectionResource *kabanerov1alpha1.Collection, collection *Ind
 			if err != nil {
 				// Update the asset status with the error message
 				log.Error(err, "Error installing the resource", "resource", asset.Url)
-				updateAssetStatusv2(&collectionResource.Status, asset, err.Error())
-			} else {
-				// Update the digest for this asset in the status
-				updateAssetStatusv2(&collectionResource.Status, asset, "")
+				assetFailedMessage = err.Error()
 			}
+
+			// Update the digest for this asset in the status.  If a previous
+			// asset failed to apply, be sure to retain the error message.
+			updateAssetStatusv2(&collectionResource.Status, asset, assetFailedMessage)
 		}
 	}
 
