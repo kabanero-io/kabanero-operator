@@ -38,6 +38,9 @@ spec:
     serverMemoryRequest: ''
     # sets mem limit for server deployment. Defaults to 1Gi
     serverMemoryLimit: ''
+    # additional custom Che properties
+    customCheProperties:
+      CHE_INFRA_KUBERNETES_WORKSPACE__START__TIMEOUT__MIN: "5"
   database:
     # when set to true, the operator skips deploying Postgres, and passes connection details of existing DB to Che server
     # otherwise a Postgres deployment is created
