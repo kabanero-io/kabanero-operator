@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -40,13 +38,7 @@ type CollectionAsset struct {
 }
 
 func DownloadToByte(url string) ([]byte, error) {
-	r, err := http.Get(url)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Could not download file: %v", url))
-	}
-	defer r.Body.Close()
-	b, err := ioutil.ReadAll(r.Body)
-	return b, err
+	return getFromCache(url, false)
 }
 
 //Read the manifests from a tar.gz archive
