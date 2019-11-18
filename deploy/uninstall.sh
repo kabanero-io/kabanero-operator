@@ -94,6 +94,9 @@ oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabane
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=21-cr-servicemeshmemberrole,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=20-cr-servicemeshcontrolplane,kabanero.io/namespace!=true
 
+# Delete service account to used by pipelines
+oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=24-pipeline-sa,kabanero.io/namespace!=true
+
 
 # CRDs still exist
 if [ `oc get crds kabaneros.kabanero.io --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
