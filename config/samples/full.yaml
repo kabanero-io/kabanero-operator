@@ -9,7 +9,7 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: "0.2.1"
+  version: "0.2.2"
 
   targetNamespaces:
   - ns1
