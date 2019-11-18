@@ -2,10 +2,12 @@
 # Override in order to customize
 IMAGE ?= kabanero-operator:latest
 REGISTRY_IMAGE ?= kabanero-operator-registry:latest
+COLLECTION_CTRLR_IMAGE ?= kabanero-collection-operator:latest
 
 # Computed repository name (no tag) including repository host/path reference
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
+COLLECTION_CTRLR_REPOSITORY=$(firstword $(subst :, ,${COLLECTION_CTRLR_IMAGE}))
 
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.4.0
@@ -25,6 +27,7 @@ INTERNAL_REGISTRY_IMAGE ?=
 
 build: generate
 	go install ./cmd/manager
+	go install ./cmd/manager/collection
 
 build-image: generate
   # These commands were taken from operator-sdk 0.8.1.  The sdk did not let us
@@ -33,8 +36,14 @@ build-image: generate
   # operator-sdk build ${IMAGE}
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
 	docker build -f build/Dockerfile -t ${IMAGE} .
+
   # This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
+
+  # Build the Kananero collection operator image.
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-collection-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
+	docker build -f cmd/manager/collection/Dockerfile -t ${COLLECTION_CTRLR_IMAGE} .
+
   # Build an OLM private registry for Kabanero
 	mkdir -p build/registry
 	cp LICENSE build/registry/LICENSE
@@ -70,6 +79,7 @@ ifneq "$(IMAGE)" "kabanero-operator:latest"
   # Default push.  Make sure the namespace is there in case using local registry
 	kubectl create namespace kabanero || true
 	docker push $(IMAGE)
+	docker push $(COLLECTION_CTRLR_IMAGE)
 	docker push $(REGISTRY_IMAGE)
 
 ifdef TRAVIS_TAG
@@ -77,6 +87,7 @@ ifdef TRAVIS_TAG
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_TAG)
+	docker push $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_TAG)
 endif
 
 ifdef TRAVIS_BRANCH
@@ -84,6 +95,7 @@ ifdef TRAVIS_BRANCH
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
+	docker push $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_BRANCH)
 endif
 endif
 

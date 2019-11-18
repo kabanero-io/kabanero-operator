@@ -25,6 +25,13 @@ kabanero:
     landing: "0.3.0"
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
+- version: "0.4.0"
+  related-versions: 
+    cli-services: "0.3.0"
+    landing: "0.3.0"
+    kabanero-che: "0.6.0"
+    webhook: "0.1.0"
+    collection-operator: "0.3.0"
 
 related-software:
   landing:
@@ -55,3 +62,10 @@ related-software:
     identifiers:
       repository: "kabanero/kabanero-webhook"
       tag: "0.1"
+
+  collection-operator: 
+  - version: "0.3.0"
+    orchestrations: "orchestrations/collection-operator/0.1"
+    identifiers:
+      repository: "kabanero/collection-operator"
+      tag: "0.3.0"

@@ -11,15 +11,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller"
-
-	knsapis "github.com/knative/serving-operator/pkg/apis"
-	kneapis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
-	consolev1 "github.com/openshift/api/console/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	routev1 "github.com/openshift/api/route/v1"
-	tektonapis "github.com/openshift/tektoncd-pipeline-operator/pkg/apis"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -32,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
+	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -39,7 +33,7 @@ var (
 	metricsHost       = "0.0.0.0"
 	metricsPort int32 = 8383
 )
-var log = logf.Log.WithName("cmd")
+var log = logf.Log.WithName("collection cmd")
 
 // These variables are injected during the build using ldflags
 var GitTag string
@@ -47,27 +41,27 @@ var GitCommit string
 var GitRepoSlug string
 var BuildDate string
 
-func printVersion() {
+func printCollectionControllerData() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 
 	if len(GitTag) > 0 {
-		log.Info(fmt.Sprintf("kabanero-operator Git tag: %s", GitTag))
+		log.Info(fmt.Sprintf("kabanero-collection-operator Git tag: %s", GitTag))
 	}
 
 	if len(GitCommit) > 0 {
-		log.Info(fmt.Sprintf("kabanero-operator Git commit: %s", GitCommit))
+		log.Info(fmt.Sprintf("kabanero-collection-operator Git commit: %s", GitCommit))
 	}
 
 	if len(GitRepoSlug) > 0 {
-		log.Info(fmt.Sprintf("kabanero-operator Git repository: %s", GitRepoSlug))
+		log.Info(fmt.Sprintf("kabanero-collection-operator Git repository: %s", GitRepoSlug))
 	}
 
 	if len(BuildDate) == 0 {
 		BuildDate = "unspecified"
 	}
-	log.Info(fmt.Sprintf("kabanero-operator build date: %s", BuildDate))
+	log.Info(fmt.Sprintf("kabanero-collection-operator build date: %s", BuildDate))
 }
 
 func main() {
@@ -91,7 +85,7 @@ func main() {
 	// uniform and structured logs.
 	logf.SetLogger(zap.Logger())
 
-	printVersion()
+	printCollectionControllerData()
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -109,7 +103,7 @@ func main() {
 	ctx := context.TODO()
 
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "kabanero-operator-lock")
+	err = leader.Become(ctx, "kabanero-collection-operator-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -134,43 +128,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := routev1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := kneapis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := knsapis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := corev1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := tektonapis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := consolev1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := operatorv1.AddToScheme(mgr.GetScheme()); err != nil {
+	if err := pipelinev1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := collection.AddToManager(mgr); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
