@@ -12,6 +12,7 @@ import (
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller"
+	collectionwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/collection"
 
 	knsapis "github.com/knative/serving-operator/pkg/apis"
 	kneapis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
@@ -20,6 +21,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	tektonapis "github.com/openshift/tektoncd-pipeline-operator/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
+	apitypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -32,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
@@ -188,6 +191,59 @@ func main() {
 		log.Info(err.Error())
 	}
 
+	// Create the validating webhook
+	validatingWebhook, err := collectionwebhook.BuildValidatingWebhook(&mgr)
+	if err != nil {
+		log.Error(err, "unable to setup validating webhook")
+		os.Exit(1)
+	}
+
+	// Create the mutating webhook
+	mutatingWebhook, err := collectionwebhook.BuildMutatingWebhook(&mgr)
+	if err != nil {
+		log.Error(err, "unable to setup mutating webhook")
+		os.Exit(1)
+	}
+
+	// Start the webhook server.  Some things to note:
+	// 1) A webhook server requires certificates.  The controller-runtime is
+	//    creating a secret and generates a certificate within it.  This allows
+	//    the Kube API server to use TLS when calling the webhook.
+	// 2) The controller-runtime is auto-generating the secret, service, and
+	//    configurations (ValidatingWebhookConfiguration and
+	//    MutatingWebhookConfiguration) used here.
+	disableWebhookConfigInstaller := false
+	admissionServer, err := webhook.NewServer("collection-admission-server", mgr, webhook.ServerOptions{
+		Port: 9876,
+		CertDir: "/tmp/cert",
+		DisableWebhookConfigInstaller: &disableWebhookConfigInstaller,
+		BootstrapOptions: &webhook.BootstrapOptions{
+			MutatingWebhookConfigName: "webhook.operator.kabanero.io",
+			ValidatingWebhookConfigName: "webhook.operator.kabanero.io",
+			Secret: &apitypes.NamespacedName{
+				Namespace: namespace, // TODO: appropriate namespace
+				Name: "collection-admission-server-secret",
+			},
+			Service: &webhook.Service{
+				Namespace: namespace, // TODO: appropriate namespace
+				Name: "collection-admission-server-service",
+				Selectors: map[string]string{
+					"name": "kabanero-operator",
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Error(err, "unable to create a new webhook server")
+		os.Exit(1)
+	}
+
+	err = admissionServer.Register(validatingWebhook, mutatingWebhook)
+	if err != nil {
+		log.Error(err, "unable to register webhooks in the admission server")
+		os.Exit(1)
+	}
+	
 	log.Info("Starting the Cmd.")
 
 	// Start the Cmd
