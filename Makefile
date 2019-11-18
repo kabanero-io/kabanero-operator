@@ -155,7 +155,6 @@ dependency-report:
 # Requires jq
 
 # Install Test
-export
 int-test-install: creds build-image push-image int-install
 
 creds:
