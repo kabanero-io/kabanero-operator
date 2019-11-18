@@ -164,7 +164,7 @@ then
 fi
 
 # Create service account to used by pipelines
-oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pipelines-sa
+oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pipeline-sa
 
 # Install complete.  give instructions for how to create an instance.
 SAMPLE_KAB_INSTANCE_URL=https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/config/samples/default.yaml
