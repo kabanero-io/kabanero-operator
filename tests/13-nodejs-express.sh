@@ -2,8 +2,8 @@
 
 set -Eeuox pipefail
 
-COLLECTION="java-microprofile"
-APP="sample-java-microprofile"
+COLLECTION="nodejs-express"
+APP="sample-nodejs-express"
 DOCKER_IMAGE="image-registry.openshift-image-registry.svc:5000/kabanero/${APP}" \
 APP_REPO="https://github.com/kabanero-io/${APP}/" \
 PIPELINE_RUN="${APP}-build-deploy-pipeline-run-kabanero" \

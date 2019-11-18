@@ -18,7 +18,7 @@ INTERNAL_IMAGE ?=
 INTERNAL_REGISTRY_IMAGE ?=
 
 
-.PHONY: build deploy deploy-olm build-image push-image
+.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall
 
 build: generate
 	go install ./cmd/manager
@@ -155,14 +155,23 @@ dependency-report:
 # Requires jq
 
 # Install Test
+export
 int-test-install: creds build-image push-image int-install
 
 creds:
 	tests/00-credentials.sh
 
 int-install:
-	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
+# Update deployment to correct image 
+ifdef INTERNAL_REGISTRY_IMAGE
+# Deployment uses internal registry service address
+	sed -e "s!image: kabanero/kabanero-operator-registry:latest!image: ${INTERNAL_REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+else
+	sed -e "s!image: kabanero/kabanero-operator-registry:latest!image: ${REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+endif
 
+	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
+	kubectl apply -f config/samples/default.yaml
 
 # Uninstall Test
 int-test-uninstall: creds int-uninstall
@@ -171,8 +180,20 @@ int-uninstall:
 	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/uninstall.sh
 
 # Collections
-int-test-collections: int-test-java-microprofile
+int-test-collections: int-test-java-microprofile int-test-java-spring-boot2 int-test-nodejs int-test-nodejs-express int-test-nodejs-loopback
 
 int-test-java-microprofile:
 	tests/10-java-microprofile.sh
+
+int-test-java-spring-boot2:
+	tests/11-java-spring-boot2.sh
+
+int-test-nodejs:
+	tests/12-nodejs.sh
+
+int-test-nodejs-express:
+	tests/13-nodejs-express.sh
+
+int-test-nodejs-loopback:
+	tests/14-nodejs-loopback.sh
 
