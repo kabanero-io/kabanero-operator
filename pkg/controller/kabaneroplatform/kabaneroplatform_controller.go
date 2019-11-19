@@ -188,6 +188,14 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		reqLogger.Error(err, "Error reconciling kabanero-admission-controller-webhook")
 		return reconcile.Result{}, err
 	}
+
+	// Wait for the admission controller webhook to be ready before we try
+	// to deploy the featured collections.
+	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(instance, r.client, reqLogger)
+	if isAdmissionControllerWebhookReady == false {
+		processStatus(ctx, request, instance, r.client, reqLogger)
+		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
+	}
 	
 	// Deploy feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
@@ -354,6 +362,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 	isCheReady, _ := getCheStatus(ctx, k, c)
 	isWebhookRouteReady, _ := getWebhookRouteStatus(k, c, reqLogger)
+	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	
 	// Set the overall status.
 	isKabaneroReady := isTektonReady &&
@@ -364,7 +373,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady &&
 		isCheReady &&
-		isWebhookRouteReady
+		isWebhookRouteReady &&
+		isAdmissionControllerWebhookReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.ErrorMessage = ""

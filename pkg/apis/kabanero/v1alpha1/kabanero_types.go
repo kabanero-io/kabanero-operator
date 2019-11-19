@@ -149,6 +149,9 @@ type KabaneroStatus struct {
 
 	// Webhook instance status
 	Webhook *WebhookStatus `json:"webhook,omitempty"`
+
+	// Admission webhook instance status
+	AdmissionControllerWebhook AdmissionControllerWebhookStatus `json:"admissionControllerWebhook,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -247,6 +250,12 @@ type WebhookStatus struct {
 	Ready        string   `json:"ready,omitempty"`
 	ErrorMessage string   `json:"errorMessage,omitempty"`
 	Hostnames    []string `json:"hostnames,omitempty"`
+}
+
+// AdmissionControllerWebhookStatus defines the observed status details of the Kabanero mutating and validating admission webhooks.
+type AdmissionControllerWebhookStatus struct {
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

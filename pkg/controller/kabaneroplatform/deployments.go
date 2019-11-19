@@ -137,3 +137,30 @@ func createDeployment(k *kabanerov1alpha1.Kabanero, clientset *kubernetes.Client
 
 	return err
 }
+
+// Retrieves the deployment's "Available" status condition.
+func getDeploymentStatus(c client.Client, name string, namespace string) (bool, error) {
+	// Check if the Deployment resource exists.
+	dInstance := &appsv1.Deployment{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      name,
+		Namespace: namespace}, dInstance)
+
+	if err != nil {
+		return false, err
+	}
+
+	// Retrieve the status condition.
+	for _, condition := range dInstance.Status.Conditions {
+		if condition.Type == appsv1.DeploymentAvailable {
+			if condition.Status == corev1.ConditionTrue {
+				return true, nil
+			} else {
+				return false, fmt.Errorf("Deployment Available status condition was %v", condition.Status)
+			}
+		}
+	}
+
+	// Did not find the condition
+	return false, fmt.Errorf("Deployment did not contains an Available status condition")
+}
