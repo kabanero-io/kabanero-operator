@@ -7,8 +7,8 @@ metadata:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator:latest
-    createdAt: 2019-06-28T12:00:00.000-0500
+    containerImage: kabanero/kabanero-operator:0.3.0
+    createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
     repository: https://github.com/kabanero-io/kabanero-operator
     support: IBM
@@ -26,7 +26,7 @@ metadata:
               "repositories": [
                 {
                   "name": "incubator",
-                  "url": "https://github.com/kabanero-io/collections/releases/download/0.3.0-rc.5/kabanero-index.yaml",
+                  "url": "https://github.com/kabanero-io/collections/releases/download/0.3.0/kabanero-index.yaml",
                   "activateDefaultCollections": true
                 }
               ]
@@ -228,7 +228,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator:latest
+                image: kabanero/kabanero-operator:0.3.0
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}

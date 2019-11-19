@@ -7,5 +7,5 @@ spec:
   collections: 
     repositories: 
     - name: central
-      url: https://github.com/kabanero-io/collections/releases/download/0.3.0-rc.5/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/0.3.0/kabanero-index.yaml
       activateDefaultCollections: true
