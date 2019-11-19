@@ -232,13 +232,6 @@ spec:
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
-                volumeMounts:
-                - mountPath: /tmp/cert
-                  name: collection-admission-server-secret
-              volumes:
-              - name: collection-admission-server-secret
-                secret:
-                  secretName: collection-admission-server-secret
               serviceAccountName: kabanero-operator
       clusterPermissions:
       - rules:

@@ -182,6 +182,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, nil
 	}
 
+	// Reconcile the admission controller webhook
+	err = reconcileAdmissionControllerWebhook(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling kabanero-admission-controller-webhook")
+		return reconcile.Result{}, err
+	}
+	
 	// Deploy feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
@@ -308,6 +315,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Cl
 		}
 	}
 
+	// Remove the webhook configurations and friends.
+	err := cleanupAdmissionControllerWebhook(k, client)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 

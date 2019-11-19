@@ -1,0 +1,8 @@
+FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
+
+ENV OPERATOR=/usr/local/bin/admission-webhook
+
+# install controller binary
+COPY build/_output/bin/admission-webhook ${OPERATOR}
+
+ENTRYPOINT ["/usr/local/bin/admission-webhook"]

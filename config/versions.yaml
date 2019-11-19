@@ -19,6 +19,7 @@ kabanero:
     landing: "0.3.0"
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
+    admission-webhook: "0.3.0"
 
 related-software:
   landing:
@@ -49,3 +50,10 @@ related-software:
     identifiers:
       repository: "kabanero/kabanero-webhook"
       tag: "0.1"
+
+  admission-webhook:
+  - version: "0.3.0"
+    orchestrations: "orchestrations/admission-webhook/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-admission-webhook"
+      tag: "0.3.0"

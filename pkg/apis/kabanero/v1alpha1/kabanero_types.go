@@ -33,6 +33,8 @@ type KabaneroSpec struct {
 	Che CheCustomizationSpec `json:"che,omitempty"`
 
 	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
+
+	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 }
 
 // InstanceCollectionConfig defines the customization entries for a set of collections.
@@ -102,6 +104,13 @@ type KabaneroCheSpec struct {
 
 type WebhookCustomizationSpec struct {
 	Enable     bool   `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type AdmissionControllerWebhookCustomizationSpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`

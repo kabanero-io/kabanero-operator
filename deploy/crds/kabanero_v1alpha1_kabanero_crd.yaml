@@ -29,6 +29,17 @@ spec:
           type: object
         spec:
           properties:
+            admissionControllerWebhook:
+              properties:
+                image:
+                  type: string
+                repository:
+                  type: string
+                tag:
+                  type: string
+                version:
+                  type: string
+              type: object
             che:
               properties:
                 cheOperatorInstance:

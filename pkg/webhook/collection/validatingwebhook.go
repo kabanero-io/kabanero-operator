@@ -60,8 +60,8 @@ func (v *collectionValidator) Handle(ctx context.Context, req types.Request) typ
 }
 
 func (v *collectionValidator) validateCollectionFn(ctx context.Context, pod *kabanerov1alpha1.Collection) (bool, string, error) {
-	// For now, just accept everything.
-	return true, "All collections are accepted", nil
+	// For now, just reject everything.
+	return false, "All collections are rejected", nil
 }
 
 // collectionValidator implements inject.Client.
