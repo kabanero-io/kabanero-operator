@@ -9,4 +9,4 @@ spec:
   name: kabanero-operator
   source: kabanero-catalog
   sourceNamespace: openshift-marketplace
-  startingCSV: kabanero-operator.v0.3.0
+  startingCSV: kabanero-operator.v0.4.0

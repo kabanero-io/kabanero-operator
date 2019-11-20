@@ -13,6 +13,12 @@ default: "0.3.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
+- version: "0.4.0"
+  related-versions: 
+    cli-services: "0.3.0"
+    landing: "0.3.0"
+    kabanero-che: "0.6.0"
+    webhook: "0.1.0"
 - version: "0.3.0"
   related-versions: 
     cli-services: "0.3.0"
