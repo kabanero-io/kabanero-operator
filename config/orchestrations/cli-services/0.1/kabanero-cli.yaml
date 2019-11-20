@@ -88,3 +88,30 @@ roleRef:
   kind: Role
   name: kabanero-cli
   apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-cli
+rules:
+- verbs:
+  - get
+  - list
+  - watch
+  apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-cli
+subjects:
+- kind: ServiceAccount
+  name: kabanero-cli
+  namespace: kabanero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kabanero-cli
