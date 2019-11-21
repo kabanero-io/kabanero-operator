@@ -36,6 +36,14 @@ spec:
     # The landing page is enabled by default. To disable specify false.
     enable: true
 
+  admissionControllerWebhook:
+    # Overrides the image as a separate repository or tag
+    repository: kabanero/kabanero-operator-admission-webhook
+    tag: "0.4.0"
+
+    # Overrides the image uri
+    image: kabanero/kabanero-operator-admission-webhook:0.4.0
+    
   che:
     # che is disabled by default. Set the enable value to true/false to enable/disable the Che installation.
     enable: true
