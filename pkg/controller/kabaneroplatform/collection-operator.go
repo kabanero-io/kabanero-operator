@@ -11,31 +11,31 @@ import (
 	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var cclog = rlog.Log.WithName("collection-operator-install")
+var cclog = rlog.Log.WithName("collection-controller-install")
 
 const (
-	ccVersionSoftCompName   = "collection-operator"
-	ccOrchestrationFileName = "collection-operator.yaml"
+	ccVersionSoftCompName   = "collection-controller"
+	ccOrchestrationFileName = "collection-controller.yaml"
 
-	ccDeploymentResourceName = "kabanero-collection-operator"
+	ccDeploymentResourceName = "kabanero-operator-collection-controller"
 )
 
-// Installs the Kabanero collection operator.
-func reconcileCollectionOperator(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+// Installs the Kabanero collection controller.
+func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
-	logger.Info("Reconciling Kabanero collection operator installation.")
+	logger.Info("Reconciling Kabanero collection controller installation.")
 
 	// Deploy the Kabanero collection operator.
-	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionOperator.Version)
+	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
 	if err != nil {
-		logger.Error(err, "Kabanero collection operator deloyment failed. Unable to resolve software revision.")
+		logger.Error(err, "Kabanero collection controller deloyment failed. Unable to resolve software revision.")
 		return err
 	}
 
 	templateCtx := rev.Identifiers
-	image, err := imageUriWithOverrides(k.Spec.CollectionOperator.Repository, k.Spec.CollectionOperator.Tag, k.Spec.CollectionOperator.Image, rev)
+	image, err := imageUriWithOverrides(k.Spec.CollectionController.Repository, k.Spec.CollectionController.Tag, k.Spec.CollectionController.Image, rev)
 	if err != nil {
-		logger.Error(err, "Kabanero collection operator deloyment failed. Unable to process image overrides.")
+		logger.Error(err, "Kabanero collection controller deloyment failed. Unable to process image overrides.")
 		return err
 	}
 	templateCtx["image"] = image
@@ -73,31 +73,31 @@ func reconcileCollectionOperator(ctx context.Context, k *kabanerov1alpha1.Kabane
 	return nil
 }
 
-// Returns the readiness status of the Kabanero collection operator installation.
+// Returns the readiness status of the Kabanero collection controller installation.
 func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
-	k.Status.CollectionOperator.ErrorMessage = ""
-	k.Status.CollectionOperator.Ready = "False"
+	k.Status.CollectionController.ErrorMessage = ""
+	k.Status.CollectionController.Ready = "False"
 
-	// Retrieve the Kabanero collection operator version.
-	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionOperator.Version)
+	// Retrieve the Kabanero collection controller version.
+	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
 	if err != nil {
 		message := "Unable to retrieve the collection controller version."
 		kanlog.Error(err, message)
-		k.Status.CollectionOperator.ErrorMessage = message + ": " + err.Error()
+		k.Status.CollectionController.ErrorMessage = message + ": " + err.Error()
 		return false, err
 	}
-	k.Status.CollectionOperator.Version = rev.Version
+	k.Status.CollectionController.Version = rev.Version
 
-	// Base the status on the Kabanero collection operator's deployment resource.
+	// Base the status on the Kabanero collection controller's deployment resource.
 	ccdeployment := &appsv1.Deployment{}
 	err = c.Get(ctx, client.ObjectKey{
 		Name:      ccDeploymentResourceName,
 		Namespace: k.ObjectMeta.Namespace}, ccdeployment)
 
 	if err != nil {
-		message := "Unable to retrieve the Kabanero collection operator deployment object."
+		message := "Unable to retrieve the Kabanero collection controller deployment object."
 		kanlog.Error(err, message)
-		k.Status.CollectionOperator.ErrorMessage = message + ": " + err.Error()
+		k.Status.CollectionController.ErrorMessage = message + ": " + err.Error()
 		return false, err
 	}
 
@@ -107,9 +107,9 @@ func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha1.Kaba
 		if strings.ToLower(string(condition.Type)) == "available" {
 			if strings.ToLower(string(condition.Status)) == "true" {
 				ready = true
-				k.Status.CollectionOperator.Ready = "True"
+				k.Status.CollectionController.Ready = "True"
 			} else {
-				k.Status.CollectionOperator.ErrorMessage = condition.Message
+				k.Status.CollectionController.ErrorMessage = condition.Message
 			}
 
 			break

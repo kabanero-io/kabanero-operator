@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
 spec:
   selector:
-    app: kabanero-collection-operator
+    app: kabanero-operator-collection-controller
   ports:
   - protocol: TCP
     port: 443
@@ -14,7 +14,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
 rules:
 - apiGroups:
   - ""
@@ -88,47 +88,41 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
 subjects:
 - kind: ServiceAccount
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
 roleRef:
   kind: Role
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kabanero-collection-operator
+  name: kabanero-operator-collection-controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kabanero-collection-operator
+      app: kabanero-operator-collection-controller
   template:
     metadata:
       labels:
-        app: kabanero-collection-operator
+        app: kabanero-operator-collection-controller
     spec:
-      serviceAccountName: kabanero-collection-operator
+      serviceAccountName: kabanero-operator-collection-controller
       containers:
-        - name: kabanero-collection-operator
+        - name: kabanero-operator-collection-controller
           image: {{ .image }}
           imagePullPolicy: Always
           env:
-            - name: WATCH_NAMESPACE
+            - name: KABANERO_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "kabanero-collection-operator"

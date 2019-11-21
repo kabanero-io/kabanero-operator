@@ -61,7 +61,7 @@ spec:
                     description: 'Future: Enable     bool   `json:"enable,omitempty"`'
                     type: string
                 type: object
-              collectionOperator:
+              collectionController:
                 properties:
                   image:
                     type: string
@@ -184,8 +184,8 @@ spec:
                   ready:
                     type: string
                 type: object
-              collectionOperator:
-                description: Kabanero collection operator readiness status.
+              collectionController:
+                description: Kabanero collection controller readiness status.
                 properties:
                   errorMessage:
                     type: string

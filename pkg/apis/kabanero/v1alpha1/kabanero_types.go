@@ -34,7 +34,7 @@ type KabaneroSpec struct {
 
 	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
 
-	CollectionOperator CollectionOperatorSpec `json:"collectionOperator,omitempty"`
+	CollectionController CollectionControllerSpec `json:"collectionController,omitempty"`
 }
 
 // InstanceCollectionConfig defines the customization entries for a set of collections.
@@ -110,8 +110,8 @@ type WebhookCustomizationSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
-// CollectionOperatorSpec defines customization entried for the Kabanero collection Operator.
-type CollectionOperatorSpec struct {
+// CollectionControllerSpec defines customization entried for the Kabanero collection controller.
+type CollectionControllerSpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
@@ -151,8 +151,8 @@ type KabaneroStatus struct {
 	// Webhook instance status
 	Webhook *WebhookStatus `json:"webhook,omitempty"`
 
-	// Kabanero collection operator readiness status.
-	CollectionOperator CollectionOperatorStatus `json:"collectionOperator,omitempty"`
+	// Kabanero collection controller readiness status.
+	CollectionController CollectionControllerStatus `json:"collectionController,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -253,8 +253,8 @@ type WebhookStatus struct {
 	Hostnames    []string `json:"hostnames,omitempty"`
 }
 
-// CollectionOperatorStatus defines the observed status details of the Kabanero collection operator.
-type CollectionOperatorStatus struct {
+// CollectionControllerStatus defines the observed status details of the Kabanero collection controller.
+type CollectionControllerStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`

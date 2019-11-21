@@ -32,16 +32,16 @@ spec:
     # You can include multiple values in a single entry. For example, 1m30s is equivalent to 90 seconds.
     sessionExpirationSeconds: "1440m"
 
-  collectionOperator:
+  collectionController:
     # Overrides the setting for version on this component
     version: "0.3.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabanero-collection-operator
+    repository: kabanero/kabaner-operator-collection-controller
     tag: "0.3.0"
 
     # Overrides the image uri
-    image: kabanero/kabanero-collection-operator:0.3.0
+    image: kabanero/kabanero-operator-collection-controller:0.3.0
 
   landing:
     # The landing page is enabled by default. To disable specify false.

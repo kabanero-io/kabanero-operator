@@ -183,7 +183,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// Deploy the kabanero operator collection controller.
-	err = reconcileCollectionOperator(ctx, instance, r.client)
+	err = reconcileCollectionController(ctx, instance, r.client)
 	if err != nil {
 		reqLogger.Error(err, "Error deploying the kabanero collection controller.")
 		return reconcile.Result{}, err
