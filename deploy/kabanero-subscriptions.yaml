@@ -61,26 +61,26 @@ metadata:
   labels:
     kabanero.io/install: 11-subscription
 spec:
-  channel: "1.0"
+  channel: kabanero-0.3
   installPlanApproval: Automatic
   name: servicemeshoperator
-  source: redhat-operators
+  source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: knative-eventing-operator-alpha-community-operators-openshift-marketplace
+  name: knative-eventing-operator
   namespace: openshift-operators
   labels:
     kabanero.io/install: 12-subscription
 spec:
-  channel: alpha
+  channel: kabanero-0.3
   config:
     resources: {}
   installPlanApproval: Automatic
   name: knative-eventing-operator
-  source: community-operators
+  source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
@@ -91,10 +91,10 @@ metadata:
   labels:
     kabanero.io/install: 12-subscription
 spec:
-  channel: techpreview
+  channel: kabanero-0.3
   installPlanApproval: Automatic
   name: serverless-operator
-  source: redhat-operators
+  source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
@@ -116,17 +116,17 @@ spec:
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: appsody-operator-certified-beta-certified-operators-openshift-marketplace
+  name: appsody-operator-certified
   namespace: openshift-operators
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: beta
+  channel: kabanero-0.3
   config:
     resources: {}
   installPlanApproval: Automatic
   name: appsody-operator-certified
-  source: certified-operators
+  source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: v1
@@ -155,10 +155,10 @@ metadata:
   labels:
     kabanero.io/install: 14-subscription
 spec:
-  channel: stable
+  channel: kabanero-0.3
   installPlanApproval: Automatic
   name: eclipse-che
-  source: community-operators
+  source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
@@ -169,7 +169,7 @@ metadata:
   labels:
     kabanero.io/install: 14-subscription
 spec:
-  channel: alpha
+  channel: kabanero-0.3
   installPlanApproval: Automatic
   name: kabanero-operator
   source: kabanero-catalog

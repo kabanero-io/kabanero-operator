@@ -88,7 +88,7 @@ checksub servicemeshoperator openshift-operators
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=12-subscription
 
 # Verify Subscriptions
-checksub knative-eventing-operator-alpha-community-operators-openshift-marketplace openshift-operators
+checksub knative-eventing-operator openshift-operators
 checksub serverless-operator openshift-operators
 
 # Install 13-subscription (pipelines, appsody)
@@ -96,7 +96,7 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=13-subsc
 
 # Verify Subscriptions
 checksub openshift-pipelines openshift-operators
-checksub appsody-operator-certified-beta-certified-operators-openshift-marketplace openshift-operators
+checksub appsody-operator-certified openshift-operators
 
 # Install 14-subscription (che, kabanero)
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=14-subscription
