@@ -1,0 +1,290 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kabaneros.kabanero.io
+spec:
+  group: kabanero.io
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              che:
+                properties:
+                  cheOperatorInstance:
+                    properties:
+                      cheWorkspaceClusterRole:
+                        type: string
+                    type: object
+                  enable:
+                    type: boolean
+                  kabaneroChe:
+                    properties:
+                      image:
+                        type: string
+                      repository:
+                        type: string
+                      tag:
+                        type: string
+                      version:
+                        type: string
+                    type: object
+                type: object
+              cliServices:
+                properties:
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  sessionExpirationSeconds:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    description: 'Future: Enable     bool   `json:"enable,omitempty"`'
+                    type: string
+                type: object
+              collections:
+                properties:
+                  repositories:
+                    items:
+                      properties:
+                        activateDefaultCollections:
+                          type: boolean
+                        name:
+                          type: string
+                        skipCertVerification:
+                          type: boolean
+                        url:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              github:
+                properties:
+                  apiUrl:
+                    type: string
+                  organization:
+                    type: string
+                  teams:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              landing:
+                properties:
+                  enable:
+                    type: boolean
+                  version:
+                    type: string
+                type: object
+              targetNamespaces:
+                items:
+                  type: string
+                type: array
+              tekton:
+                properties:
+                  disabled:
+                    type: boolean
+                  version:
+                    type: string
+                type: object
+              version:
+                type: string
+              webhook:
+                properties:
+                  enable:
+                    type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
+            type: object
+          status:
+            properties:
+              appsody:
+                description: Appsody instance readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              che:
+                description: Che instance readiness status.
+                properties:
+                  cheOperator:
+                    properties:
+                      version:
+                        type: string
+                    type: object
+                  errorMessage:
+                    type: string
+                  kabaneroChe:
+                    properties:
+                      version:
+                        type: string
+                    type: object
+                  kabaneroCheInstance:
+                    properties:
+                      cheImage:
+                        type: string
+                      cheImageTag:
+                        type: string
+                      cheWorkspaceClusterRole:
+                        type: string
+                    type: object
+                  ready:
+                    type: string
+                type: object
+              cli:
+                description: CLI readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  hostnames:
+                    items:
+                      type: string
+                    type: array
+                  ready:
+                    type: string
+                type: object
+              kabaneroInstance:
+                description: Kabanero operator instance readiness status. The status
+                  is directly correlated to the availability of resources dependencies.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              kappnav:
+                description: Kabanero Application Navigator instance readiness status.
+                properties:
+                  apiLocations:
+                    items:
+                      type: string
+                    type: array
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  uiLocations:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              knativeEventing:
+                description: Knative eventing instance readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              landing:
+                description: Kabanero Landing page readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              serverless:
+                description: OpenShift serverless operator status.
+                properties:
+                  errorMessage:
+                    type: string
+                  knativeServing:
+                    properties:
+                      errorMessage:
+                        type: string
+                      ready:
+                        type: string
+                      version:
+                        type: string
+                    type: object
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              tekton:
+                description: Tekton instance readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              webhook:
+                description: Webhook instance status
+                properties:
+                  errorMessage:
+                    type: string
+                  hostnames:
+                    items:
+                      type: string
+                    type: array
+                  ready:
+                    type: string
+                type: object
+            type: object
+  conversion:
+    strategy: None
+  names:
+    kind: Kabanero
+    listKind: KabaneroList
+    plural: kabaneros
+    singular: kabanero
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.kabaneroInstance.version
+    description: Kabanero operator instance version.
+    name: Version
+    type: string
+  - JSONPath: .status.kabaneroInstance.ready
+    description: Kabanero operator instance readiness status. The status is directly
+      correlated to the availability of the operator's resources dependencies.
+    name: Ready
+    type: string

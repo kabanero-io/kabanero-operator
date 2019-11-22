@@ -51,6 +51,7 @@ spec:
   apiservicedefinitions: {}
   maturity: alpha
   version: 0.4.0
+  replaces: kabanero-operator.v0.3.1
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
