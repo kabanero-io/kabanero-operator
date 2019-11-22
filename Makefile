@@ -9,6 +9,9 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 WEBHOOK_REPOSITORY=$(firstword $(subst :, ,${WEBHOOK_IMAGE}))
 
+# Current release (used for CSV management)
+CURRENT_RELEASE=0.4.0
+
 # Internal Docker image in format repository:tag. Repository may contain an internal service reference.
 # Used for external push, and internal deployment pull
 # Example case:
@@ -42,22 +45,17 @@ build-image: generate
 	docker build -f build/Dockerfile-webhook -t ${WEBHOOK_IMAGE} .
 
   # Build an OLM private registry for Kabanero
-  # The intention here is for the '0.3.0' to be a variable that points to the
-  # current version.  The CRDs for the current version are copied from the
-  # originals in 'deploy/crds'.  Then, when we switch to the next version, the
-  # variable changes to '0.4.0' or whatever, and the CRDs for 0.3.0 become
-  # static.
 	mkdir -p build/registry
 	cp LICENSE build/registry/LICENSE
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
-	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/0.3.0/
+	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
 
 ifdef INTERNAL_IMAGE
   # Deployment uses internal registry service address
-	sed -e "s!kabanero/kabanero-operator:latest!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:.*!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 else
-	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:.*!${IMAGE}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 endif
 
 	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
@@ -65,12 +63,12 @@ endif
   # If we're doing a Travis build, need to build a second image because the CSV
   # in the registry image has to point to the tagged operator image.
 ifdef TRAVIS_TAG
-	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_TAG}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:.*!${REPOSITORY}:${TRAVIS_TAG}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_TAG} -f build/registry/Dockerfile build/registry/
 endif
 
 ifdef TRAVIS_BRANCH
-	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_BRANCH}!" registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.0/kabanero-operator.v0.3.0.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:.*!${REPOSITORY}:${TRAVIS_BRANCH}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_BRANCH} -f build/registry/Dockerfile build/registry/
 endif
 
@@ -178,9 +176,9 @@ int-install:
 # Update deployment to correct image 
 ifdef INTERNAL_REGISTRY_IMAGE
 # Deployment uses internal registry service address
-	sed -e "s!image: kabanero/kabanero-operator-registry:latest!image: ${INTERNAL_REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${INTERNAL_REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 else
-	sed -e "s!image: kabanero/kabanero-operator-registry:latest!image: ${REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh

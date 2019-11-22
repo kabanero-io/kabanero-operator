@@ -1,10 +1,6 @@
 package collection
 
 import (
-	"crypto/tls"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"regexp"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
@@ -24,33 +20,7 @@ func ResolveIndex(repoConf kabanerov1alpha1.RepositoryConfig) (*Index, error) {
 		url = url + "/index.yaml"
 	}
 
-	// Build the request.
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Drive the request. Certificate validation is not disabled by default.
-	skipCertVerify := repoConf.SkipCertVerification
-	client := http.DefaultClient
-	if skipCertVerify {
-		config := &tls.Config{InsecureSkipVerify: skipCertVerify}
-		transport := &http.Transport{TLSClientConfig: config}
-		client = &http.Client{Transport: transport}
-	}
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(fmt.Sprintf("Could not resolve the index: %v. Http status code: %v", url, resp.StatusCode))
-	}
-
-	r := resp.Body
-	b, err := ioutil.ReadAll(r)
+	b, err := getFromCache(url, repoConf.SkipCertVerification)
 	if err != nil {
 		return nil, err
 	}
