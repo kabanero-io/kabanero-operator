@@ -1,0 +1,4 @@
+packageName: knative-eventing-operator
+channels:
+- name: kabanero-0.3
+  currentCSV: knative-eventing-operator.v0.9.0

@@ -7,7 +7,7 @@ set -x pipefail
 # following line.
 APPSODY_UNINSTALL=1
 
-RELEASE="${RELEASE:-0.3.0}"
+RELEASE="${RELEASE:-0.3.1}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
 SLEEP_LONG="${SLEEP_LONG:-5}"
@@ -167,9 +167,9 @@ unsubscribe serverless-operator openshift-operators
 
 unsubscribe openshift-pipelines openshift-operators
 
-unsubscribe knative-eventing-operator-alpha-community-operators-openshift-marketplace openshift-operators
+unsubscribe knative-eventing-operator openshift-operators
 
-unsubscribe appsody-operator-certified-beta-certified-operators-openshift-marketplace openshift-operators
+unsubscribe appsody-operator-certified openshift-operators
 
 unsubscribe servicemeshoperator openshift-operators
 
@@ -189,7 +189,7 @@ oc delete -n openshift-marketplace catalogsource kabanero-catalog
 
 
 # Ensure CSV Cleanup in all namespaces
-OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator servicemeshoperator elasticsearch-operator)
+OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator)
 for OPERATOR in "${OPERATORS[@]}"
 do
   CSV=$(oc --all-namespaces=true get csv --output=jsonpath={.items[*].metadata.name} | tr " " "\n" | grep ${OPERATOR} | head -1)

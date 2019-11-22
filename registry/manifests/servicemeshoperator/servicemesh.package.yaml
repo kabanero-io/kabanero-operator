@@ -1,0 +1,5 @@
+packageName: servicemeshoperator
+channels:
+- name: kabanero-0.3
+  currentCSV: servicemeshoperator.v1.0.2
+defaultChannel: kabanero-0.3
