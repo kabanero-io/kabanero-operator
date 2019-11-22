@@ -17,11 +17,13 @@ CURRENT_RELEASE=0.4.0
 # Example case:
 # export IMAGE=default-route-openshift-image-registry.apps.CLUSTER.example.com/kabanero/kabanero-operator:latest
 # export REGISTRY_IMAGE=default-route-openshift-image-registry.apps.CLUSTER.example.com/openshift-marketplace/kabanero-operator-registry:latest
+# export WEBHOOK_IMAGE=
 # export INTERNAL_IMAGE=image-registry.openshift-image-registry.svc:5000/kabanero/kabanero-operator:latest
 # export INTERNAL_REGISTRY_IMAGE=image-registry.openshift-image-registry.svc:5000/openshift-marketplace/kabanero-operator-registry:latest
+# export INTERNAL_WEBHOOK_IMAGE=
 INTERNAL_IMAGE ?=
 INTERNAL_REGISTRY_IMAGE ?=
-
+INTERNAL_WEBHOOK_IMAGE ?=
 
 .PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall
 
@@ -182,8 +184,13 @@ else
 endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
-	kubectl apply -f config/samples/default.yaml
 
+ifdef INTERNAL_WEBHOOK_IMAGE
+# Deployment uses internal registry service address
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${INTERNAL_WEBHOOK_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
+else
+	kubectl apply -f config/samples/full.yaml
+endif
 # Uninstall Test
 int-test-uninstall: creds int-uninstall
 
