@@ -229,7 +229,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator:latest
+                image: kabanero/kabanero-operator:0.3.1
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
