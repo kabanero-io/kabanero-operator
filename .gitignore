@@ -80,3 +80,6 @@ tags
 
 .DS_Store
 /.project
+
+# Ignore VFS data - should be generated during the build.
+pkg/assets/config/config_vfsdata.go
