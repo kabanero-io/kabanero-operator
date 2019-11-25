@@ -35,6 +35,8 @@ type KabaneroSpec struct {
 	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
 
 	CollectionController CollectionControllerSpec `json:"collectionController,omitempty"`
+
+	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 }
 
 // InstanceCollectionConfig defines the customization entries for a set of collections.
@@ -118,6 +120,13 @@ type CollectionControllerSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
+type AdmissionControllerWebhookCustomizationSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
 // KabaneroStatus defines the observed state of the Kabanero instance.
 // +k8s:openapi-gen=true
 type KabaneroStatus struct {
@@ -153,6 +162,9 @@ type KabaneroStatus struct {
 
 	// Kabanero collection controller readiness status.
 	CollectionController CollectionControllerStatus `json:"collectionController,omitempty"`
+
+	// Admission webhook instance status
+	AdmissionControllerWebhook AdmissionControllerWebhookStatus `json:"admissionControllerWebhook,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -258,6 +270,12 @@ type CollectionControllerStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`
+}
+
+// AdmissionControllerWebhookStatus defines the observed status details of the Kabanero mutating and validating admission webhooks.
+type AdmissionControllerWebhookStatus struct {
+	Ready        string   `json:"ready,omitempty"`
+	ErrorMessage string   `json:"errorMessage,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

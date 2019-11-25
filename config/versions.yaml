@@ -20,6 +20,7 @@ kabanero:
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
     collection-controller: "0.4.0"
+    admission-webhook: "0.4.0"
 - version: "0.3.1"
   related-versions: 
     cli-services: "0.3.0"
@@ -27,6 +28,7 @@ kabanero:
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
     collection-controller: "0.4.0"
+    admission-webhook: "0.4.0"
 - version: "0.3.0"
   related-versions: 
     cli-services: "0.3.0"
@@ -34,6 +36,7 @@ kabanero:
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
     collection-controller: "0.4.0"
+    admission-webhook: "0.4.0"
 
 related-software:
   landing:
@@ -71,3 +74,10 @@ related-software:
     identifiers:
       repository: "kabanero/kabanero-operator-collection-controller"
       tag: "0.4.0-alpha.1"
+
+  admission-webhook:
+  - version: "0.4.0"
+    orchestrations: "orchestrations/admission-webhook/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-admission-webhook"
+      tag: "0.4.0-alpha.2"

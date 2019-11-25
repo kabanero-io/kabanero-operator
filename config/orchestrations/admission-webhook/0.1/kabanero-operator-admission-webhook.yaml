@@ -1,0 +1,145 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-operator-admission-webhook
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - watch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - watch
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - watch
+  - delete
+- apiGroups:
+  - kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kabanero-operator-admission-webhook
+rules:
+- apiGroups:
+  - "admissionregistration.k8s.io"
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - watch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-operator-admission-webhook
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-operator-admission-webhook
+subjects:
+- kind: ServiceAccount
+  name: kabanero-operator-admission-webhook
+roleRef:
+  kind: Role
+  name: kabanero-operator-admission-webhook
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-operator-admission-webhook
+subjects:
+- kind: ServiceAccount
+  namespace: kabanero
+  name: kabanero-operator-admission-webhook
+roleRef:
+  kind: ClusterRole
+  name: kabanero-operator-admission-webhook
+  apiGroup: rbac.authorization.k8s.io
+---  
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kabanero-operator-admission-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kabanero-operator-admission-webhook
+  template:
+    metadata:
+      labels:
+        name: kabanero-operator-admission-webhook
+    spec:
+      serviceAccountName: kabanero-operator-admission-webhook
+      containers:
+        - name: kabanero-operator-admission-webhook
+          image: {{ .image }}
+          imagePullPolicy: Always
+          env:
+            - name: KABANERO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+          - mountPath: /tmp/cert
+            name: kabanero-operator-admission-webhook
+            readOnly: true
+      volumes:
+      - name: kabanero-operator-admission-webhook
+        secret:
+          secretName: kabanero-operator-admission-webhook
+
