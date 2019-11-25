@@ -15,9 +15,9 @@ import (
 
 	knsapis "github.com/knative/serving-operator/pkg/apis"
 	kneapis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
-	routev1 "github.com/openshift/api/route/v1"
 	consolev1 "github.com/openshift/api/console/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	tektonapis "github.com/openshift/tektoncd-pipeline-operator/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 
@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
-	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -136,11 +134,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := pipelinev1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
 	if err := routev1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -175,7 +168,7 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	
+
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")

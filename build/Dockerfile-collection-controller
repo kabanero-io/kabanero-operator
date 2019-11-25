@@ -1,0 +1,8 @@
+FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
+
+ENV OPERATOR=/usr/local/bin/kabanero-operator-collection-controller
+
+# install operator binary
+COPY build/_output/bin/kabanero-operator-collection-controller ${OPERATOR}
+
+ENTRYPOINT ["/usr/local/bin/kabanero-operator-collection-controller"]
