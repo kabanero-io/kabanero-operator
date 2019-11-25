@@ -72,13 +72,46 @@ spec:
       taskRef:
         name: my-collection-build-task
     `),
-		}}
+		},
+		{
+			name: "Substitute Digest",
+			provided: []byte(`
+#Kabanero! on activate substitute Digest for text 'Digest'
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: build-deploy-pipeline-Digest
+spec:
+  resources:
+  - resource1
+  tasks:
+    - name: build-task
+      taskRef:
+        name: build-task-Digest
+    `),
+
+			expected: []byte(`
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: build-deploy-pipeline-12345678
+spec:
+  resources:
+  - resource1
+  tasks:
+    - name: build-task
+      taskRef:
+        name: build-task-12345678
+    `),
+		},
+	}
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s", tc.name), func(t *testing.T) {
 			context := map[string]interface{}{
 				"CollectionName": "My Collection Name",
 				"CollectionId":   "my-collection",
+				"Digest":         "12345678",
 			}
 
 			r := &DirectiveProcessor{}
