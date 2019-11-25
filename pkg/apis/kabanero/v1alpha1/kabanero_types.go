@@ -33,6 +33,8 @@ type KabaneroSpec struct {
 	Che CheCustomizationSpec `json:"che,omitempty"`
 
 	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
+
+	CollectionController CollectionControllerSpec `json:"collectionController,omitempty"`
 }
 
 // InstanceCollectionConfig defines the customization entries for a set of collections.
@@ -108,6 +110,14 @@ type WebhookCustomizationSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
+// CollectionControllerSpec defines customization entried for the Kabanero collection controller.
+type CollectionControllerSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
 // KabaneroStatus defines the observed state of the Kabanero instance.
 // +k8s:openapi-gen=true
 type KabaneroStatus struct {
@@ -140,6 +150,9 @@ type KabaneroStatus struct {
 
 	// Webhook instance status
 	Webhook *WebhookStatus `json:"webhook,omitempty"`
+
+	// Kabanero collection controller readiness status.
+	CollectionController CollectionControllerStatus `json:"collectionController,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -238,6 +251,13 @@ type WebhookStatus struct {
 	Ready        string   `json:"ready,omitempty"`
 	ErrorMessage string   `json:"errorMessage,omitempty"`
 	Hostnames    []string `json:"hostnames,omitempty"`
+}
+
+// CollectionControllerStatus defines the observed status details of the Kabanero collection controller.
+type CollectionControllerStatus struct {
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
