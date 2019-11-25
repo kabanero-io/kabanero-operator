@@ -1,0 +1,7 @@
+channels:
+- currentCSV: appsody-operator.v0.2.2
+  name: kabanero-0.3
+- currentCSV: appsody-operator.v0.2.2
+  name: kabanero-0.4
+defaultChannel: kabanero-0.4
+packageName: appsody-operator-certified

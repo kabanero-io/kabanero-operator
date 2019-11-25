@@ -1,13 +1,13 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: kabanero-operator.v0.4.0
+  name: kabanero-operator.v0.3.1
   namespace: placeholder
   annotations:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator:latest
+    containerImage: kabanero/kabanero-operator:0.3.1
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
     repository: https://github.com/kabanero-io/kabanero-operator
@@ -21,7 +21,7 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.4.0",
+            "version": "0.3.1",
             "collections": {
               "repositories": [
                 {
@@ -50,8 +50,8 @@ spec:
   minKubeVersion: 1.14.0
   apiservicedefinitions: {}
   maturity: alpha
-  version: 0.4.0
-  replaces: kabanero-operator.v0.3.1
+  version: 0.3.1
+  replaces: kabanero-operator.v0.3.0
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.

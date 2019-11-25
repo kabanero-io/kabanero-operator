@@ -167,9 +167,9 @@ unsubscribe serverless-operator openshift-operators
 
 unsubscribe openshift-pipelines openshift-operators
 
-unsubscribe knative-eventing-operator-alpha-community-operators-openshift-marketplace openshift-operators
+unsubscribe knative-eventing-operator openshift-operators
 
-unsubscribe appsody-operator-certified-beta-certified-operators-openshift-marketplace openshift-operators
+unsubscribe appsody-operator-certified openshift-operators
 
 unsubscribe servicemeshoperator openshift-operators
 
@@ -189,7 +189,7 @@ oc delete -n openshift-marketplace catalogsource kabanero-catalog
 
 
 # Ensure CSV Cleanup in all namespaces
-OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator servicemeshoperator elasticsearch-operator)
+OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator)
 for OPERATOR in "${OPERATORS[@]}"
 do
   CSV=$(oc --all-namespaces=true get csv --output=jsonpath={.items[*].metadata.name} | tr " " "\n" | grep ${OPERATOR} | head -1)

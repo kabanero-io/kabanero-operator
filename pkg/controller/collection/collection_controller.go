@@ -306,6 +306,18 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		r_log.Error(err, "Could not make kabanero the owner of the collection")
 	}
 
+	// Process deactivates regardless of whether the collection is available in the remote
+	// repository.
+	if strings.EqualFold(c.Spec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
+		err := deactivate(c, r.client)
+		if err != nil {
+			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+		}
+		
+		c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
+		return reconcile.Result{}, nil
+	}
+	
 	// Retreive all matching collection names from all remote indexes.  If none were specified,
 	// build and log an error and return.
 	var matchingCollections []resolvedCollection
@@ -385,29 +397,17 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 				// Activate or deactivate the collection based on the collection's current desiredState.
 				// The activateDefaultCollections setting in the CR instance's collection repository entry has
 				// no influence here as that only sets a collection's initial state.
-				desiredCollecitonState := strings.ToLower(c.Spec.DesiredState)
-				switch desiredCollecitonState {
-				case kabanerov1alpha1.CollectionDesiredStateInactive:
-					err := deactivate(c, &matchingCollection.collection, r.client)
-					if err != nil {
-						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-					}
-
-					c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
-				default:
-					if desiredCollecitonState != kabanerov1alpha1.CollectionDesiredStateActive {
-						c.Status.StatusMessage = "An invalid desiredState value of " + c.Spec.DesiredState + " was specified. The collection is activated by default."
-					}
-
-					// Activate the collection.
-					err := activate(c, &matchingCollection.collection, r.client)
-					if err != nil {
-						return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-					}
-					c.Status.ActiveLocation = matchingCollection.repositoryURL
-					c.Status.Status = kabanerov1alpha1.CollectionDesiredStateActive
+				if !strings.EqualFold(c.Spec.DesiredState, kabanerov1alpha1.CollectionDesiredStateActive) {
+					c.Status.StatusMessage = "An invalid desiredState value of " + c.Spec.DesiredState + " was specified. The collection is activated by default."
 				}
 
+				// Activate the collection.
+				err := activate(c, &matchingCollection.collection, r.client)
+				if err != nil {
+					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+				}
+				c.Status.ActiveLocation = matchingCollection.repositoryURL
+				c.Status.Status = kabanerov1alpha1.CollectionDesiredStateActive
 				return reconcile.Result{}, nil
 			}
 		}
@@ -478,7 +478,7 @@ func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, pipeline Pipel
 }
 
 // Deactivates a collection.
-func deactivate(collectionResource *kabanerov1alpha1.Collection, collection *Collection, c client.Client) error {
+func deactivate(collectionResource *kabanerov1alpha1.Collection, c client.Client) error {
 
 	// Maintain a list of failed "stuff" here.  We'll replace it later.
 	failedCollectionStatus := &kabanerov1alpha1.CollectionStatus{}
