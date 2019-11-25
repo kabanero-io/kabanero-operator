@@ -555,6 +555,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
 
 		for _, pipeline := range collectionResource.Status.ActivePipelines {
+			// Add the Digest to the rendering context.
+			renderingContext["Digest"] = pipeline.Digest[0:8]
 
 			// Retrieve manifests as unstructured
 			manifests, err := GetManifests(pipeline.Url, pipeline.Digest, renderingContext, log)
@@ -605,6 +607,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	// Now apply the new version
 	for _, pipeline := range collection.Pipelines {
 		log.Info(fmt.Sprintf("Applying assets %v", pipeline.Url))
+		// Add the Digest to the rendering context.
+		renderingContext["Digest"] = pipeline.Sha256[0:8]
 
 		// Retrieve manifests as unstructured
 		manifests, err := GetManifests(pipeline.Url, pipeline.Sha256, renderingContext, log)
