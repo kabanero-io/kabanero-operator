@@ -9,7 +9,7 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.3.0"
+default: "0.4.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
@@ -19,6 +19,7 @@ kabanero:
     landing: "0.3.0"
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
+    collection-controller: "0.4.0"
     admission-webhook: "0.4.0"
 - version: "0.3.0"
   related-versions: 
@@ -26,7 +27,8 @@ kabanero:
     landing: "0.3.0"
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
-    admission-webhook: "0.3.0"
+    collection-controller: "0.4.0"
+    admission-webhook: "0.4.0"
 
 related-software:
   landing:
@@ -58,9 +60,16 @@ related-software:
       repository: "kabanero/kabanero-webhook"
       tag: "0.1"
 
+  collection-controller: 
+  - version: "0.4.0"
+    orchestrations: "orchestrations/collection-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-collection-controller"
+      tag: "0.4.0-alpha.1"
+
   admission-webhook:
-  - version: "0.3.0"
+  - version: "0.4.0"
     orchestrations: "orchestrations/admission-webhook/0.1"
     identifiers:
       repository: "kabanero/kabanero-operator-admission-webhook"
-      tag: "0.3.0"
+      tag: "0.4.0-alpha.2"

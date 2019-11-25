@@ -197,6 +197,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
 	
+	// Deploy the kabanero operator collection controller.
+	err = reconcileCollectionController(ctx, instance, r.client)
+	if err != nil {
+		reqLogger.Error(err, "Error deploying the kabanero collection controller.")
+		return reconcile.Result{}, err
+	}
+
 	// Deploy feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
@@ -353,6 +360,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	k.Status.KabaneroInstance.Ready = "False"
 
 	// Gather the status of all resource dependencies.
+	isCollectionControllerReady, _ := getCollectionControllerStatus(ctx, k, c)
 	isAppsodyReady, _ := getAppsodyStatus(k, c, reqLogger)
 	isTektonReady, _ := getTektonStatus(k, c)
 	isServerlessReady, _ := getServerlessStatus(k, c, reqLogger)
@@ -365,7 +373,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	
 	// Set the overall status.
-	isKabaneroReady := isTektonReady &&
+	isKabaneroReady := isCollectionControllerReady &&
+		isTektonReady &&
 		isKnativeEventingReady &&
 		isServerlessReady &&
 		isCliRouteReady &&

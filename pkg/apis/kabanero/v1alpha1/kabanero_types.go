@@ -34,6 +34,8 @@ type KabaneroSpec struct {
 
 	Webhook WebhookCustomizationSpec `json:"webhook,omitempty"`
 
+	CollectionController CollectionControllerSpec `json:"collectionController,omitempty"`
+
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 }
 
@@ -110,6 +112,14 @@ type WebhookCustomizationSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
+// CollectionControllerSpec defines customization entried for the Kabanero collection controller.
+type CollectionControllerSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
 type AdmissionControllerWebhookCustomizationSpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
@@ -149,6 +159,9 @@ type KabaneroStatus struct {
 
 	// Webhook instance status
 	Webhook *WebhookStatus `json:"webhook,omitempty"`
+
+	// Kabanero collection controller readiness status.
+	CollectionController CollectionControllerStatus `json:"collectionController,omitempty"`
 
 	// Admission webhook instance status
 	AdmissionControllerWebhook AdmissionControllerWebhookStatus `json:"admissionControllerWebhook,omitempty"`
@@ -250,6 +263,13 @@ type WebhookStatus struct {
 	Ready        string   `json:"ready,omitempty"`
 	ErrorMessage string   `json:"errorMessage,omitempty"`
 	Hostnames    []string `json:"hostnames,omitempty"`
+}
+
+// CollectionControllerStatus defines the observed status details of the Kabanero collection controller.
+type CollectionControllerStatus struct {
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 // AdmissionControllerWebhookStatus defines the observed status details of the Kabanero mutating and validating admission webhooks.

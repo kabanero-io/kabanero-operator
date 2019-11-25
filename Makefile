@@ -3,11 +3,13 @@
 IMAGE ?= kabanero-operator:latest
 REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 WEBHOOK_IMAGE ?= kabanero-operator-admission-webhook:latest
+COLLECTION_CTRLR_IMAGE ?= kabanero-operator-collection-controller:latest
 
 # Computed repository name (no tag) including repository host/path reference
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 WEBHOOK_REPOSITORY=$(firstword $(subst :, ,${WEBHOOK_IMAGE}))
+COLLECTION_CTRLR_REPOSITORY=$(firstword $(subst :, ,${COLLECTION_CTRLR_IMAGE}))
 
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.4.0
@@ -29,6 +31,7 @@ INTERNAL_WEBHOOK_IMAGE ?=
 
 build: generate
 	go install ./cmd/manager
+	go install ./cmd/manager/collection
 	go install ./cmd/admission-webhook
 
 build-image: generate
@@ -37,11 +40,15 @@ build-image: generate
   # commands separately here.
   # operator-sdk build ${IMAGE}
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator-collection-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
 
 	docker build -f build/Dockerfile -t ${IMAGE} .
   # This is a workaround until manfistival can interact with the virtual file system
 	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
+
+  # Build the Kananero collection controller image.
+	docker build -f build/Dockerfile-collection-controller -t ${COLLECTION_CTRLR_IMAGE} .
 
   # Build the admission webhook.
 	docker build -f build/Dockerfile-webhook -t ${WEBHOOK_IMAGE} .
@@ -81,6 +88,7 @@ ifneq "$(IMAGE)" "kabanero-operator:latest"
   # Default push.  Make sure the namespace is there in case using local registry
 	kubectl create namespace kabanero || true
 	docker push $(IMAGE)
+	docker push $(COLLECTION_CTRLR_IMAGE)
 	docker push $(REGISTRY_IMAGE)
 	docker push $(WEBHOOK_IMAGE)
 
@@ -91,6 +99,8 @@ ifdef TRAVIS_TAG
 	docker tag $(WEBHOOK_IMAGE) $(WEBHOOK_REPOSITORY):$(TRAVIS_TAG)
 	docker push $(WEBHOOK_REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_TAG)
+	docker tag $(COLLECTION_CTRLR_IMAGE) $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_TAG)
+	docker push $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_TAG)
 endif
 
 ifdef TRAVIS_BRANCH
@@ -100,6 +110,8 @@ ifdef TRAVIS_BRANCH
 	docker tag $(WEBHOOK_IMAGE) $(WEBHOOK_REPOSITORY):$(TRAVIS_TAG)
 	docker push $(WEBHOOK_REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
+	docker tag $(COLLECTION_CTRLR_IMAGE) $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_TAG)
+	docker push $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_BRANCH)
 endif
 endif
 
