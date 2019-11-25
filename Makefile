@@ -5,27 +5,42 @@ REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 WEBHOOK_IMAGE ?= kabanero-operator-admission-webhook:latest
 COLLECTION_CTRLR_IMAGE ?= kabanero-operator-collection-controller:latest
 
+
+# For integration testing
+# INTERNAL_REGISTRY: the public facing registry url. Set TRUE to enable and find the default address, or manually set to address itself
+# INTERNAL_REGISTRY_SVC: the internal service image pull address. If not set, set to the default
+INTERNAL_REGISTRY ?=
+INTERNAL_REGISTRY_SVC ?=
+ifdef INTERNAL_REGISTRY
+ifeq ($(INTERNAL_REGISTRY),TRUE)
+INTERNAL_REGISTRY := $(shell kubectl get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+ifndef INTERNAL_REGISTRY_SVC
+INTERNAL_REGISTRY_SVC=image-registry.openshift-image-registry.svc:5000
+endif
+# Public registry references
+IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator:latest
+REGISTRY_IMAGE=${INTERNAL_REGISTRY}/openshift-marketplace/kabanero-operator-registry:latest
+WEBHOOK_IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator-admission-webhook:latest
+COLLECTION_CTRLR_IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator-collection-controller:latest
+# Internal service registry references
+IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator:latest
+REGISTRY_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/openshift-marketplace/kabanero-operator-registry:latest
+WEBHOOK_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator-admission-webhook:latest
+COLLECTION_CTRLR_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator-collection-controller:latest
+endif
+endif
+
+
 # Computed repository name (no tag) including repository host/path reference
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 WEBHOOK_REPOSITORY=$(firstword $(subst :, ,${WEBHOOK_IMAGE}))
 COLLECTION_CTRLR_REPOSITORY=$(firstword $(subst :, ,${COLLECTION_CTRLR_IMAGE}))
 
+
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.4.0
 
-# Internal Docker image in format repository:tag. Repository may contain an internal service reference.
-# Used for external push, and internal deployment pull
-# Example case:
-# export IMAGE=default-route-openshift-image-registry.apps.CLUSTER.example.com/kabanero/kabanero-operator:latest
-# export REGISTRY_IMAGE=default-route-openshift-image-registry.apps.CLUSTER.example.com/openshift-marketplace/kabanero-operator-registry:latest
-# export WEBHOOK_IMAGE=
-# export INTERNAL_IMAGE=image-registry.openshift-image-registry.svc:5000/kabanero/kabanero-operator:latest
-# export INTERNAL_REGISTRY_IMAGE=image-registry.openshift-image-registry.svc:5000/openshift-marketplace/kabanero-operator-registry:latest
-# export INTERNAL_WEBHOOK_IMAGE=
-INTERNAL_IMAGE ?=
-INTERNAL_REGISTRY_IMAGE ?=
-INTERNAL_WEBHOOK_IMAGE ?=
 
 .PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall
 
@@ -60,9 +75,8 @@ build-image: generate
 	cp registry/Dockerfile build/registry/Dockerfile
 	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
 
-ifdef INTERNAL_IMAGE
-  # Deployment uses internal registry service address
-	sed -e "s!kabanero/kabanero-operator:.*!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
+ifdef INTERNAL_REGISTRY
+	sed -e "s!kabanero/kabanero-operator:.*!${IMAGE_SVC}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 else
 	sed -e "s!kabanero/kabanero-operator:.*!${IMAGE}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 endif
@@ -149,10 +163,9 @@ deploy-olm:
 
 	kubectl apply -f deploy/olm/
 
-# Update deployment to correct image 
-ifdef INTERNAL_REGISTRY_IMAGE
-# Deployment uses internal registry service address
-	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${INTERNAL_REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
+# Update deployment to correct image
+ifdef INTERNAL_REGISTRY
+	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE_SVC}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 else
 	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 endif
@@ -188,21 +201,20 @@ creds:
 
 int-install:
 # Update deployment to correct image 
-ifdef INTERNAL_REGISTRY_IMAGE
-# Deployment uses internal registry service address
-	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${INTERNAL_REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+ifdef INTERNAL_REGISTRY
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${REGISTRY_IMAGE_SVC}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 else
 	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
 
-ifdef INTERNAL_WEBHOOK_IMAGE
-# Deployment uses internal registry service address
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${INTERNAL_WEBHOOK_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
+ifdef INTERNAL_REGISTRY
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero-operator-collection-controller::.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl apply -f -
 else
-	kubectl apply -f config/samples/full.yaml
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero-operator-collection-controller::.*!image: ${COLLECTION_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
 endif
+
 # Uninstall Test
 int-test-uninstall: creds int-uninstall
 
