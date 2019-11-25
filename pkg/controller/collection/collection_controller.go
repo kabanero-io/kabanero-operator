@@ -567,20 +567,12 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			for _, asset := range pipeline.ActiveAssets {
 				log.Info(fmt.Sprintf("Preparing to delete asset %v in pipeline %v", asset.Name, pipeline.Name))
 
-				// Construct dummy Manifest and client, due to client being private struct field
-				m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
-				if err != nil {
-					log.Error(err, errorMessage, "resource", asset.Name)
-					collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-					return nil // Forces status to be updated
-				}
-
 				// Look for the correct manifest and assign it to the manifestival object
 				for _, assetYaml := range manifests {
 					if asset.Name == assetYaml.Name {
 
-						// Assign the real manifests
-						m.Resources = []unstructured.Unstructured{assetYaml.Yaml}
+						resources := []unstructured.Unstructured{assetYaml.Yaml}
+						m, err := mf.FromResources(resources, c)
 
 						log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
@@ -622,15 +614,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 
 		// Apply each yaml individually so that we can debug problems applying a particular asset.
 		for _, asset := range manifests {
-
-			// Construct dummy Manifest and client, due to client being private struct field
-			m, err := mf.NewManifest("usr/local/bin/dummy.yaml", false, c)
-			if err != nil {
-				return err
-			}
-
-			// Assign the real manifest
-			m.Resources = []unstructured.Unstructured{asset.Yaml}
+			resources := []unstructured.Unstructured{asset.Yaml}
+			m, err := mf.FromResources(resources, c)
 
 			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
