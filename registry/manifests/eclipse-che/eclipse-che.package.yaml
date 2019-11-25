@@ -1,0 +1,7 @@
+channels:
+- currentCSV: eclipse-che.v7.3.1
+  name: kabanero-0.3
+- currentCSV: eclipse-che.v7.3.1
+  name: kabanero-0.4
+packageName: eclipse-che
+defaultChannel: kabanero-0.4

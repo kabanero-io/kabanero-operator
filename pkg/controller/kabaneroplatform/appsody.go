@@ -18,7 +18,7 @@ const (
 	appsodyDeploymentKind      = "Deployment"
 	appsodyDeploymentGroup     = "apps"
 	appsodyDeploymentVersion   = "v1"
-	appsodySubscriptionName    = "appsody-operator-certified-beta-certified-operators-openshift-marketplace"
+	appsodySubscriptionName    = "appsody-operator-certified"
 )
 
 // Retrieves the Appsody deployment status.
