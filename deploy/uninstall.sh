@@ -10,9 +10,12 @@ APPSODY_UNINSTALL=1
 RELEASE="${RELEASE:-0.4.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
-SLEEP_LONG="${SLEEP_LONG:-5}"
+SLEEP_LONG="${SLEEP_LONG:-15}"
 SLEEP_SHORT="${SLEEP_SHORT:-2}"
 
+
+# CRD spec.group suffixes of interest
+CRDS=(appsody.dev kabanero.io tekton.dev knative.dev istio.io maistra.io kiali.io jaegertracing.io)
 
 
 ### CustomResources
@@ -127,6 +130,14 @@ fi
 oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
 oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
 
+
+# Delete CRs
+for CRD in "${CRDS[@]}"
+do
+  oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD | xargs -r -n 1 oc delete --all --all-namespaces=true
+done
+
+
 ### Subscriptions
 
 # Args: subscription metadata.name, namespace
@@ -140,22 +151,19 @@ unsubscribe () {
 	
 	# Delete Subscription 
 	oc delete subscription $1 -n $2
-
-	# Delete the InstallPlan
-	oc delete installplan $INSTALL_PLAN -n $2
 	
 	# Delete the Installed ClusterServiceVersion
 	oc delete clusterserviceversion $CSV -n $2
 	
-	# Waat for the Copied ClusterServiceVersions to cleanup
+	# Wait for the Copied ClusterServiceVersions to cleanup
 	if [ -n "$CSV" ] ; then
-		while [ `oc get clusterserviceversions $CSV --all-namespaces | wc -l` -gt 0 ]
+		while [ `oc get clusterserviceversions --all-namespaces --field-selector=metadata.name=$CSV | wc -l` -gt 0 ]
 		do
-			sleep 5
+			sleep $SLEEP_LONG
 			LOOP_COUNT=`expr $LOOP_COUNT + 1`
 			if [ $LOOP_COUNT -gt 10 ] ; then
-					echo "Timed out waiting for Copied ClusterServiceVersions $CSV to be deleted"
-					exit 1
+				echo "Timed out waiting for Copied ClusterServiceVersions $CSV to be deleted"
+				break
 			fi
 		done
 	fi
@@ -188,19 +196,24 @@ oc delete -n kabanero operatorgroup kabanero
 oc delete -n openshift-marketplace catalogsource kabanero-catalog
 
 
-# Ensure CSV Cleanup in all namespaces
+# Ensure CSV Cleanup in all namespaces in case OLM GC failed to delete Copies
 OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator)
 for OPERATOR in "${OPERATORS[@]}"
 do
-  CSV=$(oc --all-namespaces=true get csv --output=jsonpath={.items[*].metadata.name} | tr " " "\n" | grep ${OPERATOR} | head -1)
+  CSV=$(oc --all-namespaces=true get csv --output=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep ${OPERATOR} | head -1)
   if [ -n "${CSV}" ]; then
     oc --all-namespaces=true delete csv --field-selector=metadata.name="${CSV}"
   fi
 done
 
 # Cleanup from the openshift service mesh readme
-oc delete validatingwebhookconfiguration/openshift-operators.servicemesh-resources.maistra.io
-oc delete -n openshift-operators daemonset/istio-node
-oc delete clusterrole/istio-admin
-oc get crds -o name | grep '.*\.istio\.io' | xargs -r -n 1 oc delete
-oc get crds -o name | grep '.*\.maistra\.io' | xargs -r -n 1 oc delete
+oc delete validatingwebhookconfiguration/openshift-operators.servicemesh-resources.maistra.io --ignore-not-found
+oc delete -n openshift-operators daemonset/istio-node --ignore-not-found
+oc delete clusterrole/istio-admin --ignore-not-found
+
+# Delete CRDs
+for CRD in "${CRDS[@]}"
+do
+  oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD | xargs -r -n 1 oc delete crd
+done
+
