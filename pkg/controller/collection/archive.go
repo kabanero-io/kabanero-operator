@@ -41,6 +41,30 @@ func DownloadToByte(url string) ([]byte, error) {
 	return getFromCache(url, false)
 }
 
+// Read X bytes from reader.
+func readBytesFromReader(size int64, r io.Reader) ([]byte, error) {
+	b := make([]byte, size)
+	for bytesLeft := size; bytesLeft > 0; {
+		i, err := r.Read(b[size-bytesLeft:])
+		bytesLeft -= int64(i)
+		// An EOF error is normal as long as we read all the bytes.
+		if err != nil {
+			if err == io.EOF {
+				if bytesLeft != 0 {
+					return nil, fmt.Errorf("EOF received before end of file: %v", err.Error())
+				}
+
+				break;
+			}
+
+			// Otherwise, just return the error.
+			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
 //Read the manifests from a tar.gz archive
 //It would be better to use the manifest.yaml as the index, and check the signatures
 //For now, ignore manifest.yaml and return all other yaml files from the archive
@@ -74,10 +98,8 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 		switch {
 		case strings.TrimPrefix(header.Name, "./") == "manifest.yaml":
 			//Buffer the document for further processing
-			b := make([]byte, header.Size)
-			i, err := tarReader.Read(b)
-			//An EOF error is normal, as long as bytes read > 0
-			if err == io.EOF && i == 0 || err != nil && err != io.EOF {
+			b, err := readBytesFromReader(header.Size, tarReader)
+			if err != nil {
 				return nil, fmt.Errorf("Error reading archive %v: %v", header.Name, err.Error())
 			}
 			err = yml.Unmarshal(b, &collectionmanifest)
@@ -119,10 +141,8 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			break
 		case strings.HasSuffix(header.Name, ".yaml"):
 			//Buffer the document for further processing
-			b := make([]byte, header.Size)
-			i, err := tarReader.Read(b)
-			//An EOF error is normal, as long as bytes read > 0
-			if err == io.EOF && i == 0 || err != nil && err != io.EOF {
+			b, err := readBytesFromReader(header.Size, tarReader)
+			if err != nil {
 				return nil, fmt.Errorf("Error reading archive %v: %v", header.Name, err.Error())
 			}
 
