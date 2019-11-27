@@ -10,6 +10,7 @@ import (
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
 	collectionwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/collection"
+	kabanerowebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero"
 
 	apitypes "k8s.io/apimachinery/pkg/types"
 
@@ -94,17 +95,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create the validating webhook
-	validatingWebhook, err := collectionwebhook.BuildValidatingWebhook(&mgr)
+	// Create the collection validating webhook
+	collectionValidatingWebhook, err := collectionwebhook.BuildValidatingWebhook(&mgr)
 	if err != nil {
-		log.Error(err, "unable to setup validating webhook")
+		log.Error(err, "unable to setup collection validating webhook")
 		os.Exit(1)
 	}
 
-	// Create the mutating webhook
-	mutatingWebhook, err := collectionwebhook.BuildMutatingWebhook(&mgr)
+	// Create the collection mutating webhook
+	collectionMutatingWebhook, err := collectionwebhook.BuildMutatingWebhook(&mgr)
 	if err != nil {
-		log.Error(err, "unable to setup mutating webhook")
+		log.Error(err, "unable to setup collection mutating webhook")
+		os.Exit(1)
+	}
+
+	// Create the kabanero validating webhook
+	kabaneroValidatingWebhook, err := kabanerowebhook.BuildValidatingWebhook(&mgr)
+	if err != nil {
+		log.Error(err, "unable to setup kabanero validating webhook")
+		os.Exit(1)
+	}
+
+	// Create the kabanero mutating webhook
+	kabaneroMutatingWebhook, err := kabanerowebhook.BuildMutatingWebhook(&mgr)
+	if err != nil {
+		log.Error(err, "unable to setup kabanero mutating webhook")
 		os.Exit(1)
 	}
 
@@ -141,7 +156,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = admissionServer.Register(validatingWebhook, mutatingWebhook)
+	err = admissionServer.Register(collectionValidatingWebhook, collectionMutatingWebhook, kabaneroValidatingWebhook, kabaneroMutatingWebhook)
 	if err != nil {
 		log.Error(err, "unable to register webhooks in the admission server")
 		os.Exit(1)
