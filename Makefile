@@ -59,8 +59,6 @@ build-image: generate
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
 
 	docker build -f build/Dockerfile -t ${IMAGE} .
-  # This is a workaround until manfistival can interact with the virtual file system
-	docker build -t ${IMAGE} --build-arg IMAGE=${IMAGE} .
 
   # Build the Kananero collection controller image.
 	docker build -f build/Dockerfile-collection-controller -t ${COLLECTION_CTRLR_IMAGE} .

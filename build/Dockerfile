@@ -1,5 +1,14 @@
 FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 
+# The following labels are required for Redhat container certification
+LABEL vendor="Kabanero" \
+      name="Kabanero Operator" \
+      summary="Image for Kabanaro Operator" \
+      description="This image contains the controller for the Kabanero Foundation and Collection.  See https://github.com/kabanero-io/kabanero-operator/"
+
+# The licence must be here for Redhat container certification
+COPY LICENSE /licenses/
+
 ENV OPERATOR=/usr/local/bin/kabanero-operator \
     USER_UID=1001 \
     USER_NAME=kabanero-operator
