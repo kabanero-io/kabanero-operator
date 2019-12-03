@@ -11,6 +11,30 @@ SLEEP_SHORT="${SLEEP_SHORT:-2}"
 # Optional components (yes/no)
 ENABLE_KAPPNAV="${ENABLE_KAPPNAV:-no}"
 
+
+### Check prereqs
+
+# oc installed
+if ! which oc; then
+  printf "oc client is required, please install oc client in your PATH.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest"
+  exit 1
+fi
+
+# oc logged in
+if ! oc whoami; then
+  printf "Not logged in. Please login as a cluster-admin."
+  exit 1
+fi
+
+# oc version
+OCMIN="4.2.0"
+OCVER=$(oc version -o=yaml | grep  gitVersion | head -1 | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+OCHEAD=$(printf "$OCMIN\n$OCVER" | sort -V | head -n 1)
+if [ "$OCMIN" != "$OCHEAD" ]; then
+  printf "oc client version is $OCVER. Minimum oc client version required is $OCMIN.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest".
+  exit 1
+fi
+
 # Check Subscriptions: subscription-name, namespace
 checksub () {
 	echo "Waiting for Subscription $1 InstallPlan to complete."
@@ -55,6 +79,11 @@ checksub () {
 }
 
 ### CatalogSource
+
+# Recycle the catalog-operator pod to avoid ready state bug
+oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=0
+sleep $SLEEP_SHORT
+oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=1
 
 # Install Kabanero CatalogSource
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
