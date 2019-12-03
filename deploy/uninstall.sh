@@ -18,6 +18,29 @@ SLEEP_SHORT="${SLEEP_SHORT:-2}"
 CRDS=(appsody.dev kabanero.io tekton.dev knative.dev istio.io maistra.io kiali.io jaegertracing.io)
 
 
+### Check prereqs
+
+# oc installed
+if ! which oc; then
+  printf "oc client is required, please install oc client in your PATH.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest"
+  exit 1
+fi
+
+# oc logged in
+if ! oc whoami; then
+  printf "Not logged in. Please login as a cluster-admin."
+  exit 1
+fi
+
+# oc version
+OCMIN="4.2.0"
+OCVER=$(oc version -o=yaml | grep  gitVersion | head -1 | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+OCHEAD=$(printf "$OCMIN\n$OCVER" | sort -V | head -n 1)
+if [ "$OCMIN" != "$OCHEAD" ]; then
+  printf "oc client version is $OCVER. Minimum oc client version required is $OCMIN.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest".
+  exit 1
+fi
+
 ### CustomResources
 
 # If we're completely removing Appsody, make sure all instances of the
@@ -91,6 +114,11 @@ done
 oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
 
+# Tekton Dashboard
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
+
+
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=23-cr-network-policy,kabanero.io/namespace!=true
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=22-cr-knative-serving,kabanero.io/namespace!=true
@@ -126,15 +154,15 @@ if [ `oc get crds kabaneros.kabanero.io --no-headers --ignore-not-found | wc -l`
 fi
 
 
-# Tekton Dashboard
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
-
 
 # Delete CRs
 for CRD in "${CRDS[@]}"
 do
-  oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD | xargs -r -n 1 oc delete --all --all-namespaces=true
+  unset CRDNAMES
+  CRDNAMES=$(oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD)
+  if [ -n "$CRDNAMES" ]; then
+    echo $CRDNAMES | xargs -n 1 oc delete --all --all-namespaces=true
+  fi
 done
 
 
@@ -214,6 +242,10 @@ oc delete clusterrole/istio-admin --ignore-not-found
 # Delete CRDs
 for CRD in "${CRDS[@]}"
 do
-  oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD | xargs -r -n 1 oc delete crd
+  unset CRDNAMES
+  CRDNAMES=$(oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD)
+  if [ -n "$CRDNAMES" ]; then
+    echo $CRDNAMES | xargs -r -n 1 oc delete crd
+  fi
 done
 
