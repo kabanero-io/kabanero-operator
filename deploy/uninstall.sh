@@ -243,7 +243,7 @@ oc delete clusterrole/istio-admin --ignore-not-found
 for CRD in "${CRDS[@]}"
 do
   unset CRDNAMES
-  CRDNAME=$(oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD) | 
+  CRDNAMES=$(oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD)
   if [ -n "$CRDNAMES" ]; then
     echo $CRDNAMES | xargs -r -n 1 oc delete crd
   fi
