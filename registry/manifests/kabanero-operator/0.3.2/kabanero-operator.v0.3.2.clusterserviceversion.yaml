@@ -1,16 +1,15 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: kabanero-operator.v0.4.0
+  name: kabanero-operator.v0.3.2
   namespace: placeholder
   annotations:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator:latest
+    containerImage: kabanero/kabanero-operator:0.3.2
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
-    olm.skipRange: '>=0.3.1 <0.4.0'
     repository: https://github.com/kabanero-io/kabanero-operator
     support: IBM
     alm-examples: |-
@@ -22,12 +21,12 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.4.0",
+            "version": "0.3.2",
             "collections": {
               "repositories": [
                 {
                   "name": "incubator",
-                  "url": "https://github.com/kabanero-io/collections/releases/download/0.4.0-rc.1/kabanero-index.yaml",
+                  "url": "https://github.com/kabanero-io/collections/releases/download/0.3.2/kabanero-index.yaml",
                   "activateDefaultCollections": true
                 }
               ]
@@ -51,7 +50,7 @@ spec:
   minKubeVersion: 1.14.0
   apiservicedefinitions: {}
   maturity: alpha
-  version: 0.4.0
+  version: 0.3.2
   replaces: kabanero-operator.v0.3.1
   displayName: Kabanero Operator
   description: |
@@ -230,7 +229,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator:latest
+                image: kabanero/kabanero-operator:0.3.2
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
