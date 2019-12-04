@@ -9,10 +9,16 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.3.2"
+default: "0.3.3"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
+- version: "0.3.3"
+  related-versions: 
+    cli-services: "0.3.0"
+    landing: "0.3.0"
+    kabanero-che: "0.6.0"
+    webhook: "0.1.0"
 - version: "0.3.2"
   related-versions: 
     cli-services: "0.3.0"

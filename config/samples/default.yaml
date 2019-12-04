@@ -3,9 +3,9 @@ kind: Kabanero
 metadata:
   name: kabanero
 spec:
-  version: "0.3.2"
+  version: "0.3.3"
   collections: 
     repositories: 
     - name: central
-      url: https://github.com/kabanero-io/collections/releases/download/0.3.2/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/0.3.4/kabanero-index.yaml
       activateDefaultCollections: true
