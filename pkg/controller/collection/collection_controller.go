@@ -617,6 +617,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		// Retrieve manifests as unstructured
 		manifests, err := GetManifests(pipeline.Url, pipeline.Sha256, renderingContext, log)
 		if err != nil {
+			collectionResource.Status.StatusMessage = err.Error()
 			return err
 		}
 
