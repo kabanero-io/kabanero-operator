@@ -45,6 +45,9 @@ func DownloadToByte(url string) ([]byte, error) {
 		return nil, errors.New(fmt.Sprintf("Could not download file: %v", url))
 	}
 	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("Could not retrieve the resource: %v. Http status code: %v", url, r.StatusCode))
+	}
 	b, err := ioutil.ReadAll(r.Body)
 	return b, err
 }
