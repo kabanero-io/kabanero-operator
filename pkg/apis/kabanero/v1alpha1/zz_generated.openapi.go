@@ -69,7 +69,7 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CollectionSpec defines the desired state of Collection",
+				Description: "CollectionSpec defines the desired composition of a Collection",
 				Properties: map[string]spec.Schema{
 					"repositoryUrl": {
 						SchemaProps: spec.SchemaProps{
@@ -95,10 +95,23 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref common.ReferenceCallba
 							Format: "",
 						},
 					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionVersion"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionVersion"},
 	}
 }
 
@@ -106,7 +119,7 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CollectionStatus defines the observed state of Collection",
+				Description: "CollectionStatus defines the observed state of a collection",
 				Properties: map[string]spec.Schema{
 					"activeVersion": {
 						SchemaProps: spec.SchemaProps{
@@ -168,11 +181,23 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionStatus(ref common.ReferenceCall
 							},
 						},
 					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionVersionStatus"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Image", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.PipelineStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.CollectionVersionStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.Image", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1.PipelineStatus"},
 	}
 }
 
