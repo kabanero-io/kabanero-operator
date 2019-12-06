@@ -64,31 +64,43 @@ func getServerlessStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogge
 
 // Returns the name of the installed serverless CSV.
 func getInstalledCSVName(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (string, error) {
-	sInstance := &unstructured.Unstructured{}
-	sInstance.SetGroupVersionKind(schema.GroupVersionKind{
+	sList := &unstructured.UnstructuredList{}
+	sList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   olmapiv1alpha1.GroupName,
 		Version: olmapiv1alpha1.GroupVersion,
 		Kind:    olmapiv1alpha1.SubscriptionKind,
 	})
 
-	err := c.Get(context.TODO(), client.ObjectKey{
-		Namespace: serverlessSubscriptionNamespace,
-		Name:      serverlessSubscriptionName}, sInstance)
-
+	listOptions := &client.ListOptions{Namespace: serverlessSubscriptionNamespace}
+	
+  err := c.List(context.TODO(), listOptions, sList)
 	if err != nil {
 		return "", err
 	}
 
-	installedCSVName, found, err := unstructured.NestedString(sInstance.Object, "status", "installedCSV")
-	if err != nil {
-		return "", err
-	}
-	if !found {
-		err = fmt.Errorf("The value of the installedCSV entry in the serverless subscription entry was not found")
-		return "", err
+	for _, curSub := range sList.Items {
+		subscriptionPackageName, found, err := unstructured.NestedString(curSub.Object, "spec", "name")
+		if err != nil {
+			return "", err
+		}
+		if !found {
+			continue
+		}
+		if subscriptionPackageName == serverlessSubscriptionName {
+			installedCSVName, found, err := unstructured.NestedString(curSub.Object, "status", "installedCSV")
+			if err != nil {
+				return "", err
+			}
+			if !found {
+				err = fmt.Errorf("The value of the installedCSV entry in the serverless subscription entry was not found")
+				return "", err
+			}
+
+			return installedCSVName, nil
+		}
 	}
 
-	return installedCSVName, nil
+	return "", fmt.Errorf("The subscription for serverless-operator could not be found")
 }
 
 // Returns the version of the serverless CSV associated with the input CSV name.
