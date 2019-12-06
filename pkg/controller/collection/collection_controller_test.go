@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
@@ -96,158 +97,6 @@ func TestReconcileCollection(t *testing.T) {
 	}
 
 	r.ReconcileCollection(c, k)
-}
-
-// Test that a status is updated with a new digest
-func TestUpdateAssetStatus(t *testing.T) {
-
-	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{
-		Name:   "myAsset",
-		Digest: "678910",
-		Status: "active"},
-	}
-
-	var samplePipeline = Pipelines{
-		Id:     "myPipeline",
-		Sha256: "12345",
-		Url:    "http://myurl.com",
-	}
-
-	var sampleCollectionAsset = CollectionAsset{
-		Name:   "myAsset",
-		Sha256: "678910",
-	}
-
-	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myPipeline", Url: "http://myurl.com", Digest: "12345", ActiveAssets: sampleAsset}}
-
-	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
-
-	updateAssetStatus(&status, samplePipeline, sampleCollectionAsset, "", "active")
-
-	if len(status.ActivePipelines) != 1 {
-		t.Fatal("Status should have one asset in it. Currentl Length: ", status.ActivePipelines)
-	}
-
-	newStatus := status.ActivePipelines[0]
-	if newStatus.Name != samplePipeline.Id {
-		t.Fatal("Status name does not equal asset name")
-	}
-
-	if newStatus.Url != samplePipeline.Url {
-		t.Fatal("Status URL does not equal asset URL")
-	}
-
-	if newStatus.Digest != samplePipeline.Sha256 {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + samplePipeline.Sha256 + ")")
-	}
-
-	if newStatus.ActiveAssets[0].Status != "active" {
-		t.Fatal("Asset status is not active: " + newStatus.ActiveAssets[0].Status)
-	}
-
-	if newStatus.ActiveAssets[0].StatusMessage != "" {
-		t.Fatal("Asset status message is not empty: " + newStatus.ActiveAssets[0].StatusMessage)
-	}
-}
-
-// Test that a previous asset failure can be resolved in the status.
-func TestUpdateAssetStatusFromFailure(t *testing.T) {
-	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{
-		Name:          "myAsset",
-		Digest:        "678910",
-		Status:        "failed",
-		StatusMessage: "someError"},
-	}
-
-	var samplePipeline = Pipelines{
-		Id:     "myPipeline",
-		Sha256: "12345",
-		Url:    "http://myurl.com",
-	}
-
-	var sampleCollectionAsset = CollectionAsset{
-		Name:   "myAsset",
-		Sha256: "678910",
-	}
-	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myPipeline", Url: "http://myurl.com", Digest: "12345", ActiveAssets: sampleAsset}}
-	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
-
-	updateAssetStatus(&status, samplePipeline, sampleCollectionAsset, "", "active")
-
-	if len(status.ActivePipelines) != 1 {
-		t.Fatal("Status should have one asset in it")
-	}
-
-	newStatus := status.ActivePipelines[0]
-	if newStatus.Name != samplePipeline.Id {
-		t.Fatal("Status name does not equal asset name")
-	}
-
-	if newStatus.Url != samplePipeline.Url {
-		t.Fatal("Status URL does not equal asset URL")
-	}
-
-	if newStatus.Digest != samplePipeline.Sha256 {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + samplePipeline.Sha256 + ")")
-	}
-
-	if newStatus.ActiveAssets[0].Status != "active" {
-		t.Fatal("Asset status is not active: " + newStatus.ActiveAssets[0].Status)
-	}
-
-	if newStatus.ActiveAssets[0].StatusMessage != "" {
-		t.Fatal("Asset status message is not empty: " + newStatus.ActiveAssets[0].StatusMessage)
-	}
-}
-
-// Test that a previous active asset can be updated with a failure
-func TestUpdateAssetStatusToFailure(t *testing.T) {
-	var sampleAsset = []kabanerov1alpha1.RepositoryAssetStatus{{
-		Name:   "myAsset",
-		Digest: "678910",
-		Status: "active"},
-	}
-
-	var samplePipeline = Pipelines{
-		Id:     "myPipeline",
-		Sha256: "12345",
-		Url:    "http://myurl.com",
-	}
-
-	var sampleCollectionAsset = CollectionAsset{
-		Name:   "myAsset",
-		Sha256: "678910",
-	}
-	var samplePipelineStatus = []kabanerov1alpha1.PipelineStatus{{Name: "myPipeline", Url: "http://myurl.com", Digest: "12345", ActiveAssets: sampleAsset}}
-	status := kabanerov1alpha1.CollectionStatus{ActivePipelines: samplePipelineStatus}
-
-	errorMessage := "some failure happened"
-	updateAssetStatus(&status, samplePipeline, sampleCollectionAsset, errorMessage, "failed")
-
-	if len(status.ActivePipelines) != 1 {
-		t.Fatal("Status should have one asset in it")
-	}
-
-	newStatus := status.ActivePipelines[0]
-	if newStatus.Name != samplePipeline.Id {
-		t.Fatal("Status name does not equal asset name")
-	}
-
-	if newStatus.Url != samplePipeline.Url {
-		t.Fatal("Status URL does not equal asset URL")
-	}
-
-	if newStatus.Digest != samplePipeline.Sha256 {
-		t.Fatal("Status digest (" + newStatus.Digest + ") does not equal asset digest (" + samplePipeline.Sha256 + ")")
-	}
-
-	if newStatus.ActiveAssets[0].Status != "failed" {
-		t.Fatal("Asset status is not active: " + newStatus.ActiveAssets[0].Status)
-	}
-
-	if newStatus.ActiveAssets[0].StatusMessage != errorMessage {
-		t.Fatal("Asset status message is not empty: " + newStatus.ActiveAssets[0].StatusMessage)
-	}
 }
 
 // Test that failed assets are detected in the Collection instance status
@@ -495,6 +344,14 @@ var badPipeline = fileInfo{
 	name: "/bad.pipeline.tar.gz",
 	sha256: "6e2d419d7971b2ea60148a995914acda4e42c89cc4b38513aeba0aee18c944f3"}
 
+var digest1Pipeline = fileInfo{
+	name: "/digest1.pipeline.tar.gz",
+	sha256: "0238ff31f191396ca4bf5e0ebeea323d012d5dbc7e3f0997e1bf66b017228aaf"}
+
+var digest2Pipeline = fileInfo{
+	name: "/digest2.pipeline.tar.gz",
+	sha256: "c3f28ffca707942a8b351000722f1aebda080e3706aa006650a29d10f4aa226b"}
+
 // --------------------------------------------------------------------------------------------------
 // Test that initial collection activation works
 // --------------------------------------------------------------------------------------------------
@@ -509,12 +366,15 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		Status: kabanerov1alpha1.CollectionStatus{},
 	}
 
+	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
+	
 	pipelineZipUrl := server.URL + basicPipeline.name
 	desiredCollection := Collection{
 		Name: "java-microprofile",
 		Id: "java-microprofile",
 		Version: "0.2.5",
 		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+		Images: []Images{defaultImage},
 	}
 
 	client := unitTestClient{map[string][]metav1.OwnerReference{}}
@@ -549,6 +409,10 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		}
 	}
 
+	if pipeline.Name != desiredCollection.Pipelines[0].Id {
+		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", desiredCollection.Pipelines[0].Id, pipeline.Name))
+	}
+	
 	// Make sure the client has the correct objects.
 	if len(client.objs) != 2 {
 		t.Fatal(fmt.Sprintf("Client map should have 2 entries, but has %v: %v", len(client.objs), client.objs))
@@ -562,6 +426,15 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		if obj[0].UID != collectionResource.UID {
 			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, collectionResource.UID, obj[0].UID))
 		}
+	}
+
+	// Make sure the status lists the images
+	if len(collectionResource.Status.Images) != 1 {
+		t.Fatal(fmt.Sprintf("Status should contain one image, but contains %v: %#v", len(collectionResource.Status.Images), collectionResource.Status))
+	}
+
+	if collectionResource.Status.Images[0].Image != defaultImage.Image {
+		t.Fatal(fmt.Sprintf("Image should be %v, but is %v", defaultImage.Image, collectionResource.Status.Images[0].Image))
 	}
 }
 
@@ -1196,6 +1069,113 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 }
 
 // --------------------------------------------------------------------------------------------------
+// Test that we can't activate a collection that's not in the hub.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsActivateNotInHub(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+
+	collectionResource := kabanerov1alpha1.Collection{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		Spec: kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.5", DesiredState: "active"},
+		Status: kabanerov1alpha1.CollectionStatus{
+			ActiveVersion: "0.2.4",
+			ActivePipelines: []kabanerov1alpha1.PipelineStatus{{
+				Url: "https://somewhere.com/v1/pipeline.tar.gz",
+				Digest: "1234567",
+				Name: "default",
+				ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{{
+					Name: "java-microprofile-build-task",
+					Status: assetStatusActive,
+				}, {
+					Name: "java-microprofile-build-pipeline",
+					Status: assetStatusActive,
+				}, {
+					Name: "java-microprofile-old-asset",
+					Status: assetStatusActive,
+				}},
+			}},
+		},
+	}
+
+	// Note the "desired" collection version doesn't match the one that we want to activate.
+	pipelineZipUrl := server.URL + basicPipeline.name
+	desiredCollection := Collection{
+		Name: "java-microprofile",
+		Id: "java-microprofile",
+		Version: "0.2.6",
+		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+	}
+		
+	// Tell the client what should currently be there.
+	client := unitTestClient{map[string][]metav1.OwnerReference{
+		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}},
+		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: myuid}},
+		"java-microprofile-old-asset": []metav1.OwnerReference{{UID: myuid}}}}
+
+	err := reconcileActiveVersions(&collectionResource, &desiredCollection, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure the collection resource was updated with asset information
+	if len(collectionResource.Status.ActivePipelines) != 0 {
+		t.Fatal(fmt.Sprintf("Collection status should have 0 pipelines, but has %v", len(collectionResource.Status.ActivePipelines)))
+	}
+
+	if collectionResource.Status.ActiveVersion != "" {
+		t.Fatal(fmt.Sprintf("There should be no active version of the collection, but we have %v", collectionResource.Status.ActiveVersion))
+	}
+
+	if collectionResource.Status.StatusMessage == "" {
+		t.Fatal(fmt.Sprintf("There should be an error status set, but there is none: %#v", collectionResource.Status))
+	}
+
+	if strings.Contains(collectionResource.Status.StatusMessage, "is not available") == false {
+		t.Fatal(fmt.Sprintf("The status message should say not available, but it says %v", collectionResource.Status.StatusMessage))
+	}
+
+	if collectionResource.Status.Status != kabanerov1alpha1.CollectionDesiredStateInactive {
+		t.Fatal(fmt.Sprintf("The status should be inactive, but is %v", collectionResource.Status.Status))
+	}
+	
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 0 {
+		t.Fatal(fmt.Sprintf("Client map should have 0 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Reconcile it again and make sure we retain the information.
+	err = reconcileActiveVersions(&collectionResource, &desiredCollection, client)
+
+	if len(collectionResource.Status.ActivePipelines) != 0 {
+		t.Fatal(fmt.Sprintf("Collection status should have 0 pipelines, but has %v", len(collectionResource.Status.ActivePipelines)))
+	}
+
+	if collectionResource.Status.ActiveVersion != "" {
+		t.Fatal(fmt.Sprintf("There should be no active version of the collection, but we have %v", collectionResource.Status.ActiveVersion))
+	}
+
+	if collectionResource.Status.StatusMessage == "" {
+		t.Fatal(fmt.Sprintf("There should be an error status set, but there is none: %#v", collectionResource.Status))
+	}
+
+	if strings.Contains(collectionResource.Status.StatusMessage, "is not available") == false {
+		t.Fatal(fmt.Sprintf("The status message should say not available, but it says %v", collectionResource.Status.StatusMessage))
+	}
+
+	if collectionResource.Status.Status != kabanerov1alpha1.CollectionDesiredStateInactive {
+		t.Fatal(fmt.Sprintf("The status should be inactive, but is %v", collectionResource.Status.Status))
+	}
+	
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 0 {
+		t.Fatal(fmt.Sprintf("Client map should have 0 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
 // Test that a collection can be deactivated when the collection is no longer in the collection hub.
 // --------------------------------------------------------------------------------------------------
 func TestReconcileActiveVersionsDeactivateNotInHub(t *testing.T) {
@@ -1257,3 +1237,602 @@ func TestReconcileActiveVersionsDeactivateNotInHub(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Client map should have 0 entries, but has %v: %v", len(client.objs), client.objs))
 	}
 }
+
+// ==================================================================================================
+// --------------------------------------------------------------------------------------------------
+// The following tests activate multiple versions of a collection.  The supporting controller code
+// will change when the Collection CRD supports having multiple versions listed.
+// --------------------------------------------------------------------------------------------------
+// ==================================================================================================
+
+// --------------------------------------------------------------------------------------------------
+// Test that two versions of the same collection can be activated.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+
+	namespace := "kabanero"
+	assetOwner := metav1.OwnerReference{UID: myuid}
+
+	specs := []kabanerov1alpha1.CollectionSpec{
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.5", DesiredState: "active"},
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.6", DesiredState: "active"},
+	}
+
+	statuses := []kabanerov1alpha1.CollectionStatus{}
+
+	pipelineZipUrl := server.URL + basicPipeline.name
+	collections := []*Collection{
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.5",
+			Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+		},
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+		},
+	}
+
+	client := unitTestClient{map[string][]metav1.OwnerReference{}}
+
+	newStatuses, err := reconcileActiveVersionsInternal(namespace, assetOwner, specs, statuses, collections, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure we got two status structs back
+	if len(newStatuses) != 2 {
+		t.Fatal(fmt.Sprintf("Expected two statuses, but got %v: %#v", len(newStatuses), newStatuses))
+	}
+	
+	// Make sure the collection resource was updated with asset information
+	versionsFound := make(map[string]bool)
+	for _, curStatus := range newStatuses {
+		versionsFound[curStatus.ActiveVersion] = true
+		
+		if len(curStatus.ActivePipelines) != 1 {
+			t.Fatal(fmt.Sprintf("Collection status should have 1 pipeline, but has %v: %v", len(curStatus.ActivePipelines), curStatus))
+		}
+
+		// Make sure the assets were created in the collection status
+		pipeline := curStatus.ActivePipelines[0]
+		if len(pipeline.ActiveAssets) != 2 {
+			t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
+		}
+
+		for _, asset := range pipeline.ActiveAssets {
+			if asset.Status != assetStatusActive {
+				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+			}
+			if asset.StatusMessage != "" {
+				t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+			}
+		}
+	}
+
+	if versionsFound["0.2.5"] == false {
+		t.Fatal(fmt.Sprintf("Did not find version 0.2.5 in the status: %v", newStatuses))
+	}
+
+	if versionsFound["0.2.6"] == false {
+		t.Fatal(fmt.Sprintf("Did not find version 0.2.6 in the status: %v", newStatuses))
+	}
+
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 2 {
+		t.Fatal(fmt.Sprintf("Client map should have 2 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Make sure the client's objects have an owner set.
+	for key, obj := range client.objs {
+		if len(obj) != 1 {
+			t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
+		}
+		if obj[0].UID != assetOwner.UID {
+			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, assetOwner.UID, obj[0].UID))
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
+// Test that two versions of the same collection using different pipelines can be activated.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+
+	namespace := "kabanero"
+	assetOwner := metav1.OwnerReference{UID: myuid}
+
+	specs := []kabanerov1alpha1.CollectionSpec{
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.5", DesiredState: "active"},
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.6", DesiredState: "active"},
+	}
+
+	statuses := []kabanerov1alpha1.CollectionStatus{}
+
+	pipeline1ZipUrl := server.URL + digest1Pipeline.name
+	pipeline2ZipUrl := server.URL + digest2Pipeline.name
+	collections := []*Collection{
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.5",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}},
+		},
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
+		},
+	}
+
+	client := unitTestClient{map[string][]metav1.OwnerReference{}}
+
+	newStatuses, err := reconcileActiveVersionsInternal(namespace, assetOwner, specs, statuses, collections, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure we got two status structs back
+	if len(newStatuses) != 2 {
+		t.Fatal(fmt.Sprintf("Expected two statuses, but got %v: %#v", len(newStatuses), newStatuses))
+	}
+	
+	// Make sure the collection resource was updated with asset information
+	versionsFound := make(map[string]bool)
+	for _, curStatus := range newStatuses {
+		versionsFound[curStatus.ActiveVersion] = true
+		
+		if len(curStatus.ActivePipelines) != 1 {
+			t.Fatal(fmt.Sprintf("Collection status should have 1 pipeline, but has %v: %v", len(curStatus.ActivePipelines), curStatus))
+		}
+
+		// Make sure the assets were created in the collection status
+		pipeline := curStatus.ActivePipelines[0]
+		if len(pipeline.ActiveAssets) != 2 {
+			t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
+		}
+
+		for _, asset := range pipeline.ActiveAssets {
+			if asset.Status != assetStatusActive {
+				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+			}
+			if asset.StatusMessage != "" {
+				t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+			}
+		}
+	}
+
+	if versionsFound["0.2.5"] == false {
+		t.Fatal(fmt.Sprintf("Did not find version 0.2.5 in the status: %v", newStatuses))
+	}
+
+	if versionsFound["0.2.6"] == false {
+		t.Fatal(fmt.Sprintf("Did not find version 0.2.6 in the status: %v", newStatuses))
+	}
+
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 4 {
+		t.Fatal(fmt.Sprintf("Client map should have 4 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Make sure the client's objects have an owner set.
+	for key, obj := range client.objs {
+		if len(obj) != 1 {
+			t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
+		}
+		if obj[0].UID != assetOwner.UID {
+			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, assetOwner.UID, obj[0].UID))
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
+// Test that two versions of the same collection using different pipelines can be activated.  One of
+// the versions is currently active but no longer available in the collection hub.  The operator
+// should continue to use the last-available version of that collection, along with an error message
+// saying that it's not there anymore.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+
+	namespace := "kabanero"
+	assetOwner := metav1.OwnerReference{UID: myuid}
+
+	badRepositoryUrl := "https://bogus.com/kabanero_index.yaml"
+	specs := []kabanerov1alpha1.CollectionSpec{
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.5", DesiredState: "active", RepositoryUrl: badRepositoryUrl},
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.6", DesiredState: "active"},
+	}
+
+	pipeline1ZipUrl := server.URL + digest1Pipeline.name
+	pipeline2ZipUrl := server.URL + digest2Pipeline.name
+
+	// Only the first version of the collection is active
+	statuses := []kabanerov1alpha1.CollectionStatus{
+		kabanerov1alpha1.CollectionStatus{
+			ActiveVersion: "0.2.5",
+			ActivePipelines: []kabanerov1alpha1.PipelineStatus{{
+				Url: pipeline1ZipUrl,
+				Digest: digest1Pipeline.sha256,
+				Name: "default",
+				ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{{
+					Name: "build-task-0238ff31",
+					Status: assetStatusActive,
+				}, {
+					Name: "build-pipeline-0238ff31",
+					Status: assetStatusActive,
+				}},
+			}},
+		},
+	}
+
+	// Only one of the two collection versions will be found in the collection hub.  Only put the 0.2.6 version here.
+	collections := []*Collection{
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
+		},
+	}
+
+	client := unitTestClient{map[string][]metav1.OwnerReference{
+		"build-task-0238ff31": []metav1.OwnerReference{{UID: myuid}},
+		"build-pipeline-0238ff31": []metav1.OwnerReference{{UID: myuid}}}}
+
+	
+	newStatuses, err := reconcileActiveVersionsInternal(namespace, assetOwner, specs, statuses, collections, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure we got two status structs back
+	if len(newStatuses) != 2 {
+		t.Fatal(fmt.Sprintf("Expected two statuses, but got %v: %#v", len(newStatuses), newStatuses))
+	}
+	
+	// Make sure the collection resource was updated with asset information
+	versionsFound := make(map[string]bool)
+	for _, curStatus := range newStatuses {
+		versionsFound[curStatus.ActiveVersion] = true
+		
+		if len(curStatus.ActivePipelines) != 1 {
+			t.Fatal(fmt.Sprintf("Collection status should have 1 pipeline, but has %v: %v", len(curStatus.ActivePipelines), curStatus))
+		}
+
+		// Make sure the assets were created in the collection status
+		pipeline := curStatus.ActivePipelines[0]
+		if len(pipeline.ActiveAssets) != 2 {
+			t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
+		}
+
+		for _, asset := range pipeline.ActiveAssets {
+			if asset.Status != assetStatusActive {
+				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+			}
+			if asset.StatusMessage != "" {
+				t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+			}
+		}
+
+		// Version 0.2.5 was deleted from the collection hub.  Make sure there is an error set.
+		if (curStatus.ActiveVersion == "0.2.5") && (strings.Contains(curStatus.StatusMessage, badRepositoryUrl) == false) {
+			t.Fatal(fmt.Sprintf("Collection version 0.2.5 should have an error message due to collection not being in hub, but has: %v", curStatus.StatusMessage))
+		}
+
+		// Make sure both statuses contain a pipeline name
+		if curStatus.ActivePipelines[0].Name != "default" {
+			t.Fatal(fmt.Sprintf("Collection version %v should contain a pipeline named \"default\", but is %v", curStatus.ActiveVersion, curStatus.ActivePipelines[0].Name))
+		}
+	}
+
+	if versionsFound["0.2.5"] == false {
+		t.Fatal(fmt.Sprintf("Did not find version 0.2.5 in the status: %v", newStatuses))
+	}
+
+	if versionsFound["0.2.6"] == false {
+		t.Fatal(fmt.Sprintf("Did not find version 0.2.6 in the status: %v", newStatuses))
+	}
+
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 4 {
+		t.Fatal(fmt.Sprintf("Client map should have 4 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Make sure the client's objects have an owner set.
+	for key, obj := range client.objs {
+		if len(obj) != 1 {
+			t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
+		}
+		if obj[0].UID != assetOwner.UID {
+			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, assetOwner.UID, obj[0].UID))
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
+// Test that one version of a collection can be deleted but the other remains active.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+
+	namespace := "kabanero"
+	assetOwner := metav1.OwnerReference{UID: myuid}
+
+	// Only want the later version of the collection to be active
+	specs := []kabanerov1alpha1.CollectionSpec{
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.6", DesiredState: "active"},
+	}
+
+	pipeline1ZipUrl := server.URL + digest1Pipeline.name
+	pipeline2ZipUrl := server.URL + digest2Pipeline.name
+
+	// Both versions of the collection are currently active
+	statuses := []kabanerov1alpha1.CollectionStatus{
+		kabanerov1alpha1.CollectionStatus{
+			ActiveVersion: "0.2.5",
+			ActivePipelines: []kabanerov1alpha1.PipelineStatus{{
+				Url: pipeline1ZipUrl,
+				Digest: digest1Pipeline.sha256,
+				Name: "default",
+				ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{{
+					Name: "build-task-0238ff31",
+					Status: assetStatusActive,
+				}, {
+					Name: "build-pipeline-0238ff31",
+					Status: assetStatusActive,
+				}},
+			}},
+		},
+		kabanerov1alpha1.CollectionStatus{
+			ActiveVersion: "0.2.6",
+			ActivePipelines: []kabanerov1alpha1.PipelineStatus{{
+				Url: pipeline2ZipUrl,
+				Digest: digest2Pipeline.sha256,
+				Name: "default",
+				ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{{
+					Name: "build-task-c3f28ffc",
+					Status: assetStatusActive,
+				}, {
+					Name: "build-pipeline-c3f28ffc",
+					Status: assetStatusActive,
+				}},
+			}},
+		},
+	}
+
+	collections := []*Collection{
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.5",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}},
+		},
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
+		},
+	}
+
+	client := unitTestClient{map[string][]metav1.OwnerReference{
+		"build-task-0238ff31": []metav1.OwnerReference{{UID: myuid}},
+		"build-pipeline-0238ff31": []metav1.OwnerReference{{UID: myuid}},
+		"build-task-c3f28ffc": []metav1.OwnerReference{{UID: myuid}},
+		"build-pipeline-c3f28ffc": []metav1.OwnerReference{{UID: myuid}}}}
+
+	newStatuses, err := reconcileActiveVersionsInternal(namespace, assetOwner, specs, statuses, collections, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure we got one status structs back
+	if len(newStatuses) != 1 {
+		t.Fatal(fmt.Sprintf("Expected one status, but got %v: %#v", len(newStatuses), newStatuses))
+	}
+	
+	// Make sure the collection resource was updated with asset information
+	for _, curStatus := range newStatuses {
+		if curStatus.ActiveVersion != "0.2.6" {
+			t.Fatal(fmt.Sprintf("Expected collection version 0.2.6, but found %v: %#v", curStatus.ActiveVersion, curStatus))
+		}
+		
+		if len(curStatus.ActivePipelines) != 1 {
+			t.Fatal(fmt.Sprintf("Collection status should have 1 pipeline, but has %v: %v", len(curStatus.ActivePipelines), curStatus))
+		}
+
+		// Make sure the assets were created in the collection status
+		pipeline := curStatus.ActivePipelines[0]
+		if len(pipeline.ActiveAssets) != 2 {
+			t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
+		}
+
+		for _, asset := range pipeline.ActiveAssets {
+			if asset.Status != assetStatusActive {
+				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+			}
+			if asset.StatusMessage != "" {
+				t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+			}
+		}
+	}
+
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 2 {
+		t.Fatal(fmt.Sprintf("Client map should have 2 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Make sure the client's objects have an owner set.
+	for key, obj := range client.objs {
+		if len(obj) != 1 {
+			t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
+		}
+		if obj[0].UID != assetOwner.UID {
+			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, assetOwner.UID, obj[0].UID))
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
+// Test that one version of a collection can be inactive but the other remains active.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+
+	namespace := "kabanero"
+	assetOwner := metav1.OwnerReference{UID: myuid}
+
+	// Only want the later version of the collection to be active
+	specs := []kabanerov1alpha1.CollectionSpec{
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.5", DesiredState: "inactive"},
+		kabanerov1alpha1.CollectionSpec{Name: "java-microprofile", Version: "0.2.6", DesiredState: "active"},
+	}
+
+	pipeline1ZipUrl := server.URL + digest1Pipeline.name
+	pipeline2ZipUrl := server.URL + digest2Pipeline.name
+
+	// Both versions of the collection are currently active
+	statuses := []kabanerov1alpha1.CollectionStatus{
+		kabanerov1alpha1.CollectionStatus{
+			ActiveVersion: "0.2.5",
+			ActivePipelines: []kabanerov1alpha1.PipelineStatus{{
+				Url: pipeline1ZipUrl,
+				Digest: digest1Pipeline.sha256,
+				Name: "default",
+				ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{{
+					Name: "build-task-0238ff31",
+					Status: assetStatusActive,
+				}, {
+					Name: "build-pipeline-0238ff31",
+					Status: assetStatusActive,
+				}},
+			}},
+		},
+		kabanerov1alpha1.CollectionStatus{
+			ActiveVersion: "0.2.6",
+			ActivePipelines: []kabanerov1alpha1.PipelineStatus{{
+				Url: pipeline2ZipUrl,
+				Digest: digest2Pipeline.sha256,
+				Name: "default",
+				ActiveAssets: []kabanerov1alpha1.RepositoryAssetStatus{{
+					Name: "build-task-c3f28ffc",
+					Status: assetStatusActive,
+				}, {
+					Name: "build-pipeline-c3f28ffc",
+					Status: assetStatusActive,
+				}},
+			}},
+		},
+	}
+
+	collections := []*Collection{
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.5",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}},
+		},
+		&Collection{
+			Name: "java-microprofile",
+			Id: "java-microprofile",
+			Version: "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
+		},
+	}
+
+	client := unitTestClient{map[string][]metav1.OwnerReference{
+		"build-task-0238ff31": []metav1.OwnerReference{{UID: myuid}},
+		"build-pipeline-0238ff31": []metav1.OwnerReference{{UID: myuid}},
+		"build-task-c3f28ffc": []metav1.OwnerReference{{UID: myuid}},
+		"build-pipeline-c3f28ffc": []metav1.OwnerReference{{UID: myuid}}}}
+
+	newStatuses, err := reconcileActiveVersionsInternal(namespace, assetOwner, specs, statuses, collections, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure we got one status structs back
+	if len(newStatuses) != 2 {
+		t.Fatal(fmt.Sprintf("Expected two statuses, but got %v: %#v", len(newStatuses), newStatuses))
+	}
+	
+	// Make sure the collection resource was updated with asset information
+	versionsFound := make(map[string]bool)
+	for _, curStatus := range newStatuses {
+		versionsFound[curStatus.ActiveVersion] = true
+
+		if curStatus.ActiveVersion == "0.2.5" {
+			if len(curStatus.ActivePipelines) != 0 {
+				t.Fatal(fmt.Sprintf("Collection version 0.2.5 should not have any active pipelines: %#v", curStatus.ActivePipelines))
+			}
+
+			if curStatus.StatusMessage == "" {
+				t.Fatal(fmt.Sprintf("Collection version 0.2.5 should have a status message, but has none."))
+			}
+
+			if curStatus.Status != kabanerov1alpha1.CollectionDesiredStateInactive {
+				t.Fatal(fmt.Sprintf("Collection version 0.2.5 should be marked inactive, but is %v", curStatus.Status))
+			}
+		} else if curStatus.ActiveVersion == "0.2.6" {
+			if len(curStatus.ActivePipelines) != 1 {
+				t.Fatal(fmt.Sprintf("Collection status should have 1 pipeline, but has %v: %v", len(curStatus.ActivePipelines), curStatus))
+			}
+
+			// Make sure the assets were created in the collection status
+			pipeline := curStatus.ActivePipelines[0]
+			if len(pipeline.ActiveAssets) != 2 {
+				t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
+			}
+
+			for _, asset := range pipeline.ActiveAssets {
+				if asset.Status != assetStatusActive {
+					t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+				}
+				if asset.StatusMessage != "" {
+					t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+				}
+			}
+		} else {
+			t.Fatal(fmt.Sprintf("Found an invalid version: %v", curStatus.ActiveVersion))
+		}
+	}
+
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 2 {
+		t.Fatal(fmt.Sprintf("Client map should have 2 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Make sure the client's objects have an owner set.
+	for key, obj := range client.objs {
+		if len(obj) != 1 {
+			t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
+		}
+		if obj[0].UID != assetOwner.UID {
+			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, assetOwner.UID, obj[0].UID))
+		}
+	}
+}
+
+// TODO: More "multiple collection" tests...
