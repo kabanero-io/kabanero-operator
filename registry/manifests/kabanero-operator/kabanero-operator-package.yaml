@@ -3,7 +3,7 @@ channels:
 - name: alpha
   currentCSV: kabanero-operator.v0.4.0
 - name: release-0.3
-  currentCSV: kabanero-operator.v0.3.2
+  currentCSV: kabanero-operator.v0.3.3
 - name: release-0.4
   currentCSV: kabanero-operator.v0.4.0
 defaultChannel: release-0.4
