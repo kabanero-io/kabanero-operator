@@ -42,13 +42,13 @@ build-image: generate
 	cp LICENSE build/registry/LICENSE
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
-	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/0.3.3/
+	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/0.3.4/
 
 ifdef INTERNAL_IMAGE
   # Deployment uses internal registry service address
-	sed -e "s!kabanero/kabanero-operator:latest!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:latest!${INTERNAL_IMAGE}!" registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml
 else
-	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:latest!${IMAGE}!" registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml
 endif
 
 	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
@@ -56,12 +56,12 @@ endif
   # If we're doing a Travis build, need to build a second image because the CSV
   # in the registry image has to point to the tagged operator image.
 ifdef TRAVIS_TAG
-	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_TAG}!" registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_TAG}!" registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml
 	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_TAG} -f build/registry/Dockerfile build/registry/
 endif
 
 ifdef TRAVIS_BRANCH
-	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_BRANCH}!" registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.3/kabanero-operator.v0.3.3.clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:latest!${REPOSITORY}:${TRAVIS_BRANCH}!" registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/0.3.4/kabanero-operator.v0.3.4.clusterserviceversion.yaml
 	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_BRANCH} -f build/registry/Dockerfile build/registry/
 endif
 

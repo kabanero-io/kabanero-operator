@@ -1,8 +1,8 @@
 packageName: kabanero-operator
 channels:
 - name: alpha
-  currentCSV: kabanero-operator.v0.3.3
+  currentCSV: kabanero-operator.v0.3.4
 - name: kabanero-0.3
-  currentCSV: kabanero-operator.v0.3.3
+  currentCSV: kabanero-operator.v0.3.4
 defaultChannel: kabanero-0.3
 
