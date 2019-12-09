@@ -13,12 +13,20 @@ default: "0.4.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
+- version: "0.5.0"
+  related-versions: 
+    cli-services: "0.4.0-rc.1"
+    landing: "0.4.0-rc.1"
+    kabanero-che: "0.6.0"
+    events: "0.1.0"
+    collection-controller: "0.4.0"
+    admission-webhook: "0.4.0"
 - version: "0.4.0"
   related-versions: 
     cli-services: "0.4.0-rc.1"
     landing: "0.4.0-rc.1"
     kabanero-che: "0.6.0"
-    webhook: "0.1.0"
+    events: "0.1.0"
     collection-controller: "0.4.0"
     admission-webhook: "0.4.0"
 - version: "0.3.3"
@@ -26,7 +34,7 @@ kabanero:
     cli-services: "0.3.0"
     landing: "0.3.0"
     kabanero-che: "0.6.0"
-    webhook: "0.1.0"
+    events: "0.1.0"
     collection-controller: "0.4.0"
     admission-webhook: "0.4.0"
 - version: "0.3.2"
@@ -34,7 +42,7 @@ kabanero:
     cli-services: "0.3.0"
     landing: "0.3.0"
     kabanero-che: "0.6.0"
-    webhook: "0.1.0"
+    events: "0.1.0"
     collection-controller: "0.4.0"
     admission-webhook: "0.4.0"
 - version: "0.3.1"
@@ -42,7 +50,7 @@ kabanero:
     cli-services: "0.3.0"
     landing: "0.3.0"
     kabanero-che: "0.6.0"
-    webhook: "0.1.0"
+    events: "0.1.0"
     collection-controller: "0.4.0"
     admission-webhook: "0.4.0"
 - version: "0.3.0"
@@ -50,7 +58,7 @@ kabanero:
     cli-services: "0.3.0"
     landing: "0.3.0"
     kabanero-che: "0.6.0"
-    webhook: "0.1.0"
+    events: "0.1.0"
     collection-controller: "0.4.0"
     admission-webhook: "0.4.0"
 
@@ -87,11 +95,11 @@ related-software:
       repository: "kabanero/kabanero-che"
       tag: "0.6.0"
 
-  webhook:
+  events:
   - version: "0.1.0"
-    orchestrations: "orchestrations/webhook/0.1"
+    orchestrations: "orchestrations/events/0.1"
     identifiers:
-      repository: "kabanero/kabanero-webhook"
+      repository: "kabanero/kabanero-events"
       tag: "0.1"
 
   collection-controller: 

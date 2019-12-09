@@ -3,33 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: kabaneros.kabanero.io
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .metadata.creationTimestamp
-    description: CreationTimestamp is a timestamp representing the server time when
-      this object was created. It is not guaranteed to be set in happens-before order
-      across separate operations.
-    name: Age
-    type: date
-  - JSONPath: .status.kabaneroInstance.version
-    description: Kabanero operator instance version.
-    name: Version
-    type: string
-  - JSONPath: .status.kabaneroInstance.ready
-    description: Kabanero operator instance readiness status. The status is directly
-      correlated to the availability of the operator's resources dependencies.
-    name: Ready
-    type: string  
-  conversion:
-    strategy: None
   group: kabanero.io
-  names:
-    kind: Kabanero
-    listKind: KabaneroList
-    plural: kabaneros
-    singular: kabanero
-  scope: Namespaced
-  subresources:
-    status: {}
   version: v1alpha1
   versions:
   - name: v1alpha1
@@ -52,19 +26,19 @@ spec:
             type: object
           spec:
             properties:
-              admissionControllerWebhook:
-                properties:
-                  image:
-                    type: string
-                  repository:
-                    type: string
-                  tag:
-                    type: string
-                  version:
-                    type: string
-                type: object
               che:
                 properties:
+                  cheOperator:
+                    properties:
+                      image:
+                        type: string
+                      repository:
+                        type: string
+                      tag:
+                        type: string
+                      version:
+                        type: string
+                    type: object
                   cheOperatorInstance:
                     properties:
                       cheWorkspaceClusterRole:
@@ -125,19 +99,6 @@ spec:
                       type: object
                     type: array
                 type: object
-              events:
-                properties:
-                  enable:
-                    type: boolean
-                  image:
-                    type: string
-                  repository:
-                    type: string
-                  tag:
-                    type: string
-                  version:
-                    type: string
-                type: object
               github:
                 properties:
                   apiUrl:
@@ -169,25 +130,28 @@ spec:
                 type: object
               version:
                 type: string
+              webhook:
+                properties:
+                  enable:
+                    type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
             type: object
           status:
             properties:
-              admissionControllerWebhook:
-                description: Admission webhook instance status
-                properties:
-                  errorMessage:
-                    type: string
-                  ready:
-                    type: string
-                type: object
               appsody:
                 description: Appsody instance readiness status.
                 properties:
                   errorMessage:
                     type: string
                   ready:
-                    type: string
-                  version:
                     type: string
                 type: object
               che:
@@ -237,18 +201,6 @@ spec:
                   ready:
                     type: string
                   version:
-                    type: string
-                type: object
-              events:
-                description: Events instance status
-                properties:
-                  errorMessage:
-                    type: string
-                  hostnames:
-                    items:
-                      type: string
-                    type: array
-                  ready:
                     type: string
                 type: object
               kabaneroInstance:
@@ -327,5 +279,42 @@ spec:
                   version:
                     type: string
                 type: object
+              webhook:
+                description: Webhook instance status
+                properties:
+                  errorMessage:
+                    type: string
+                  hostnames:
+                    items:
+                      type: string
+                    type: array
+                  ready:
+                    type: string
+                type: object
             type: object
-
+  conversion:
+    strategy: None
+  names:
+    kind: Kabanero
+    listKind: KabaneroList
+    plural: kabaneros
+    singular: kabanero
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.kabaneroInstance.version
+    description: Kabanero operator instance version.
+    name: Version
+    type: string
+  - JSONPath: .status.kabaneroInstance.ready
+    description: Kabanero operator instance readiness status. The status is directly
+      correlated to the availability of the operator's resources dependencies.
+    name: Ready
+    type: string

@@ -18,16 +18,16 @@ import (
 	"strings"
 )
 
-func reconcileWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
+func reconcileEvents(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 
-	// The Webhook entry was not configured in the spec.  We should disable it.
-	if k.Spec.Webhook.Enable == false {
-		cleanupWebhook(ctx, k, cl)
+	// The Events entry was not configured in the spec.  We should disable it.
+	if k.Spec.Events.Enable == false {
+		cleanupEvents(ctx, k, cl)
 		return nil
 	}
 
-	// Deploy the Kabanero webhook components - service acct, role, etc
-	rev, err := resolveSoftwareRevision(k, "webhook", k.Spec.Webhook.Version)
+	// Deploy the Kabanero events components - service acct, role, etc
+	rev, err := resolveSoftwareRevision(k, "events", k.Spec.Events.Version)
 	if err != nil {
 		return err
 	}
@@ -35,13 +35,13 @@ func reconcileWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl clie
 	//The context which will be used to render any templates
 	templateContext := rev.Identifiers
 
-	image, err := imageUriWithOverrides(k.Spec.Webhook.Repository, k.Spec.Webhook.Tag, k.Spec.Webhook.Image, rev)
+	image, err := imageUriWithOverrides(k.Spec.Events.Repository, k.Spec.Events.Tag, k.Spec.Events.Image, rev)
 	if err != nil {
 		return err
 	}
 	templateContext["image"] = image
 
-	f, err := rev.OpenOrchestration("kabanero-webhook.yaml")
+	f, err := rev.OpenOrchestration("kabanero-events.yaml")
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,8 @@ func reconcileWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl clie
 		return err
 	}
 
-	// Create the default webhook secret, if we don't already have one
-	err = createDefaultWebhookSecret(k, cl, reqLogger)
+	// Create the default events secret, if we don't already have one
+	err = createDefaultEventsSecret(k, cl, reqLogger)
 	if err != nil {
 		return err
 	}
@@ -80,22 +80,22 @@ func reconcileWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl clie
 	return nil
 }
 
-// Remove the webhook resources
-func cleanupWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	rev, err := resolveSoftwareRevision(k, "webhook", k.Spec.Webhook.Version)
+// Remove the events resources
+func cleanupEvents(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
+	rev, err := resolveSoftwareRevision(k, "events", k.Spec.Events.Version)
 	if err != nil {
 		return err
 	}
 
 	templateCtx := rev.Identifiers
-	image, err := imageUriWithOverrides(k.Spec.Webhook.Repository, k.Spec.Webhook.Tag, k.Spec.Webhook.Image, rev)
+	image, err := imageUriWithOverrides(k.Spec.Events.Repository, k.Spec.Events.Tag, k.Spec.Events.Image, rev)
 	if err != nil {
 		return err
 	}
 
 	templateCtx["image"] = image
 
-	f, err := rev.OpenOrchestration("kabanero-webhook.yaml")
+	f, err := rev.OpenOrchestration("kabanero-events.yaml")
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func cleanupWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client
 	// Check if the ConfigMap resource already exists.
 	secret := &corev1.Secret{}
 	err = cl.Get(context.Background(), types.NamespacedName{
-		Name:      "default-webhook-secret",
+		Name:      "default-events-secret",
 		Namespace: k.ObjectMeta.Namespace}, secret)
 
 	if err != nil {
@@ -149,26 +149,26 @@ func cleanupWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client
 }
 
 
-// Tries to see if the webhook route has been assigned a hostname.
-func getWebhookRouteStatus(k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
+// Tries to see if the events route has been assigned a hostname.
+func getEventsRouteStatus(k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
 
 	// If disabled. Nothing to do. No need to display status if disabled.
-	if k.Spec.Webhook.Enable == false {
-		k.Status.Webhook = nil
+	if k.Spec.Events.Enable == false {
+		k.Status.Events = nil
 		return true, nil
 	}
 
-	k.Status.Webhook = &kabanerov1alpha1.WebhookStatus{}
-	k.Status.Webhook.Ready = "False"
+	k.Status.Events = &kabanerov1alpha1.EventsStatus{}
+	k.Status.Events.Ready = "False"
 	
 	// Check that the route is accepted
-	webhookRoute := &routev1.Route{}
-	webhookRouteName := types.NamespacedName{Namespace: k.ObjectMeta.Namespace, Name: "kabanero-webhook"}
-	err := cl.Get(context.TODO(), webhookRouteName, webhookRoute)
+	eventsRoute := &routev1.Route{}
+	eventsRouteName := types.NamespacedName{Namespace: k.ObjectMeta.Namespace, Name: "kabanero-events"}
+	err := cl.Get(context.TODO(), eventsRouteName, eventsRoute)
 	if err == nil {
-		k.Status.Webhook.Hostnames = nil
+		k.Status.Events.Hostnames = nil
 		// Looking for an ingress that has an admitted status and a hostname
-		for _, ingress := range webhookRoute.Status.Ingress {
+		for _, ingress := range eventsRoute.Status.Ingress {
 			var routeAdmitted bool = false
 			for _, condition := range ingress.Conditions {
 				if condition.Type == routev1.RouteAdmitted && condition.Status == corev1.ConditionTrue {
@@ -176,38 +176,38 @@ func getWebhookRouteStatus(k *kabanerov1alpha1.Kabanero, cl client.Client, reqLo
 				}
 			}
 			if routeAdmitted == true && len(ingress.Host) > 0 {
-				k.Status.Webhook.Hostnames = append(k.Status.Webhook.Hostnames, ingress.Host)
+				k.Status.Events.Hostnames = append(k.Status.Events.Hostnames, ingress.Host)
 			}
 		}
 		// If we found a hostname from an admitted route, we're done.
-		if len(k.Status.Webhook.Hostnames) > 0 {
-			k.Status.Webhook.Ready = "True"
-			k.Status.Webhook.ErrorMessage = ""
+		if len(k.Status.Events.Hostnames) > 0 {
+			k.Status.Events.Ready = "True"
+			k.Status.Events.ErrorMessage = ""
 		} else {
-			k.Status.Webhook.Ready = "False"
-			k.Status.Webhook.ErrorMessage = "There were no accepted ingress objects in the Route"
+			k.Status.Events.Ready = "False"
+			k.Status.Events.ErrorMessage = "There were no accepted ingress objects in the Route"
 			return false, err
 		}
 	} else {
 		var message string
 		if errors.IsNotFound(err) {
-			message = "The Route object for the webhook was not found"
+			message = "The Route object for the events was not found"
 		} else {
-			message = "An error occurred retrieving the Route object for the webhook"
+			message = "An error occurred retrieving the Route object for the events"
 		}
 		reqLogger.Error(err, message)
-		k.Status.Webhook.Ready = "False"
-		k.Status.Webhook.ErrorMessage = message + ": " + err.Error()
-		k.Status.Webhook.Hostnames = nil
+		k.Status.Events.Ready = "False"
+		k.Status.Events.ErrorMessage = message + ": " + err.Error()
+		k.Status.Events.Hostnames = nil
 		return false, err
 	}
 
 	return true, nil
 }
 
-// Creates the default webhook secret
-func createDefaultWebhookSecret(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
-	secretName := "default-webhook-secret"
+// Creates the default events secret
+func createDefaultEventsSecret(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+	secretName := "default-events-secret"
 
 	// Check if the Secret already exists.
 	secretInstance := &corev1.Secret{}
@@ -249,7 +249,7 @@ func createDefaultWebhookSecret(k *kabanerov1alpha1.Kabanero, c client.Client, r
 		secretMap["secret"] = buf.String()
 		secretInstance.StringData = secretMap
 
-		reqLogger.Info(fmt.Sprintf("Attempting to create the default webhook secret"))
+		reqLogger.Info(fmt.Sprintf("Attempting to create the default events secret"))
 		err = c.Create(context.TODO(), secretInstance)
 	}
 

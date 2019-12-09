@@ -3,6 +3,17 @@ kind: CustomResourceDefinition
 metadata:
   name: collections.kabanero.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.status
+    description: Collection status.
+    name: Status
+    type: string
   group: kabanero.io
   names:
     kind: Collection
