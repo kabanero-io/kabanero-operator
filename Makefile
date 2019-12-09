@@ -161,7 +161,7 @@ deploy-olm:
 
 	kubectl apply -f deploy/olm/
 
-# Update deployment to correct image
+# Update deployment to correct image 
 ifdef INTERNAL_REGISTRY
 	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE_SVC}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 else
