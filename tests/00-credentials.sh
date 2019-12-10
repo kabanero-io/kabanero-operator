@@ -23,5 +23,10 @@ if [ "$USER" != "kube:admin" ]; then
 fi
 
 HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-docker login -u admin -p $(oc whoami -t) ${HOST}
+
+if [ "$USER" == "kube:admin" ]; then
+  USER=kubeadmin
+fi
+
+docker login -u $USER -p $(oc whoami -t) ${HOST}
 
