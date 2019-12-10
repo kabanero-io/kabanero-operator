@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# Delete a collection and ensure the operator reconciler recreates it
+# Delete a collection and ensure the operator reconciler does not reactivate it
 
 set -Eeox pipefail
 
 namespace=kabanero
+
+ORIGYAML=$(oc get -n ${namespace} kabanero kabanero --export -o=json)
 
 # Update kabanero
 oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat 23-merge.yaml)"
@@ -47,6 +49,5 @@ if oc -n ${namespace} get pipeline java-microprofile-build-pipeline; then
 fi
 
 
-# Reset to default
-
-oc -n ${namespace} apply -f ../config/samples/full.yaml
+# Reset 
+echo $ORIGYAML | oc apply -f -

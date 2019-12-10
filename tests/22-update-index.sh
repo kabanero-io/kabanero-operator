@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# Delete a collection and ensure the operator reconciler recreates it
+# Update the kabanero index URL and ensure the URL is updated for the collection
 
 set -Eeox pipefail
 
 namespace=kabanero
+
+ORIGYAML=$(oc get -n ${namespace} kabanero kabanero --export -o=json)
 
 # Update kabanero collection url
 oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat 22-merge.yaml)"
@@ -23,7 +25,5 @@ do
  fi
 done
 
-
-# Reset to default
-
-oc -n ${namespace} apply -f ../config/samples/full.yaml
+# Reset 
+echo $ORIGYAML | oc apply -f -
