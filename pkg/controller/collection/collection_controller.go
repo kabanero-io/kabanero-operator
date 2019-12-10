@@ -539,6 +539,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		"CollectionName": collection.Name,
 	}
 
+	errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
+
 	// Detect if the version is changing from the active version.  If it is, we need to clean up the
 	// assets from the previous version.
 	if (collectionResource.Status.ActiveVersion != "") && (collectionResource.Status.ActiveVersion != collection.Version) {
@@ -552,7 +554,6 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		}
 
 		var transformedManifests []transformedRemoteManifest
-		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
 
 		for _, pipeline := range collectionResource.Status.ActivePipelines {
 			// Add the Digest to the rendering context.
@@ -563,7 +564,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			if err != nil {
 				log.Error(err, errorMessage, "resource", pipeline.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-				return nil // Forces status to be updated
+				return err
 			}
 
 			for _, asset := range pipeline.ActiveAssets {
@@ -613,6 +614,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		// Retrieve manifests as unstructured
 		manifests, err := GetManifests(pipeline.Url, pipeline.Sha256, renderingContext, log)
 		if err != nil {
+			log.Error(err, errorMessage, "resource", pipeline.Url)
+			collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
 			return err
 		}
 
