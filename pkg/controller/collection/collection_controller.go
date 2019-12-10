@@ -539,8 +539,6 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		"CollectionName": collection.Name,
 	}
 
-	errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
-
 	// Detect if the version is changing from the active version.  If it is, we need to clean up the
 	// assets from the previous version.
 	if (collectionResource.Status.ActiveVersion != "") && (collectionResource.Status.ActiveVersion != collection.Version) {
@@ -554,6 +552,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		}
 
 		var transformedManifests []transformedRemoteManifest
+		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
 
 		for _, pipeline := range collectionResource.Status.ActivePipelines {
 			// Add the Digest to the rendering context.
@@ -606,6 +605,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	}
 
 	// Now apply the new version
+	errorMessage := "Error during version apply to " + collection.Version
 	for _, pipeline := range collection.Pipelines {
 		log.Info(fmt.Sprintf("Applying assets %v", pipeline.Url))
 		// Add the Digest to the rendering context.
