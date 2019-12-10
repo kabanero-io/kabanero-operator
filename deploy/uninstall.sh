@@ -115,8 +115,8 @@ oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.
 
 
 # Tekton Dashboard
-oc delete --ignore-not-found -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/tekton-triggers/deploy/tekton-dashboard-nightly/openshift-tekton-webhooks-extension.yaml
-oc delete --ignore-not-found -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/tekton-triggers/deploy/tekton-dashboard-nightly/openshift-tekton-dashboard.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-openshift-tekton-dashboard-release.yaml
 
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
