@@ -3,28 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: collections.kabanero.io
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .metadata.creationTimestamp
-    description: CreationTimestamp is a timestamp representing the server time when
-      this object was created. It is not guaranteed to be set in happens-before order
-      across separate operations.
-    name: Age
-    type: date
-  - JSONPath: .status.status
-    description: Collection status.
-    name: Status
-    type: string
-  conversion:
-    strategy: None
   group: kabanero.io
-  names:
-    kind: Collection
-    listKind: CollectionList
-    plural: collections
-    singular: collection
-  scope: Namespaced
-  subresources:
-    status: {}
   version: v1alpha1
   versions:
   - name: v1alpha1
@@ -108,4 +87,25 @@ spec:
               statusMessage:
                 type: string
             type: object
+  conversion:
+    strategy: None
+  names:
+    kind: Collection
+    listKind: CollectionList
+    plural: collections
+    singular: collection
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.status
+    description: Collection status.
+    name: Status
+    type: string
 
