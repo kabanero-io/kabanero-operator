@@ -9,7 +9,7 @@ namespace=kabanero
 ORIGYAML=$(oc get -n ${namespace} kabanero kabanero --export -o=json)
 
 # Update kabanero collection url
-oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat 22-merge.yaml)"
+oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat $(dirname "$0")/22-merge.yaml)"
 
 
 echo "Waiting for java-microprofile collection URL to update"

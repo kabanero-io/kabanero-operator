@@ -9,7 +9,7 @@ namespace=kabanero
 ORIGYAML=$(oc get -n ${namespace} kabanero kabanero --export -o=json)
 
 # Update kabanero
-oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat 23-merge.yaml)"
+oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat $(dirname "$0")/23-merge.yaml)"
 
 sleep 5
 
