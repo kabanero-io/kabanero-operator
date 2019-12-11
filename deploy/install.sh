@@ -35,6 +35,15 @@ if [ "$OCMIN" != "$OCHEAD" ]; then
   exit 1
 fi
 
+# Check to see if we're upgrading, and if so, that we're at N-1 or N.
+if [ `oc get subscription kabanero-operator -n kabanero --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then
+		CSV=$(oc get subscription kabanero-operator -n kabanero --output=jsonpath={.status.installedCSV})
+    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[45]\..* ]]; then
+        printf "Cannot upgrade kabanero-operator CSV version $CSV to $RELEASE.  Upgrade is supported from the previous minor release."
+        exit 1
+    fi
+fi
+
 # Check Subscriptions: subscription-name, namespace
 checksub () {
 	echo "Waiting for Subscription $1 InstallPlan to complete."
