@@ -78,15 +78,34 @@ checksub () {
 	done
 }
 
+### Upgrade Prep
+
+# ServiceMeshMemberRole
+# serverless-operator.v1.2.0+ manages smmr, clean up
+oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=21-cr-servicemeshmemberrole || true
+
+# CatalogSource
+# Delete previous CatalogSource to ensure visibility of updated catalog CSVs
+oc delete -f $KABANERO_SUBSCRIPTIONS_YAML  --ignore-not-found --selector kabanero.io/install=00-catalogsource
+
+
+### Install
+
 ### CatalogSource
 
-# Recycle the catalog-operator pod to avoid ready state bug
+# Stop the catalog-operator pod to avoid ready state bug
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=0
-sleep $SLEEP_SHORT
-oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=1
+sleep $SLEEP_LONG
 
 # Install Kabanero CatalogSource
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+
+# Restart the catalog-operator pod to avoid ready state bug
+sleep $SLEEP_LONG
+oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=1
+
+
+
 
 # Check the CatalogSource is ready
 unset LASTOBSERVEDSTATE
@@ -151,8 +170,6 @@ do
 	sleep $SLEEP_SHORT
 done
 
-# ServiceMeshMemberRole
-oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=21-cr-servicemeshmemberrole
 
 # Serving
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=22-cr-knative-serving
