@@ -563,7 +563,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			if err != nil {
 				log.Error(err, errorMessage, "resource", pipeline.Url)
 				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-				return nil // Forces status to be updated
+				return err
 			}
 
 			for _, asset := range pipeline.ActiveAssets {
@@ -605,6 +605,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	}
 
 	// Now apply the new version
+	errorMessage := "Error during version apply to " + collection.Version
 	for _, pipeline := range collection.Pipelines {
 		log.Info(fmt.Sprintf("Applying assets %v", pipeline.Url))
 		// Add the Digest to the rendering context.
@@ -613,6 +614,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 		// Retrieve manifests as unstructured
 		manifests, err := GetManifests(pipeline.Url, pipeline.Sha256, renderingContext, log)
 		if err != nil {
+			log.Error(err, errorMessage, "resource", pipeline.Url)
+			collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
 			return err
 		}
 

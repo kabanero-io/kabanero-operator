@@ -192,7 +192,7 @@ dependency-report:
 # Requires jq
 
 # Install Test
-int-test-install: creds build-image push-image int-install
+int-test-install: creds build-image push-image int-install int-config
 
 creds:
 	tests/00-credentials.sh
@@ -207,10 +207,12 @@ endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
 
+int-config:
+# Update config to correct image
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero-operator-collection-controller::.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl apply -f -
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl apply -f -
 else
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero-operator-collection-controller::.*!image: ${COLLECTION_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
 endif
 
 # Uninstall Test
