@@ -10,31 +10,45 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetInstalledCSVName retrieves the name of the installed serverless CSV.
+// GetInstalledCSVName retrieves the name of the installed CSV from the subscription.
 func GetInstalledCSVName(c client.Client, cok client.ObjectKey) (string, error) {
-	sInstance := &unstructured.Unstructured{}
-	sInstance.SetGroupVersionKind(schema.GroupVersionKind{
+	sList := &unstructured.UnstructuredList{}
+	sList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   olmapiv1alpha1.GroupName,
 		Version: olmapiv1alpha1.GroupVersion,
 		Kind:    olmapiv1alpha1.SubscriptionKind,
 	})
 
-	err := c.Get(context.TODO(), cok, sInstance)
-
+	listOptions := &client.ListOptions{Namespace: cok.Namespace}
+	
+  err := c.List(context.TODO(), listOptions, sList)
 	if err != nil {
 		return "", err
 	}
 
-	installedCSVName, found, err := unstructured.NestedString(sInstance.Object, "status", "installedCSV")
-	if err != nil {
-		return "", err
-	}
-	if !found {
-		err = fmt.Errorf("The value of the installedCSV entry in the subscription was not found")
-		return "", err
+	for _, curSub := range sList.Items {
+		subscriptionPackageName, found, err := unstructured.NestedString(curSub.Object, "spec", "name")
+		if err != nil {
+			return "", err
+		}
+		if !found {
+			continue
+		}
+		if subscriptionPackageName == cok.Name {
+			installedCSVName, found, err := unstructured.NestedString(curSub.Object, "status", "installedCSV")
+			if err != nil {
+				return "", err
+			}
+			if !found {
+				err = fmt.Errorf("The value of the installedCSV entry in the subscription entry was not found")
+				return "", err
+			}
+
+			return installedCSVName, nil
+		}
 	}
 
-	return installedCSVName, nil
+	return "", fmt.Errorf("The subscription %v could not be found", cok.Name)
 }
 
 // GetCSVSpecVersion retrieves the version of the serverless CSV associated with the input CSV name.
