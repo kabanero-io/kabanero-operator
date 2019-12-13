@@ -15,8 +15,8 @@ default: "0.4.0"
 kabanero:
 - version: "0.4.0"
   related-versions: 
-    cli-services: "0.4.0-rc.1"
-    landing: "0.4.0-rc.1"
+    cli-services: "0.4.0"
+    landing: "0.4.0"
     kabanero-che: "0.6.0"
     webhook: "0.1.0"
     collection-controller: "0.4.0"
@@ -64,6 +64,11 @@ kabanero:
 
 related-software:
   landing:
+  - version: "0.4.0"
+    orchestrations: "orchestrations/landing/0.1"
+    identifiers:
+      repository: "kabanero/landing"
+      tag: "0.4.0"
   - version: "0.4.0-rc.1"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
@@ -76,6 +81,11 @@ related-software:
       tag: "0.3.0"
 
   cli-services: 
+  - version: "0.4.0"
+    orchestrations: "orchestrations/cli-services/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.4.0"
   - version: "0.4.0-rc.1"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
@@ -107,11 +117,11 @@ related-software:
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
       repository: "kabanero/kabanero-operator-collection-controller"
-      tag: "0.4.0-rc.1"
+      tag: "0.4.0"
 
   admission-webhook:
   - version: "0.4.0"
     orchestrations: "orchestrations/admission-webhook/0.1"
     identifiers:
       repository: "kabanero/kabanero-operator-admission-webhook"
-      tag: "0.4.0-rc.1"
+      tag: "0.4.0"
