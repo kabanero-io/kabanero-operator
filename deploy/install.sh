@@ -39,6 +39,9 @@ fi
 checksub () {
 	echo "Waiting for Subscription $1 InstallPlan to complete."
 
+	# Wait 2 resync periods for OLM to emit new installplan
+	sleep 60
+
 	# Wait for the InstallPlan to be generated and available on status
 	unset INSTALL_PLAN
 	until oc get subscription $1 -n $2 --output=jsonpath={.status.installPlanRef.name}
