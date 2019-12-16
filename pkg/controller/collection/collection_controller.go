@@ -173,7 +173,20 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 
 	rr, err := r.ReconcileCollection(instance, k)
 
-	// Update the status
+	// Temporary. Copy the collection status for now since as of this update we only support only one collection version.
+	s := kabanerov1alpha1.CollectionVersionStatus{
+		Version:       instance.Status.ActiveVersion,
+		Location:      instance.Status.ActiveLocation,
+		Pipelines:     instance.Status.ActivePipelines,
+		Status:        instance.Status.Status,
+		StatusMessage: instance.Status.StatusMessage,
+		Images:        instance.Status.Images}
+	if len(instance.Status.Versions) < 1 {
+		instance.Status.Versions = append(instance.Status.Versions, s)
+	} else {
+		instance.Status.Versions[0] = s
+	}
+
 	r.client.Status().Update(ctx, instance)
 
 	// Force a requeue if there are failed assets.  These should be retried, and since
@@ -314,11 +327,11 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		if err != nil {
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
-		
+
 		c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
 		return reconcile.Result{}, nil
 	}
-	
+
 	// Retreive all matching collection names from all remote indexes.  If none were specified,
 	// build and log an error and return.
 	// TODO: Start using the URL in the Collection object so we don't need to reference the

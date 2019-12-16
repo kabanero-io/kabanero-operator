@@ -90,7 +90,7 @@ spec:
       # A collection's desiredState value of active or inactive is what determines whether the 
       # assets associated with a collection object are activated or deactived.
       # Setting activateDefaultCollections to true sets the collection's initial desiredState to "active". 
-      # Setting activateDefaultCollections to true sets the collection's initial desiredState to "inactive".
+      # Setting activateDefaultCollections to false sets the collection's initial desiredState to "inactive".
       # ActivateDefaultCollections' default value is false.
       activateDefaultCollections: true
 
