@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	consolev1 "github.com/openshift/api/console/v1"
@@ -15,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -70,27 +71,79 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 		return err
 	}
 
-	// Create a clientset to drive API operations on resources.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
 	// Retrieve the kabanero landing URL.
-	landingURL, err := getLandingURL(k, c, config)
+	landingURL, err := getLandingURL(k, c)
 	if err != nil {
 		return err
 	}
 
 	// Create a Deployment. The landing application requires knowledge of the landingURL
 	// post route creation.
-	env := []corev1.EnvVar{{Name: "LANDING_URL", Value: landingURL}}
-	err = createDeployment(k, clientset, c, "kabanero-landing", image, env, nil, nil, kllog)
+	f, err = rev.OpenOrchestration("kabanero-landing-deployment.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err = renderOrchestration(f, templateContext)
+	if err != nil {
+		return err
+	}
+
+	m, err = mf.FromReader(strings.NewReader(s), c)
+	if err != nil {
+		return err
+	}
+
+	transforms = []mf.Transformer{
+		mf.InjectOwner(k),
+		mf.InjectNamespace(k.GetNamespace()),
+		kabTransforms.AddEnvVariable("LANDING_URL", landingURL),
+	}
+
+	// See if we should define the OAuth volume and variables
+	secretInstance := &corev1.Secret{}
+	secretName := "kabanero-github-oauth-secret"
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      secretName,
+		Namespace: k.ObjectMeta.Namespace}, secretInstance)
+
+	if err == nil {
+		// The secret exists, go ahead and put in the oauth information
+		transforms = append(transforms, kabTransforms.MountSecret(secretName, "/etc/oauth"))
+
+		// Try and figure out what the OAuth URL for github is, based on the API url.  If the API
+		// URL is not set, assume that it is "api.github.com".
+		apiUrlString := k.Spec.Github.ApiUrl
+		if len(apiUrlString) == 0 {
+			apiUrlString = "https://api.github.com"
+		}
+
+		apiUrl, err := url.Parse(apiUrlString)
+		if err != nil {
+			kllog.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
+			apiUrl, _ = url.Parse("https://api.github.com")
+		}
+
+		hostname := apiUrl.Hostname()
+		if hostname == "api.github.com" {
+			transforms = append(transforms, kabTransforms.AddEnvVariable("USER_API", "https://api.github.com/user"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("AUTHORIZATION_ENDPOINT", "https://github.com/login/oauth/authorize"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("TOKEN_ENDPOINT", "https://github.com/login/oauth/access_token"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("WEBSITE", "https://github.com"))
+		} else {
+			transforms = append(transforms, kabTransforms.AddEnvVariable("USER_API", "https://" + hostname + "/api/v3/user"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("AUTHORIZATION_ENDPOINT", "https://" + hostname + "/login/oauth/authorize"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("TOKEN_ENDPOINT", "https://" + hostname + "/login/oauth/access_token"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("WEBSITE", "https://" + hostname))
+		}
+	}
+	
+	err = m.Transform(transforms...)
+	if err != nil {
+		return err
+	}
+
+	err = m.ApplyAll()
 	if err != nil {
 		return err
 	}
@@ -169,7 +222,7 @@ func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 }
 
 // Retrieves the landing URL from the landing Route.
-func getLandingURL(k *kabanerov1alpha1.Kabanero, c client.Client, config *restclient.Config) (string, error) {
+func getLandingURL(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
 	landingURL := ""
 
 	// Get the Route instance.
@@ -291,88 +344,6 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 		return err
 	}
 
-	/* Disabling the console logo customization for now.
-	// Make sure we have a config map with the Kabanero pepper icon in it.
-	configMapName := "kabanero-icon"
-
-	// Check if the map already exists.  We are going to make the map
-	// and put the image in it, once.  If the image changes, we will not
-	// update it.
-	configMapInstance := &corev1.ConfigMap{}
-	gvk := schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"}
-	key := client.ObjectKey{Name: configMapName, Namespace: "openshift-config"}
-	err = utils.UnstructuredGet(c, gvk, key, configMapInstance, kllog)
-
-	if err != nil {
-		if apierrors.IsNotFound(err) == false {
-			return err
-		}
-
-		// Not found.  Make a new one.
-		configMapInstance = &corev1.ConfigMap{}
-		configMapInstance.ObjectMeta.Name = configMapName
-		configMapInstance.ObjectMeta.Namespace = "openshift-config"
-		configMapInstance.BinaryData = make(map[string][]byte)
-
-		// Grab the pepper icon from the landing page.
-		pepperIconUrl := landingURL + "/img/Kabanero_Logo_White_Text.png"
-		req, err := http.NewRequest(http.MethodGet, pepperIconUrl, nil)
-		if err != nil {
-			return err
-		}
-
-		// Can't trust the landing page certificate, localhost.
-		config := &tls.Config{InsecureSkipVerify: true}
-		transport := &http.Transport{TLSClientConfig: config}
-		client := &http.Client{Transport: transport}
-		resp, err := client.Do(req)
-		if err != nil {
-			return err
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf(fmt.Sprintf("Could not resolve %v. Http status code: %v", pepperIconUrl, resp.StatusCode))
-		}
-
-		r := resp.Body
-		b, err := ioutil.ReadAll(r)
-		if err != nil {
-			return err
-		}
-
-		configMapInstance.BinaryData["kabanero.png"] = b
-
-		// TODO: Close response?  cleanup?
-
-		err = c.Create(context.TODO(), configMapInstance)
-		if err != nil {
-			return err
-		}
-	}
-	
-	
-	// Grab the console object so we can change the icon
-	consoleInstance := &operatorv1.Console{}
-	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      "cluster"}, consoleInstance)
-
-	// Should be a console instance.... if not, error.
-	if err != nil {
-		return err
-	}
-
-	if consoleInstance.Spec.Customization.CustomLogoFile.Name != configMapName {
-		consoleInstance.Spec.Customization.CustomLogoFile.Name = configMapName
-		consoleInstance.Spec.Customization.CustomLogoFile.Key = "kabanero.png"
-
-		err = c.Update(context.TODO(), consoleInstance)
-
-		if err != nil {
-			return err
-		}
-	}
-  */
-	
 	return nil
 }
 
@@ -404,34 +375,6 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 		}
 	}
 
-	/* Disabling the console logo customization for now.
-	// Remove web console config map and customization.
-	consoleInstance := &operatorv1.Console{}
-	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      "cluster"}, consoleInstance)
-
-	// Should be a console instance....
-	if err == nil {
-		configMapName := "kabanero-icon"
-		if consoleInstance.Spec.Customization.CustomLogoFile.Name == configMapName {
-			// Delete our icon...
-			consoleInstance.Spec.Customization.CustomLogoFile.Name = ""
-			consoleInstance.Spec.Customization.CustomLogoFile.Key = ""
-
-			err = c.Update(context.TODO(), consoleInstance)
-
-			// Delete the config map holding our icon...
-			configMapInstance := &corev1.ConfigMap{}
-			gvk := schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"}
-			key := client.ObjectKey{Name: configMapName, Namespace: "openshift-config"}
-			err = utils.UnstructuredGet(c, gvk, key, configMapInstance, kllog)
-			if err != nil {
-				c.Delete(context.TODO(), configMapInstance)
-			}
-		}
-	}
-  */
-	
 	return nil
 }
 

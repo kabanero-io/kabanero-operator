@@ -1,0 +1,22 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kabanero-landing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kabanero-landing
+  template:
+    metadata:
+      labels:
+        app: kabanero-landing
+    spec:
+      containers:
+        - name: kabanero-landing
+          image: {{ .image }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9443
+              protocol: TCP
+      serviceAccountName: kabanero-landing
