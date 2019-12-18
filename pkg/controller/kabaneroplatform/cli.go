@@ -11,26 +11,19 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
-	// Create a clientset to drive API operations on resources.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
-	if err != nil {
-		return err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
+	// Create the AES encryption key secret, if we don't already have one
+	err := createEncryptionKeySecret(k, cl, reqLogger)
 	if err != nil {
 		return err
 	}
@@ -70,34 +63,9 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	err = m.Transform(transforms...)
-	if err != nil {
-		return err
-	}
-
-	err = m.ApplyAll()
-	if err != nil {
-		return err
-	}
-
-	// If there is a role binding config map, delete it (previous version)
-	err = destroyRoleBindingConfigMap(k, cl, reqLogger)
-	if err != nil {
-		return err
-	}
-
-	// Create the AES encryption key secret, if we don't already have one
-	err = createEncryptionKeySecret(k, cl, reqLogger)
-	if err != nil {
-		return err
-	}
-
-	// Create the deployment manually as we have to fill in some env vars.
-	env := []corev1.EnvVar{{Name: "KABANERO_CLI_NAMESPACE", Value: k.GetNamespace()}}
-
 	// The CLI wants to know the Github organization name, if it was provided
 	if len(k.Spec.Github.Organization) > 0 {
-		env = append(env, corev1.EnvVar{Name: "KABANERO_CLI_GROUP", Value: k.Spec.Github.Organization})
+		transforms = append(transforms, kabTransforms.AddEnvVariable("KABANERO_CLI_GROUP", k.Spec.Github.Organization))
 	}
 
 	// The CLI wants to know which teams to bind to the admin role
@@ -110,13 +78,12 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 			}
 			teamList = teamList + team + "@" + k.Spec.Github.Organization
 		}
-		env = append(env, corev1.EnvVar{Name: "teamsInGroup_admin", Value: teamList})
+		transforms = append(transforms, kabTransforms.AddEnvVariable("teamsInGroup_admin", teamList))
 	}
 
-	// Export the github API URL, if it's set.  This is used by the security
-	// portion of the microservice.
+	// Export the github API URL, if it's set.  This is used by the security portion of the microservice.
 	if len(k.Spec.Github.ApiUrl) > 0 {
-		env = append(env, corev1.EnvVar{Name: "github.api.url", Value: k.Spec.Github.ApiUrl})
+		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", k.Spec.Github.ApiUrl))
 	}
 
 	// Set JwtExpiration for login duration/timeout
@@ -129,42 +96,26 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 		}
 		if !matched {
 			reqLogger.Info(fmt.Sprintf("Kabanero Spec.CliServices.SessionExpirationSeconds must specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). Defaulting to 1440m."))
-			env = append(env, corev1.EnvVar{Name: "JwtExpiration", Value: "1440m"})
+			transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
 		} else {
-			env = append(env, corev1.EnvVar{Name: "JwtExpiration", Value: k.Spec.CliServices.SessionExpirationSeconds})
+			transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", k.Spec.CliServices.SessionExpirationSeconds))
 		}
 	} else {
-		env = append(env, corev1.EnvVar{Name: "JwtExpiration", Value: "1440m"})
+		transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
 	}
 
-	// Tell the CLI where the AES encryption key secret is
-	keyOptional := false
-	aesSecretKeySelector := corev1.SecretKeySelector{}
-	aesSecretKeySelector.Name = "kabanero-cli-aes-encryption-key-secret"
-	aesSecretKeySelector.Key = "AESEncryptionKey"
-	aesSecretKeySelector.Optional = &keyOptional
-	aesSecretKeySource := corev1.EnvVarSource{SecretKeyRef: &aesSecretKeySelector}
-	env = append(env, corev1.EnvVar{Name: "AESEncryptionKey", ValueFrom: &aesSecretKeySource})
+	err = m.Transform(transforms...)
+	if err != nil {
+		return err
+	}
 
-	// Add livenessProbe
-	httpAction := corev1.HTTPGetAction{}
-	httpAction.Path = "/v1/liveliness"
-	httpAction.Port = intstr.FromInt(9443)
-	httpAction.Scheme = corev1.URISchemeHTTPS
+	err = m.ApplyAll()
+	if err != nil {
+		return err
+	}
 
-	probeHandler := corev1.Handler{}
-	probeHandler.HTTPGet = &httpAction
-
-	livenessProbe := &corev1.Probe{}
-	livenessProbe.Handler = probeHandler
-	livenessProbe.InitialDelaySeconds = 60
-	livenessProbe.TimeoutSeconds = 1
-	livenessProbe.PeriodSeconds = 30
-	livenessProbe.SuccessThreshold = 1
-	livenessProbe.FailureThreshold = 3
-
-	// Go ahead and make or update the deployment object
-	err = createDeployment(k, clientset, cl, "kabanero-cli", image, env, nil, livenessProbe, reqLogger)
+	// If there is a role binding config map, delete it (previous version)
+	err = destroyRoleBindingConfigMap(k, cl, reqLogger)
 	if err != nil {
 		return err
 	}

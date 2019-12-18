@@ -158,3 +158,176 @@ spec:
 		})
 	}
 }
+
+func TestAddEnvVariable(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputYaml      string
+		expectedOutput string
+		expectedError  string
+	}{
+		{
+			name: "no matches",
+			inputYaml: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydeployment
+spec: {}`,
+	    expectedError: "No containers entry in deployment spec: &{map[apiVersion:apps/v1 kind:Deployment metadata:map[name:mydeployment] spec:map[]]}",
+		},
+		{
+			name: "deployment",
+			inputYaml: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appsody-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: appsody-operator
+  template:
+    metadata:
+      labels:
+        name: appsody-operator
+    spec:
+      serviceAccountName: appsody-operator
+      containers:
+        - name: appsody-operator
+          image: image
+          command:
+          - appsody-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom: watch
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "appsody-operator"`,
+
+			expectedOutput: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appsody-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: appsody-operator
+  template:
+    metadata:
+      labels:
+        name: appsody-operator
+    spec:
+      containers:
+      - command:
+        - appsody-operator
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OPERATOR_NAME
+          value: appsody-operator
+        - name: WATCH_NAMESPACE
+          value: mynamespace
+        image: image
+        imagePullPolicy: Always
+        name: appsody-operator
+      serviceAccountName: appsody-operator`,
+		},
+		{
+			name: "deployment-newvar",
+			inputYaml: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appsody-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: appsody-operator
+  template:
+    metadata:
+      labels:
+        name: appsody-operator
+    spec:
+      serviceAccountName: appsody-operator
+      containers:
+        - name: appsody-operator
+          image: image
+          command:
+          - appsody-operator
+          imagePullPolicy: Always
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "appsody-operator"`,
+
+			expectedOutput: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appsody-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: appsody-operator
+  template:
+    metadata:
+      labels:
+        name: appsody-operator
+    spec:
+      containers:
+      - command:
+        - appsody-operator
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OPERATOR_NAME
+          value: appsody-operator
+        - name: WATCH_NAMESPACE
+          value: mynamespace
+        image: image
+        imagePullPolicy: Always
+        name: appsody-operator
+      serviceAccountName: appsody-operator`,
+		}}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("%s", tc.name), func(t *testing.T) {
+			u, err := unmarshal([]byte(tc.inputYaml))
+			if err != nil {
+				t.Fatal(err)
+			}
+			deployment := &u[0]
+			err = AddEnvVariable("WATCH_NAMESPACE", "mynamespace")(deployment)
+			if err != nil && tc.expectedError != "" && tc.expectedError == err.Error() {
+				//Matches expected error
+			} else if err != nil && tc.expectedError != "" {
+				t.Fatalf("Expected error `%v` but found error `%v`", tc.expectedError, err.Error())
+			} else if err != nil {
+				t.Fatal(err)
+			} else {
+				b, err := marshal(deployment)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if strings.TrimSpace(tc.expectedOutput) != strings.TrimSpace(string(b)) {
+					t.Log("Expected: ", tc.expectedOutput)
+					t.Log("Found: ", string(b))
+
+					t.Fatal("Expected output did not match")
+				}
+			}
+		})
+	}
+}
