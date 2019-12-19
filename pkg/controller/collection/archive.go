@@ -187,13 +187,16 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 
 			decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(b))
 			out := unstructured.Unstructured{}
-			err = decoder.Decode(&out)
-			if err != nil {
+			for err = decoder.Decode(&out); err == nil; {
+				gvk := out.GroupVersionKind()
+				manifests = append(manifests, CollectionAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
+				out = unstructured.Unstructured{}
+				err = decoder.Decode(&out)
+			}
+				
+			if (err != nil) && (err != io.EOF) {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
-
-			gvk := out.GroupVersionKind()
-			manifests = append(manifests, CollectionAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
 		}
 	}
 	return manifests, nil
