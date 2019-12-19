@@ -2,17 +2,19 @@ package kabaneroplatform
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 
+	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	"github.com/go-logr/logr"
-	mf "github.com/manifestival/manifestival"
+	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 	mfc "github.com/manifestival/controller-runtime-client"
+	mf "github.com/manifestival/manifestival"
 	consolev1 "github.com/openshift/api/console/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -70,6 +72,11 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 	}
 
 	err = m.Apply()
+	if err != nil {
+		return err
+	}
+
+	err = addTLSConfigToLandingRoute(k, c, rev)
 	if err != nil {
 		return err
 	}
@@ -218,6 +225,60 @@ func cleanupLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	err = m.Delete()
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// Updates the route with openshift generated TLS key and certificate.
+// The certificate and TLS key were produced by OpenShift and were added to a secret during service creation.
+// The service annotation that triggered the creation of the secret/cert/key is:
+// service.beta.openshift.io/serving-cert-secret-name: kabanero-landing-service-cert-secret
+func addTLSConfigToLandingRoute(k *kabanerov1alpha2.Kabanero, c client.Client, rev versioning.SoftwareRevision) error {
+	// Retrieve the sevice created secret and get the TLS cert/key.
+	secretName := "kabanero-landing-service-cert-secret"
+	secretInstance := &corev1.Secret{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      secretName,
+		Namespace: k.GetNamespace()}, secretInstance)
+
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve a secret object. Secret name: %v. Namespace: %v. Error: %v", secretName, k.GetNamespace(), err)
+	}
+
+	tlskey, ok := secretInstance.Data["tls.key"]
+	if !ok {
+		return fmt.Errorf("The data.tls.key entry under secret %v was not found", secretName)
+	}
+
+	encodedKey := base64.StdEncoding.EncodeToString(tlskey)
+	decodedStringkey, err := base64.StdEncoding.DecodeString(encodedKey)
+
+	tlscrt, ok := secretInstance.Data["tls.crt"]
+	if !ok {
+		return fmt.Errorf("The data.tls.crt entry under secret %v was not found", secretName)
+	}
+	encodedCrt := base64.StdEncoding.EncodeToString(tlscrt)
+	decodedCrtString, err := base64.StdEncoding.DecodeString(encodedCrt)
+
+	// Get the landing route.
+	routeName := "kabanero-landing"
+	ri := &routev1.Route{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      routeName,
+		Namespace: k.ObjectMeta.Namespace}, ri)
+
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve route object. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+	}
+
+	// Add TLS cert/key to route.
+	ri.Spec.TLS.Key = string(decodedStringkey)
+	ri.Spec.TLS.Certificate = string(decodedCrtString)
+
+	err = c.Update(context.Background(), ri)
+	if err != nil {
+		return fmt.Errorf("Unable to update route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
 	}
 
 	return nil
