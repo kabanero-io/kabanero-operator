@@ -579,7 +579,7 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 						log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
 						transforms := []mf.Transformer{
-							mf.InjectNamespace(collectionResource.GetNamespace()),
+							injectNamespace(collectionResource.GetNamespace()),
 						}
 
 						err = m.Transform(transforms...)
@@ -624,8 +624,8 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
 			transforms := []mf.Transformer{
-				mf.InjectOwner(collectionResource),
-				mf.InjectNamespace(collectionResource.GetNamespace()),
+				injectOwner(collectionResource),
+				injectNamespace(collectionResource.GetNamespace()),
 			}
 
 			err = m.Transform(transforms...)
@@ -661,4 +661,28 @@ func activate(collectionResource *kabanerov1alpha1.Collection, collection *Colle
 	collectionResource.Status.Images = statusImages
 
 	return nil
+}
+
+// Custom transform that leaves the namespace alone for some types
+func injectNamespace(namespace string) mf.Transformer {
+	return func(u *unstructured.Unstructured) error {
+		kind := u.GetKind()
+		if (kind != "TriggerBinding") && (kind != "TriggerTemplate") {
+			return mf.InjectNamespace(namespace)(u)
+		}
+
+		return nil
+	}
+}
+
+// Custom transform that leaves the owner alone for some types
+func injectOwner(owner mf.Owner) mf.Transformer {
+	return func(u *unstructured.Unstructured) error {
+		kind := u.GetKind()
+		if (kind != "TriggerBinding") && (kind != "TriggerTemplate") {
+			return mf.InjectOwner(owner)(u)
+		}
+
+		return nil
+	}
 }

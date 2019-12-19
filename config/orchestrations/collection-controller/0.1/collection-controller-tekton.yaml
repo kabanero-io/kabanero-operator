@@ -1,0 +1,17 @@
+# This role lets the collection controller create triggerbindings and
+# triggertemplates in the tekton-pipelines namespace, as required by
+# the tekton dashboard webhooks extension.  The Role was created
+# during Kabanero install.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .name }}
+  namespace: tekton-pipelines
+subjects:
+- kind: ServiceAccount
+  name: kabanero-operator-collection-controller
+  namespace: {{ .kabaneroNamespace }}
+roleRef:
+  kind: Role
+  name: kabanero-trigger-role 
+  apiGroup: rbac.authorization.k8s.io

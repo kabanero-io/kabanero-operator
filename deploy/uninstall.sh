@@ -113,6 +113,8 @@ do
 done
 oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
+# Delete the Role used by the collection controller to manipulate triggers
+oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Tekton Dashboard
 oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml

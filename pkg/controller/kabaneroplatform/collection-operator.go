@@ -70,6 +70,71 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kaba
 		return err
 	}
 
+	// Create a RoleBinding in the tekton-pipelines namespace that will allow
+	// the collection controller to create triggerbinding and triggertemplate
+	// objects in the tekton-pipelines namespace.
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateCtx["kabaneroNamespace"] = k.GetNamespace()
+
+	f, err = rev.OpenOrchestration("collection-controller-tekton.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err = renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	m, err = mf.FromReader(strings.NewReader(s), c)
+	if err != nil {
+		return err
+	}
+
+	err = m.ApplyAll()
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
+
+// Removes the cross-namespace objects created during the collection controller
+// deployment.
+func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
+	logger.Info("Removing Kabanero collection controller installation.")
+
+	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
+	if err != nil {
+		logger.Error(err, "Unable to resolve software revision.")
+		return err
+	}
+
+	templateCtx := rev.Identifiers
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateCtx["kabaneroNamespace"] = k.GetNamespace()
+
+	f, err := rev.OpenOrchestration("collection-controller-tekton.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), c)
+	if err != nil {
+		return err
+	}
+
+	err = m.DeleteAll()
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 

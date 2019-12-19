@@ -335,6 +335,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Cl
 	if err != nil {
 		return err
 	}
+
+	// Remove the cross-namespace objects that the collection controller uses.
+	err = cleanupCollectionController(ctx, k, client)
+	if err != nil {
+		return err
+	}
 	
 	return nil
 }
