@@ -45,18 +45,18 @@ CURRENT_RELEASE=0.5.0
 .PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle
 
 build: generate
-	go install ./cmd/manager
-	go install ./cmd/manager/collection
-	go install ./cmd/admission-webhook
+	GO111MODULE=on go install ./cmd/manager
+	GO111MODULE=on go install ./cmd/manager/collection
+	GO111MODULE=on go install ./cmd/admission-webhook
 
 build-image: generate
   # These commands were taken from operator-sdk 0.8.1.  The sdk did not let us
   # pass the ldflags option.  The advice from operator-sdk was to run the 
   # commands separately here.
   # operator-sdk build ${IMAGE}
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator-collection-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/kabanero-operator-collection-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
 
 	docker build -f build/Dockerfile -t ${IMAGE} .
 
@@ -128,15 +128,15 @@ endif
 endif
 
 test: 
-	go test ./cmd/... ./pkg/... 
+	GO111MODULE=on go test ./cmd/... ./pkg/... 
 
 format:
-	go fmt ./cmd/... ./pkg/...
+	GO111MODULE=on go fmt ./cmd/... ./pkg/...
 
 generate:
-	operator-sdk generate k8s
-	operator-sdk generate openapi
-	go generate ./pkg/assets
+	GO111MODULE=on operator-sdk generate k8s
+	GO111MODULE=on operator-sdk generate openapi
+	GO111MODULE=on go generate ./pkg/assets
 
 install:
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
@@ -172,7 +172,7 @@ check: format build #test
 
 dependencies: 
 ifeq (, $(shell which dep))
-	go get -u github.com/golang/dep/cmd/dep
+	GO111MODULE=on go get -u github.com/golang/dep/cmd/dep
 endif
 	dep ensure
 
@@ -182,7 +182,7 @@ endif
 
 # Requires https://github.com/pmezard/licenses
 dependency-report: 
-	go get -u github.com/pmezard/licenses
+	GO111MODULE=on go get -u github.com/pmezard/licenses
 	licenses ./pkg/... | cut -c49- > 3RD_PARTY
 
 
