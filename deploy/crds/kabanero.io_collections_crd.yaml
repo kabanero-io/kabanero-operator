@@ -25,6 +25,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
+      description: Collection is the Schema for the collections API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -39,6 +40,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: CollectionSpec defines the desired composition of a Collection
           properties:
             desiredState:
               type: string
@@ -50,6 +52,8 @@ spec:
               type: string
             versions:
               items:
+                description: CollectionVersion defines the desired composition of
+                  a specific collection version.
                 properties:
                   desiredState:
                     type: string
@@ -61,14 +65,19 @@ spec:
               type: array
           type: object
         status:
+          description: CollectionStatus defines the observed state of a collection
           properties:
             activeLocation:
               type: string
             activePipelines:
               items:
+                description: PipelineStatus defines the observed state of the assets
+                  located within a single pipeline .tar.gz.
                 properties:
                   activeAssets:
                     items:
+                      description: RepositoryAssetStatus defines the observed state
+                        of a single asset in a respository, in the collection.
                       properties:
                         assetDigest:
                           type: string
@@ -93,9 +102,9 @@ spec:
                   url:
                     type: string
                 required:
+                - digest
                 - name
                 - url
-                - digest
                 type: object
               type: array
             activeVersion:
@@ -106,6 +115,7 @@ spec:
               type: string
             images:
               items:
+                description: Image defines a container image used by a collection
                 properties:
                   id:
                     type: string
@@ -119,9 +129,12 @@ spec:
               type: string
             versions:
               items:
+                description: CollectionVersionStatus defines the observed state of
+                  a specific collection version.
                 properties:
                   images:
                     items:
+                      description: Image defines a container image used by a collection
                       properties:
                         id:
                           type: string
@@ -133,9 +146,13 @@ spec:
                     type: string
                   pipelines:
                     items:
+                      description: PipelineStatus defines the observed state of the
+                        assets located within a single pipeline .tar.gz.
                       properties:
                         activeAssets:
                           items:
+                            description: RepositoryAssetStatus defines the observed
+                              state of a single asset in a respository, in the collection.
                             properties:
                               assetDigest:
                                 type: string
@@ -160,9 +177,9 @@ spec:
                         url:
                           type: string
                       required:
+                      - digest
                       - name
                       - url
-                      - digest
                       type: object
                     type: array
                   status:
@@ -174,6 +191,7 @@ spec:
                 type: object
               type: array
           type: object
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1

@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -163,11 +163,12 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	//       object here.
 	var k *kabanerov1alpha1.Kabanero
 	l := kabanerov1alpha1.KabaneroList{}
-	err = r.client.List(context.Background(), &client.ListOptions{}, &l)
+	err = r.client.List(context.Background(), &l, client.InNamespace(instance.GetNamespace()))
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	for _, _k := range l.Items {
-		if _k.GetNamespace() == instance.GetNamespace() {
-			k = &_k
-		}
+		k = &_k
 	}
 	reqLogger.Info("Resolved Kabanero", "kabanero", k)
 

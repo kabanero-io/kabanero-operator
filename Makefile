@@ -71,7 +71,7 @@ build-image: generate
 	cp LICENSE build/registry/LICENSE
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
-	cp deploy/crds/kabanero_kabanero_crd.yaml deploy/crds/kabanero_collection_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
+	cp deploy/crds/kabanero.io_kabaneros_crd.yaml deploy/crds/kabanero.io_collections_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
 
 ifdef INTERNAL_REGISTRY
 	sed -e "s!kabanero/kabanero-operator:.*!${IMAGE_SVC}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
@@ -140,8 +140,8 @@ generate:
 
 install:
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
-	kubectl apply -f deploy/crds/kabanero_kabanero_crd.yaml
-	kubectl apply -f deploy/crds/kabanero_collection_crd.yaml
+	kubectl apply -f deploy/crds/kabanero.io_kabaneros_crd.yaml
+	kubectl apply -f deploy/crds/kabanero.io_collections_crd.yaml
 
 deploy: 
 	kubectl create namespace kabanero || true

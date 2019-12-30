@@ -2,39 +2,27 @@ package collection
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
 // BuildMutatingWebhook builds the webhook for the manager to register
-func BuildMutatingWebhook(mgr *manager.Manager) (webhook.Webhook, error) {
-	// Create the mutating webhook
-	return builder.NewWebhookBuilder().
-		Name("mutating.collection.kabanero.io").
-		Mutating().
-		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
-		WithManager(*mgr).
-		ForType(&kabanerov1alpha1.Collection{}).
-		Handlers(&collectionMutator{}).
-		Build()
+func BuildMutatingWebhook(mgr *manager.Manager) *admission.Webhook {
+	return &admission.Webhook{Handler: &collectionMutator{}}
 }
 
 // collectionMutator mutates collections
 type collectionMutator struct {
 	client  client.Client
-	decoder types.Decoder // TODO should this be admission decoder?
+	decoder *admission.Decoder
 }
 
 // Implement admission.Handler so the controller can handle admission request.
@@ -43,21 +31,25 @@ var _ admission.Handler = &collectionMutator{}
 
 // collectionMutator verifies that the collection version singleton and array
 // are not in conflict.
-func (a *collectionMutator) Handle(ctx context.Context, req types.Request) types.Response {
+func (a *collectionMutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	collection := &kabanerov1alpha1.Collection{}
 
 	err := a.decoder.Decode(req, collection)
 	if err != nil {
-		return admission.ErrorResponse(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
-	copy := collection.DeepCopy()
 
-	err = a.mutateCollectionFn(ctx, copy)
-
+	err = a.mutateCollectionFn(ctx, collection)
 	if err != nil {
-		return admission.ErrorResponse(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	return admission.PatchResponse(collection, copy)
+
+	marshaledCollection, err := json.Marshal(collection)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledCollection)
 }
 
 // mutateCollectionFn updates collection version entries.
@@ -207,22 +199,14 @@ func areMixedVersionModelCollectionsEqual(this *kabanerov1alpha1.Collection, tha
 		this.Spec.DesiredState == that.Spec.Versions[0].DesiredState
 }
 
-// collectionMutator implements inject.Client.
-// A client will be automatically injected.
-var _ inject.Client = &collectionMutator{}
-
 // InjectClient injects the client.
 func (v *collectionMutator) InjectClient(c client.Client) error {
 	v.client = c
 	return nil
 }
 
-// podAnnotator implements inject.Decoder.
-// A decoder will be automatically injected.
-var _ inject.Decoder = &collectionMutator{}
-
 // InjectDecoder injects the decoder.
-func (v *collectionMutator) InjectDecoder(d types.Decoder) error {
+func (v *collectionMutator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
 }

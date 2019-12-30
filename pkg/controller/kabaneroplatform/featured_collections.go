@@ -6,6 +6,7 @@ import (
 	"github.com/blang/semver"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,7 +47,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 		for _, c := range featured {
 			// For each collection, assure that a corresponding resource exists and it is at
 			// the highest level found among the repositories.
-			updateCollection := cl.Update
+			updateCollection := utils.Update
 			name := types.NamespacedName{
 				Name:      c.Id,
 				Namespace: k.GetNamespace(),
@@ -65,7 +66,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 						desiredState = kabanerov1alpha1.CollectionDesiredStateInactive
 					}
 
-					updateCollection = cl.Create
+					updateCollection = utils.Create
 					collectionResource = &kabanerov1alpha1.Collection{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      c.Id,
@@ -92,7 +93,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 
 			collectionResource.Spec.Version = findMaxVersionCollectionWithId(featured, c.Id)
 			collectionResource.Spec.RepositoryUrl = data.repositoryConfig.Url
-			err = updateCollection(ctx, collectionResource)
+			err = updateCollection(cl, ctx, collectionResource)
 			if err != nil {
 				return err
 			}

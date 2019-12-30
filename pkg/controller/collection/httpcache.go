@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
-	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var cachelog = rlog.Log.WithName("httpcache")

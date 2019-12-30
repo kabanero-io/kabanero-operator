@@ -19,9 +19,7 @@ func GetInstalledCSVName(c client.Client, cok client.ObjectKey) (string, error) 
 		Kind:    olmapiv1alpha1.SubscriptionKind,
 	})
 
-	listOptions := &client.ListOptions{Namespace: cok.Namespace}
-	
-  err := c.List(context.TODO(), listOptions, sList)
+  err := c.List(context.TODO(), sList, client.InNamespace(cok.Namespace))
 	if err != nil {
 		return "", err
 	}
