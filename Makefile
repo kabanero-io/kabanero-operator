@@ -41,6 +41,15 @@ COLLECTION_CTRLR_REPOSITORY=$(firstword $(subst :, ,${COLLECTION_CTRLR_IMAGE}))
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.5.0
 
+# OS detection
+ifeq ($(OS),Windows_NT)
+	detected_OS := windows
+else
+	detected_OS := $(shell uname)
+ifeq ($(detected_OS),Darwin)
+	detected_OS := macos
+endif
+endif
 
 .PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle
 
@@ -180,11 +189,18 @@ endif
 	rm vendor/golang.org/x/net/http2/h2demo/tmpl.go
 	rm -r vendor/golang.org/x/text/internal/testtext
 
-# Requires https://github.com/pmezard/licenses
-dependency-report: 
-	GO111MODULE=on go get -u github.com/pmezard/licenses
-	licenses ./pkg/... | cut -c49- > 3RD_PARTY
-
+# Requires https://github.com/mitchellh/golicense
+# Note that the tool currently fails when a license is not found.  Since
+# this is currently the case for several dependencies, the file must be
+# inspected manually, and we append || true to the command.
+dependency-report:
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN must be set to a PAT to run the license check)
+endif
+	mkdir -p build/bin
+	curl -L https://github.com/mitchellh/golicense/releases/download/v0.2.0/golicense_0.2.0_$(detected_OS)_x86_64.tar.gz | tar -C build/bin -xzf - golicense
+	build/bin/golicense -plain ./license-rules.json build/_output/bin/admission-webhook build/_output/bin/kabanero-operator build/_output/bin/kabanero-operator-collection-controller > 3RD_PARTY || true
+	rm build/bin/golicense
 
 # Integration Tests
 # Requires kube login context an existing cluster
