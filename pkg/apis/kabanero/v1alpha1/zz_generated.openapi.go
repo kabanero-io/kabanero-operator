@@ -77,6 +77,12 @@ func schema_pkg_apis_kabanero_v1alpha1_CollectionSpec(ref common.ReferenceCallba
 							Format: "",
 						},
 					},
+					"skipCertVerification": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 					"name": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},

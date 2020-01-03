@@ -53,8 +53,23 @@ spec:
                 type: string
               repositoryUrl:
                 type: string
+              skipCertVerification:
+                type: boolean
               version:
                 type: string
+              versions:
+                items:
+                  properties:
+                    desiredState:
+                      type: string
+                    repositoryUrl:
+                      type: string
+                    skipCertVerification:
+                      type: boolean
+                    version:
+                      type: string
+                  type: object
+                type: array
             type: object
           status:
             properties:
@@ -70,9 +85,15 @@ spec:
                             type: string
                           assetName:
                             type: string
+                          group:
+                            type: string
+                          kind:
+                            type: string
                           status:
                             type: string
                           statusMessage:
+                            type: string
+                          version:
                             type: string
                         type: object
                       type: array
@@ -107,5 +128,61 @@ spec:
                 type: string
               statusMessage:
                 type: string
+              versions:
+                items:
+                  properties:
+                    images:
+                      items:
+                        properties:
+                          id:
+                            type: string
+                          image:
+                            type: string
+                        type: object
+                      type: array
+                    location:
+                      type: string
+                    pipelines:
+                      items:
+                        properties:
+                          activeAssets:
+                            items:
+                              properties:
+                                assetDigest:
+                                  type: string
+                                assetName:
+                                  type: string
+                                group:
+                                  type: string
+                                kind:
+                                  type: string
+                                status:
+                                  type: string
+                                statusMessage:
+                                  type: string
+                                version:
+                                  type: string
+                              type: object
+                            type: array
+                          digest:
+                            type: string
+                          name:
+                            type: string
+                          url:
+                            type: string
+                        required:
+                        - name
+                        - url
+                        - digest
+                        type: object
+                      type: array
+                    status:
+                      type: string
+                    statusMessage:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                type: array
             type: object
 
