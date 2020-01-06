@@ -151,7 +151,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 		}
 	}
 
-	fmt.Println("Header names: ", strings.Join(headers, ","))
+	reqLogger.Info(fmt.Sprintf("Header names: %v", strings.Join(headers, ",")))
 
 	if foundManifest != true {
 		return nil, fmt.Errorf("Error reading archive, unable to read manifest.yaml")
