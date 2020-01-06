@@ -438,6 +438,19 @@ type pipelineVersion struct {
 	version string
 }
 
+// Some objects need to get created in a specific namespace.  Try and figure out what that is.
+func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string) string {
+	kind := u.GetKind()
+
+	// Presently, TriggerBinding and TriggerTemplate objects are created
+	// in the tekton-pipelines namespace.
+	if (kind != "TriggerBinding") && (kind != "TriggerTemplate") {
+		return "tekton-pipelines"
+	}
+
+	return defaultNamespace
+}
+
 func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, collections []resolvedCollection, c client.Client) error {
 
 	ownerIsController := false
@@ -544,6 +557,11 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 			log.Info(fmt.Sprintf("Deleting assets with use count %v: %v", value.useCount, value))
 
 			for _, asset := range value.ActiveAssets {
+				// Old assets may not have a namespace set - correct that now.
+				if len(asset.Namespace) == 0 {
+					asset.Namespace = collectionResource.GetNamespace()
+				}
+
 				u := &unstructured.Unstructured{}
 				u.SetGroupVersionKind(schema.GroupVersionKind{
 					Group:   asset.Group,
@@ -552,7 +570,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 				})
 
 				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: collectionResource.GetNamespace(),
+					Namespace: asset.Namespace,
 					Name:      asset.Name,
 				}, u)
 
@@ -610,8 +628,10 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 				
 				// Create the asset status slice, but don't apply anything yet.
 				for _, asset := range manifests {
+					// Figure out what namespace we should create the object in.
 					value.ActiveAssets = append(value.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{
 						Name: asset.Name,
+						Namespace: getNamespaceForObject(&asset.Yaml, collectionResource.GetNamespace()),
 						Group: asset.Group,
 					  Version: asset.Version,
 					  Kind: asset.Kind,
@@ -624,6 +644,11 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 
 			// Now go thru the asset list and see if the objects are there.  If not, create them.
 			for index, asset := range value.ActiveAssets {
+				// Old assets may not have a namespace set - correct that now.
+				if len(asset.Namespace) == 0 {
+					asset.Namespace = collectionResource.GetNamespace()
+				}
+				
 				u := &unstructured.Unstructured{}
 				u.SetGroupVersionKind(schema.GroupVersionKind{
 					Group:   asset.Group,
@@ -632,7 +657,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 				})
 
 				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: collectionResource.GetNamespace(),
+					Namespace: asset.Namespace,
 					Name:      asset.Name,
 				}, u)
 
@@ -667,7 +692,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 
 								transforms := []mf.Transformer{
 									transforms.InjectOwnerReference(assetOwner), 
-									transforms.InjectNamespace(collectionResource.GetNamespace()),
+									mf.InjectNamespace(asset.Namespace),
 								}
 
 								err = m.Transform(transforms...)
