@@ -2,7 +2,6 @@ package collection
 
 import (
 	"context"
-	me "errors"
 	"fmt"
 	"strings"
 	"time"
@@ -172,21 +171,44 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	reqLogger.Info("Resolved Kabanero", "kabanero", k)
 
-	rr, err := r.ReconcileCollection(instance, k)
-
-	// Temporary. Copy the collection status for now since as of this update we only support only one collection version.
-	s := kabanerov1alpha1.CollectionVersionStatus{
-		Version:       instance.Status.ActiveVersion,
-		Location:      instance.Status.ActiveLocation,
-		Pipelines:     instance.Status.ActivePipelines,
-		Status:        instance.Status.Status,
-		StatusMessage: instance.Status.StatusMessage,
-		Images:        instance.Status.Images}
-	if len(instance.Status.Versions) < 1 {
-		instance.Status.Versions = append(instance.Status.Versions, s)
-	} else {
-		instance.Status.Versions[0] = s
+	// Collection objects which existed prior to the spec.versions array will not
+	// have the versions array filled in.  Try to fill it in if we can.  Nothing
+	// fancy here... if one or the other is empty, fill it in.  Then re-reconcile.
+	if (len(instance.Spec.Version) > 0) && (len(instance.Spec.Versions) == 0) {
+		instance.Spec.Versions = []kabanerov1alpha1.CollectionVersion{{RepositoryUrl: instance.Spec.RepositoryUrl, Version: instance.Spec.Version, DesiredState: instance.Spec.DesiredState}}
+		err = r.client.Update(context.Background(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Unable to sync version and versions array")
+		}
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 	}
+
+	if (len(instance.Spec.Version) == 0) && (len(instance.Spec.Versions) > 0) {
+		instance.Spec.Version = instance.Spec.Versions[0].Version
+		instance.Spec.DesiredState = instance.Spec.Versions[0].DesiredState
+		instance.Spec.RepositoryUrl = instance.Spec.Versions[0].RepositoryUrl
+		err = r.client.Update(context.Background(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Unable to sync version and versions array")
+		}
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	}
+
+	// Similarly, collection objects which existed prior to the status.versions array
+	// will not have it filled in.  Pre-populate it with the singleton information so
+	// the reconciler can reference it.
+	if (len(instance.Status.Status) > 0) && (len(instance.Status.Versions) == 0) {
+		instance.Status.Versions = []kabanerov1alpha1.CollectionVersionStatus{{
+			Version: instance.Status.ActiveVersion,
+			Location: instance.Status.ActiveLocation,
+			Pipelines: instance.Status.ActivePipelines,
+			Status: instance.Status.Status,
+			StatusMessage: instance.Status.StatusMessage,
+			Images: instance.Status.Images,
+		}}
+	}
+	
+	rr, err := r.ReconcileCollection(instance, k)
 
 	r.client.Status().Update(ctx, instance)
 
@@ -321,32 +343,11 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		r_log.Error(err, "Could not make kabanero the owner of the collection")
 	}
 
-	// Process deactivates regardless of whether the collection is available in the remote
-	// repository.
-	if strings.EqualFold(c.Spec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
-		err := reconcileActiveVersions(c, nil, r.client)
-		if err != nil {
-			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-		}
-
-		c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
-		return reconcile.Result{}, nil
-	}
-
-	// Retreive all matching collection names from all remote indexes.  If none were specified,
-	// build and log an error and return.
+	// Retreive all matching collection names from all remote indexes.
 	// TODO: Start using the URL in the Collection object so we don't need to reference the
 	//       parent Kabanero anymore.
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
-	if len(repositories) == 0 {
-		err = me.New(fmt.Sprintf("No repositories were configured in the Kabanero instance"))
-		r_log.Error(err, "Could not continue without any repositories")
-
-		// Update the status message so the user knows that something needs to be done.
-		c.Status.StatusMessage = "Could not find any configured repositories."
-		return reconcile.Result{Requeue: false, RequeueAfter: 60 * time.Second}, err
-	}
 
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo)
@@ -405,37 +406,11 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		} else {
 			r_log.Error(semverErr, "Could not determine upgrade availability for collection "+collectionName)
 		}
-
-		// Search for the correct version.  The list may have duplicates, we're just searching for
-		// the first match.
-		for _, matchingCollection := range matchingCollections {
-			switch {
-			case matchingCollection.collection.Version == c.Spec.Version:
-				// Activate or deactivate the collection based on the collection's current desiredState.
-				// The activateDefaultCollections setting in the CR instance's collection repository entry has
-				// no influence here as that only sets a collection's initial state.
-				if !strings.EqualFold(c.Spec.DesiredState, kabanerov1alpha1.CollectionDesiredStateActive) {
-					c.Status.StatusMessage = "An invalid desiredState value of " + c.Spec.DesiredState + " was specified. The collection is activated by default."
-				}
-
-				// Activate the collection.
-				err := reconcileActiveVersions(c, &matchingCollection.collection, r.client)
-				if err != nil {
-					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-				}
-				c.Status.ActiveLocation = matchingCollection.repositoryURL
-				c.Status.Status = kabanerov1alpha1.CollectionDesiredStateActive
-				return reconcile.Result{}, nil
-			}
-		}
-
-		// No collection with a matching version could be found. Update the status
-		// message so the user understands that the version they want is not available.
-		c.Status.StatusMessage = "The requested version of the collection (" + c.Spec.Version + ") is not available."
-
-		return reconcile.Result{}, nil
 	}
 
+	// Process the versions array and activate (or deactivate) the desired versions.
+	err = reconcileActiveVersions(c, matchingCollections, r.client)
+	
 	// No version of the collection could be found.  If there is no active version, update
 	// the status message so the user knows that something needs to be done.
 	if c.Status.ActiveVersion == "" {
@@ -464,18 +439,10 @@ type pipelineVersion struct {
 	version string
 }
 
-func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, collection *Collection, c client.Client) error {
-	// In practice right now there is one active version and one status.  But in preparation for the future we're going to
-	// pretend there can be more than one.
-	specList := []kabanerov1alpha1.CollectionSpec{collectionResource.Spec}
-	statusList := []kabanerov1alpha1.CollectionStatus{collectionResource.Status}
-	collectionList := []*Collection{}
-	if collection != nil {
-		collectionList = append(collectionList, collection)
-	}
-	
+func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, collections []resolvedCollection, c client.Client) error {
+
 	ownerIsController := false
-	newOwner := metav1.OwnerReference{
+	assetOwner := metav1.OwnerReference{
 		APIVersion: collectionResource.TypeMeta.APIVersion,
 		Kind:       collectionResource.TypeMeta.Kind,
 		Name:       collectionResource.ObjectMeta.Name,
@@ -483,34 +450,17 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 		Controller: &ownerIsController,
 	}
 
-	newStatusList, err := reconcileActiveVersionsInternal(collectionResource.Namespace, newOwner, specList, statusList, collectionList, c)
-
-	// In practice there will only be one status, until the Collection CRD is updated to support a list.
-	if err == nil {
-		collectionResource.Status = newStatusList[0]
-	}
-
-	// Fix up the version if it's inactive.  The multiple versions support tries to tell us which version is inactive
-	// but the caller expects all versions to be inactive.
-	if collectionResource.Status.Status == kabanerov1alpha1.CollectionDesiredStateInactive {
-		collectionResource.Status.ActiveVersion = ""
-	}
-	
-	return err
-}
-
-func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerReference, specs []kabanerov1alpha1.CollectionSpec, statuses []kabanerov1alpha1.CollectionStatus, collections []*Collection, c client.Client) ([]kabanerov1alpha1.CollectionStatus, error) {
 	renderingContext := make(map[string]interface{})
 	if len(collections) > 0 {
-		renderingContext["CollectionId"] = collections[0].Id
-		renderingContext["CollectionName"] = collections[0].Name
+		renderingContext["CollectionId"] = collections[0].collection.Id
+		renderingContext["CollectionName"] = collections[0].collection.Name
 	}
-	
+
 	// Multiple versions of the same collection, could be using the same pipeline zip.  Count how many
 	// times each pipeline has been used.
 	assetUseMap := make(map[pipelineUseMapKey]*pipelineUseMapValue)
-	for _, curStatus := range statuses {
-		for _, pipeline := range curStatus.ActivePipelines {
+	for _, curStatus := range collectionResource.Status.Versions {
+		for _, pipeline := range curStatus.Pipelines {
 			key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}
 			value := assetUseMap[key]
 			if value == nil {
@@ -526,25 +476,25 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 	// sure to take into consideration the digest on the individual pipeline zips.
 	assetsToDecrement := make(map[pipelineVersion]bool)
 	assetsToIncrement := make(map[pipelineVersion]bool)
-	for _, curStatus := range statuses {
-		for _, pipeline := range curStatus.ActivePipelines {
-			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.ActiveVersion}
+	for _, curStatus := range collectionResource.Status.Versions {
+		for _, pipeline := range curStatus.Pipelines {
+			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.Version}
 			assetsToDecrement[cur] = true
 		}
 	}
 
-	for _, curSpec := range specs {
+	for _, curSpec := range collectionResource.Spec.Versions {
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
 			collection := getCollectionForSpecVersion(curSpec, collections)
 			if collection == nil {
 				// This version of the collection was not found in the collection hub.  See if it's currently active.  
 				// If it is, we should continue to use what is active.
 				//activeMatch := false
-				for _, curStatus := range statuses {
-					if curStatus.ActiveVersion == curSpec.Version {
+				for _, curStatus := range collectionResource.Status.Versions {
+					if curStatus.Version == curSpec.Version {
 						//activeMatch = true
-						for _, pipeline := range curStatus.ActivePipelines {
-							cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.ActiveVersion}
+						for _, pipeline := range curStatus.Pipelines {
+							cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.Version}
 							if assetsToDecrement[cur] == true {
 								delete(assetsToDecrement, cur)
 							} else {
@@ -555,7 +505,7 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 					}
 				}
 			} else {
-				for _, pipeline := range collection.Pipelines {
+				for _, pipeline := range collection.collection.Pipelines {
 					cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Sha256}, version: curSpec.Version}
 					if assetsToDecrement[cur] == true {
 						delete(assetsToDecrement, cur)
@@ -571,7 +521,7 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 	for cur, _ := range assetsToDecrement {
 		value := assetUseMap[cur.pipelineUseMapKey]
 		if value == nil {
-			return nil, fmt.Errorf("Pipeline version not found in use map: %v", cur)
+			return fmt.Errorf("Pipeline version not found in use map: %v", cur)
 		}
 
 		value.useCount--
@@ -603,14 +553,13 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 				})
 
 				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: namespace,
+					Namespace: collectionResource.GetNamespace(),
 					Name:      asset.Name,
 				}, u)
 
 				if err != nil {
 					if errors.IsNotFound(err) == false {
 						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
-						// TODO: Report in collection status somewhere?
 					}
 				} else {
 					// Get the owner references.  See if we're the last one.
@@ -626,14 +575,12 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 						err = c.Delete(context.TODO(), u)
 						if err != nil {
 							log.Error(err, fmt.Sprintf("Unable to delete asset name %v", asset.Name))
-							// TODO: Report in collection status somewhere?
 						}
 					} else {
 						u.SetOwnerReferences(newOwnerRefs)
 						err = c.Update(context.TODO(), u)
 						if err != nil {
 							log.Error(err, fmt.Sprintf("Unable to delete owner reference from %v", asset.Name))
-							// TODO: Report in collection status somewhere?
 						}
 					}
 				}
@@ -686,14 +633,13 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 				})
 
 				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: namespace,
+					Namespace: collectionResource.GetNamespace(),
 					Name:      asset.Name,
 				}, u)
 
 				if err != nil {
 					if errors.IsNotFound(err) == false {
 						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
-						// TODO: Report in collection status somewhere?
 					} else {
 						// Make sure the manifests are loaded.
 						if len(value.manifests) == 0 {
@@ -722,7 +668,7 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 
 								transforms := []mf.Transformer{
 									transforms.InjectOwnerReference(assetOwner), 
-									mf.InjectNamespace(namespace),
+									mf.InjectNamespace(collectionResource.GetNamespace()),
 								}
 
 								err = m.Transform(transforms...)
@@ -766,7 +712,6 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 						err = c.Update(context.TODO(), u)
 						if err != nil {
 							log.Error(err, fmt.Sprintf("Unable to add owner reference to %v", asset.Name))
-							// TODO: Report in collection status somewhere?
 						}
 					}
 					
@@ -778,17 +723,17 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 	}
 	
 	// Now update the CollectionStatus to reflect the current state of things.
-	newCollectionStatusList := []kabanerov1alpha1.CollectionStatus{}
-	for _, curSpec := range specs {
-		newCollectionStatus := kabanerov1alpha1.CollectionStatus{ActiveVersion: curSpec.Version}
+	newCollectionStatus := kabanerov1alpha1.CollectionStatus{}
+	for _, curSpec := range collectionResource.Spec.Versions {
+		newCollectionVersionStatus := kabanerov1alpha1.CollectionVersionStatus{Version: curSpec.Version}
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
 			if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateActive) {
-				newCollectionStatus.StatusMessage = "An invalid desiredState value of " + curSpec.DesiredState + " was specified. The collection is activated by default."
+				newCollectionVersionStatus.StatusMessage = "An invalid desiredState value of " + curSpec.DesiredState + " was specified. The collection is activated by default."
 			}
-			newCollectionStatus.Status = kabanerov1alpha1.CollectionDesiredStateActive
+			newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateActive
 			collection := getCollectionForSpecVersion(curSpec, collections)
 			if collection != nil {
-				for _, pipeline := range collection.Pipelines {
+				for _, pipeline := range collection.collection.Pipelines {
 					key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Sha256}
 					value := assetUseMap[key]
 					if value == nil {
@@ -797,26 +742,26 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 						newStatus := kabanerov1alpha1.PipelineStatus{}
 						value.DeepCopyInto(&newStatus)
 						newStatus.Name = pipeline.Id // This may vary by collection version
-						newCollectionStatus.ActivePipelines = append(newCollectionStatus.ActivePipelines, newStatus)
+						newCollectionVersionStatus.Pipelines = append(newCollectionVersionStatus.Pipelines, newStatus)
 						// If we had a problem loading the pipeline manifests, say so.
 						if value.manifestError != nil {
-							newCollectionStatus.StatusMessage = value.manifestError.Error()
+							newCollectionVersionStatus.StatusMessage = value.manifestError.Error()
 						}
 					}
 				}
 
 				// Update the status of the Collection object to reflect the images used
-				for _, image := range collection.Images {
-					newCollectionStatus.Images = append(newCollectionStatus.Images,
+				for _, image := range collection.collection.Images {
+					newCollectionVersionStatus.Images = append(newCollectionVersionStatus.Images,
 						kabanerov1alpha1.Image{Id: image.Id, Image: image.Image})
 				}
 			} else {
 				// Collection was not available, need to get pipeline information from previous status.
 				foundPrevStatus := false
-				for _, curStatus := range statuses {
-					if curStatus.ActiveVersion == curSpec.Version {
+				for _, curStatus := range collectionResource.Status.Versions {
+					if curStatus.Version == curSpec.Version {
 						foundPrevStatus = true
-						for _, pipeline := range curStatus.ActivePipelines {
+						for _, pipeline := range curStatus.Pipelines {
 							key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}
 							value := assetUseMap[key]
 							if value == nil {
@@ -825,44 +770,59 @@ func reconcileActiveVersionsInternal(namespace string, assetOwner metav1.OwnerRe
 								newStatus := kabanerov1alpha1.PipelineStatus{}
 								value.DeepCopyInto(&newStatus)
 								newStatus.Name = pipeline.Name
-								newCollectionStatus.ActivePipelines = append(newCollectionStatus.ActivePipelines, newStatus)
+								newCollectionVersionStatus.Pipelines = append(newCollectionVersionStatus.Pipelines, newStatus)
 								// If we had a problem loading the pipeline manifests, say so.
 								if value.manifestError != nil {
-									newCollectionStatus.StatusMessage = value.manifestError.Error()
+									newCollectionVersionStatus.StatusMessage = value.manifestError.Error()
 								}
 							}
 						}
-						newCollectionStatus.Status = curStatus.Status
-						newCollectionStatus.Images = curStatus.Images
+						newCollectionVersionStatus.Status = curStatus.Status
+						newCollectionVersionStatus.Images = curStatus.Images
 					}
 				}
 
 				// If there was no previous status, then the collection is inactive.
 				if foundPrevStatus == false {
-					newCollectionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
+					newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
 				}
 				
 				// Tell the user that the collection was not in the hub, if no other errors
-				if newCollectionStatus.StatusMessage == "" {
-						newCollectionStatus.StatusMessage = fmt.Sprintf("The requested version of the collection (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
+				if newCollectionVersionStatus.StatusMessage == "" {
+						newCollectionVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the collection (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
 				}
 			}
 		} else {
-			newCollectionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
-			newCollectionStatus.StatusMessage = "The collection has been deactivated."
+			newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
+			newCollectionVersionStatus.StatusMessage = "The collection has been deactivated."
 		}
 
-		log.Info(fmt.Sprintf("Updated collection status: %#v", newCollectionStatus))
-		newCollectionStatusList = append(newCollectionStatusList, newCollectionStatus)
+		log.Info(fmt.Sprintf("Updated collection status: %#v", newCollectionVersionStatus))
+		newCollectionStatus.Versions = append(newCollectionStatus.Versions, newCollectionVersionStatus)
+	}
+
+	// Need to copy status version [0] to the singleton (for now)
+	if len(newCollectionStatus.Versions) > 0 {
+		newCollectionStatus.ActiveLocation = newCollectionStatus.Versions[0].Location
+		newCollectionStatus.ActivePipelines = newCollectionStatus.Versions[0].Pipelines
+		newCollectionStatus.Status = newCollectionStatus.Versions[0].Status
+		newCollectionStatus.StatusMessage = newCollectionStatus.Versions[0].StatusMessage
+		newCollectionStatus.Images = newCollectionStatus.Versions[0].Images
+
+		if newCollectionStatus.Versions[0].Status != kabanerov1alpha1.CollectionDesiredStateInactive {
+			newCollectionStatus.ActiveVersion = newCollectionStatus.Versions[0].Version
+		}
 	}
 	
-	return newCollectionStatusList, nil
+	collectionResource.Status = newCollectionStatus
+	
+	return nil
 }
 
-func getCollectionForSpecVersion(spec kabanerov1alpha1.CollectionSpec, collections []*Collection) *Collection {
+func getCollectionForSpecVersion(spec kabanerov1alpha1.CollectionVersion, collections []resolvedCollection) *resolvedCollection {
 	for _, collection := range collections {
-		if collection.Version == spec.Version {
-			return collection
+		if collection.collection.Version == spec.Version {
+			return &collection
 		}
 	}
 	return nil
