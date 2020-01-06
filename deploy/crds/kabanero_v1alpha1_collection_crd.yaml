@@ -3,6 +3,17 @@ kind: CustomResourceDefinition
 metadata:
   name: collections.kabanero.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.status
+    description: Collection status.
+    name: Status
+    type: string
   group: kabanero.io
   names:
     kind: Collection
@@ -37,6 +48,17 @@ spec:
               type: string
             version:
               type: string
+            versions:
+              items:
+                properties:
+                  desiredState:
+                    type: string
+                  repositoryUrl:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              type: array
           type: object
         status:
           properties:
@@ -95,6 +117,62 @@ spec:
               type: string
             statusMessage:
               type: string
+            versions:
+              items:
+                properties:
+                  images:
+                    items:
+                      properties:
+                        id:
+                          type: string
+                        image:
+                          type: string
+                      type: object
+                    type: array
+                  location:
+                    type: string
+                  pipelines:
+                    items:
+                      properties:
+                        activeAssets:
+                          items:
+                            properties:
+                              assetDigest:
+                                type: string
+                              assetName:
+                                type: string
+                              group:
+                                type: string
+                              kind:
+                                type: string
+                              status:
+                                type: string
+                              statusMessage:
+                                type: string
+                              version:
+                                type: string
+                            type: object
+                          type: array
+                        digest:
+                          type: string
+                        name:
+                          type: string
+                        url:
+                          type: string
+                      required:
+                      - name
+                      - url
+                      - digest
+                      type: object
+                    type: array
+                  status:
+                    type: string
+                  statusMessage:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              type: array
           type: object
   version: v1alpha1
   versions:

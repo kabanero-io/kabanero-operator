@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 
 	"github.com/go-logr/logr"
 	yml "gopkg.in/yaml.v2"
@@ -39,6 +40,46 @@ type CollectionAsset struct {
 
 func DownloadToByte(url string) ([]byte, error) {
 	return getFromCache(url, false)
+}
+
+// Print something that looks similar to xxd output
+func commTrace(buffer []byte) string {
+	var sb strings.Builder
+	for bytesLeft := len(buffer); bytesLeft > 0; {
+		var bytesThisRound []byte
+		if bytesLeft >= 16 {
+			bytesThisRound = buffer[len(buffer)-bytesLeft:len(buffer)-bytesLeft+16]
+		} else {
+			bytesThisRound = buffer[len(buffer)-bytesLeft:]
+		}
+
+		// Build up the line to print
+		sb.WriteString(fmt.Sprintf("%.08X: ", len(buffer)-bytesLeft))
+		for i := 0; i < 16; i = i + 2 {
+			x := len(bytesThisRound) - i
+			if x >= 2 {
+				sb.WriteString(fmt.Sprintf("%.04X ", bytesThisRound[i:i+2]))
+			} else if x == 1 {
+				sb.WriteString(fmt.Sprintf("%.02X   ", bytesThisRound[i]))
+			} else {
+				sb.WriteString("     ")
+			}
+		}
+
+		for _, b := range bytesThisRound {
+			if unicode.IsPrint(rune(b)) {
+				sb.WriteByte(b)
+			} else {
+				sb.WriteString(".")
+			}
+		}
+		sb.WriteString("\n")
+
+		// Subtract for next loop
+		bytesLeft -= len(bytesThisRound)
+	}
+
+	return sb.String()
 }
 
 // Read X bytes from reader.
@@ -110,7 +151,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 		}
 	}
 
-	fmt.Println("Header names: ", strings.Join(headers, ","))
+	reqLogger.Info(fmt.Sprintf("Header names: %v", strings.Join(headers, ",")))
 
 	if foundManifest != true {
 		return nil, fmt.Errorf("Error reading archive, unable to read manifest.yaml")

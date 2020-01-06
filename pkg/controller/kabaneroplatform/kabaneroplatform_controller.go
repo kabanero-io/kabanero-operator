@@ -235,10 +235,10 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// Reconcile the webhook
-	err = reconcileWebhook(ctx, instance, r.client, reqLogger)
+	// Reconcile kabanero events
+	err = reconcileEvents(ctx, instance, r.client, reqLogger)
 	if err != nil {
-		reqLogger.Error(err, "Error reconciling kabanero-webhook")
+		reqLogger.Error(err, "Error reconciling kabanero-events")
 		return reconcile.Result{}, err
 	}
 	
@@ -375,7 +375,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 	isCheReady, _ := getCheStatus(ctx, k, c)
-	isWebhookRouteReady, _ := getWebhookRouteStatus(k, c, reqLogger)
+	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	
 	// Set the overall status.
@@ -388,7 +388,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady &&
 		isCheReady &&
-		isWebhookRouteReady &&
+		isEventsRouteReady &&
 		isAdmissionControllerWebhookReady
 
 	if isKabaneroReady {

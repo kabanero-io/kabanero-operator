@@ -115,3 +115,47 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: kabanero-cli
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kabanero-cli
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kabanero-cli
+  template:
+    metadata:
+      labels:
+        app: kabanero-cli
+    spec:
+      containers:
+        - name: kabanero-cli
+          livenessProbe:
+            httpGet:
+              path: /v1/liveliness
+              port: 9443
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            timeoutSeconds: 1
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: AESEncryptionKey
+              valueFrom:
+                secretKeyRef:
+                  name: kabanero-cli-aes-encryption-key-secret
+                  key: AESEncryptionKey
+                  optional: false
+            - name: KABANERO_CLI_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 9443
+              protocol: TCP
+          imagePullPolicy: Always
+          image: {{ .image }}
+      serviceAccountName: kabanero-cli

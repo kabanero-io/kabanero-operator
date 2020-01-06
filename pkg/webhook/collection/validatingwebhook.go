@@ -5,6 +5,7 @@ package collection
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
@@ -12,15 +13,15 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
-// Builds the webhook for the manager to register
+// BuildValidatingWebhook builds the webhook for the manager to register
 func BuildValidatingWebhook(mgr *manager.Manager) (webhook.Webhook, error) {
 	// Create the validating webhook
 	return builder.NewWebhookBuilder().
@@ -59,9 +60,18 @@ func (v *collectionValidator) Handle(ctx context.Context, req types.Request) typ
 	return admission.ValidationResponse(allowed, reason)
 }
 
-func (v *collectionValidator) validateCollectionFn(ctx context.Context, pod *kabanerov1alpha1.Collection) (bool, string, error) {
-	// For now, just reject everything.
-	return true, "All collections are approved", nil
+func (v *collectionValidator) validateCollectionFn(ctx context.Context, collection *kabanerov1alpha1.Collection) (bool, string, error) {
+	allowed := collection.Spec.Version == collection.Spec.Versions[0].Version &&
+		collection.Spec.RepositoryUrl == collection.Spec.Versions[0].RepositoryUrl &&
+		collection.Spec.DesiredState == collection.Spec.Versions[0].DesiredState
+
+	if !allowed {
+		reason := fmt.Sprintf("Single version collection model values do not match multiple collection model values. collection: %v", collection)
+		err := fmt.Errorf(reason)
+		return false, reason, err
+	}
+
+	return true, "", nil
 }
 
 // collectionValidator implements inject.Client.

@@ -2,13 +2,13 @@ package collection
 
 import (
 	"context"
-	me "errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/blang/semver"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
 
 	//	corev1 "k8s.io/api/core/v1"
@@ -170,9 +170,45 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	reqLogger.Info("Resolved Kabanero", "kabanero", k)
 
+	// Collection objects which existed prior to the spec.versions array will not
+	// have the versions array filled in.  Try to fill it in if we can.  Nothing
+	// fancy here... if one or the other is empty, fill it in.  Then re-reconcile.
+	if (len(instance.Spec.Version) > 0) && (len(instance.Spec.Versions) == 0) {
+		instance.Spec.Versions = []kabanerov1alpha1.CollectionVersion{{RepositoryUrl: instance.Spec.RepositoryUrl, Version: instance.Spec.Version, DesiredState: instance.Spec.DesiredState}}
+		err = r.client.Update(context.Background(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Unable to sync version and versions array")
+		}
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	}
+
+	if (len(instance.Spec.Version) == 0) && (len(instance.Spec.Versions) > 0) {
+		instance.Spec.Version = instance.Spec.Versions[0].Version
+		instance.Spec.DesiredState = instance.Spec.Versions[0].DesiredState
+		instance.Spec.RepositoryUrl = instance.Spec.Versions[0].RepositoryUrl
+		err = r.client.Update(context.Background(), instance)
+		if err != nil {
+			reqLogger.Error(err, "Unable to sync version and versions array")
+		}
+		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	}
+
+	// Similarly, collection objects which existed prior to the status.versions array
+	// will not have it filled in.  Pre-populate it with the singleton information so
+	// the reconciler can reference it.
+	if (len(instance.Status.Status) > 0) && (len(instance.Status.Versions) == 0) {
+		instance.Status.Versions = []kabanerov1alpha1.CollectionVersionStatus{{
+			Version: instance.Status.ActiveVersion,
+			Location: instance.Status.ActiveLocation,
+			Pipelines: instance.Status.ActivePipelines,
+			Status: instance.Status.Status,
+			StatusMessage: instance.Status.StatusMessage,
+			Images: instance.Status.Images,
+		}}
+	}
+	
 	rr, err := r.ReconcileCollection(instance, k)
 
-	// Update the status
 	r.client.Status().Update(ctx, instance)
 
 	// Force a requeue if there are failed assets.  These should be retried, and since
@@ -306,30 +342,11 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		r_log.Error(err, "Could not make kabanero the owner of the collection")
 	}
 
-	// Process deactivates regardless of whether the collection is available in the remote
-	// repository.
-	if strings.EqualFold(c.Spec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
-		err := deactivate(c, r.client)
-		if err != nil {
-			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-		}
-		
-		c.Status.Status = kabanerov1alpha1.CollectionDesiredStateInactive
-		return reconcile.Result{}, nil
-	}
-	
-	// Retreive all matching collection names from all remote indexes.  If none were specified,
-	// build and log an error and return.
+	// Retreive all matching collection names from all remote indexes.
+	// TODO: Start using the URL in the Collection object so we don't need to reference the
+	//       parent Kabanero anymore.
 	var matchingCollections []resolvedCollection
 	repositories := k.Spec.Collections.Repositories
-	if len(repositories) == 0 {
-		err = me.New(fmt.Sprintf("No repositories were configured in the Kabanero instance"))
-		r_log.Error(err, "Could not continue without any repositories")
-
-		// Update the status message so the user knows that something needs to be done.
-		c.Status.StatusMessage = "Could not find any configured repositories."
-		return reconcile.Result{Requeue: false, RequeueAfter: 60 * time.Second}, err
-	}
 
 	for _, repo := range repositories {
 		index, err := r.indexResolver(repo)
@@ -388,37 +405,11 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		} else {
 			r_log.Error(semverErr, "Could not determine upgrade availability for collection "+collectionName)
 		}
-
-		// Search for the correct version.  The list may have duplicates, we're just searching for
-		// the first match.
-		for _, matchingCollection := range matchingCollections {
-			switch {
-			case matchingCollection.collection.Version == c.Spec.Version:
-				// Activate or deactivate the collection based on the collection's current desiredState.
-				// The activateDefaultCollections setting in the CR instance's collection repository entry has
-				// no influence here as that only sets a collection's initial state.
-				if !strings.EqualFold(c.Spec.DesiredState, kabanerov1alpha1.CollectionDesiredStateActive) {
-					c.Status.StatusMessage = "An invalid desiredState value of " + c.Spec.DesiredState + " was specified. The collection is activated by default."
-				}
-
-				// Activate the collection.
-				err := activate(c, &matchingCollection.collection, r.client)
-				if err != nil {
-					return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
-				}
-				c.Status.ActiveLocation = matchingCollection.repositoryURL
-				c.Status.Status = kabanerov1alpha1.CollectionDesiredStateActive
-				return reconcile.Result{}, nil
-			}
-		}
-
-		// No collection with a matching version could be found. Update the status
-		// message so the user understands that the version they want is not available.
-		c.Status.StatusMessage = "The requested version of the collection (" + c.Spec.Version + ") is not available."
-
-		return reconcile.Result{}, nil
 	}
 
+	// Process the versions array and activate (or deactivate) the desired versions.
+	err = reconcileActiveVersions(c, matchingCollections, r.client)
+	
 	// No version of the collection could be found.  If there is no active version, update
 	// the status message so the user knows that something needs to be done.
 	if c.Status.ActiveVersion == "" {
@@ -427,262 +418,411 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	return reconcile.Result{}, nil
 }
 
-// Check if the asset read from a manifest is equal to the asset in the status
-// object.  They are equal if they have the same name, or if the name is
-// nil, if the URLs are equal.
-func assetMatch(assetStatus kabanerov1alpha1.RepositoryAssetStatus, asset CollectionAsset) bool {
-	return asset.Name == assetStatus.Name
+// A key to the pipeline use count map
+type pipelineUseMapKey struct {
+	url string
+	digest string
 }
 
-func updateAssetStatus(status *kabanerov1alpha1.CollectionStatus, pipeline Pipelines, asset CollectionAsset, message string, assetStatus string) {
-	log.Info(fmt.Sprintf("Updating status for asset %v in pipeline %v", asset.Name, pipeline.Id))
+// The value in the pipeline use count map
+type pipelineUseMapValue struct {
+	kabanerov1alpha1.PipelineStatus
+	useCount int64
+	manifests []CollectionAsset
+	manifestError error
+}
 
-	// Assume that if there is a message, it's an error condition
-	assetStatusMessage := message
+// A specific version of a pipeline zip in a specific version of a collection
+type pipelineVersion struct {
+	pipelineUseMapKey
+	version string
+}
 
-	// First, find the right pipeline in the Collection status
-	var matchingPipeline *kabanerov1alpha1.PipelineStatus
-	var matchingPipelineIndex int
-	for matchingPipelineIndex, _ = range status.ActivePipelines {
-		if status.ActivePipelines[matchingPipelineIndex].Name == pipeline.Id {
-			matchingPipeline = &status.ActivePipelines[matchingPipelineIndex]
-			break
+func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, collections []resolvedCollection, c client.Client) error {
+
+	ownerIsController := false
+	assetOwner := metav1.OwnerReference{
+		APIVersion: collectionResource.TypeMeta.APIVersion,
+		Kind:       collectionResource.TypeMeta.Kind,
+		Name:       collectionResource.ObjectMeta.Name,
+		UID:        collectionResource.ObjectMeta.UID,
+		Controller: &ownerIsController,
+	}
+
+	renderingContext := make(map[string]interface{})
+	if len(collections) > 0 {
+		renderingContext["CollectionId"] = collections[0].collection.Id
+		renderingContext["CollectionName"] = collections[0].collection.Name
+	}
+
+	// Multiple versions of the same collection, could be using the same pipeline zip.  Count how many
+	// times each pipeline has been used.
+	assetUseMap := make(map[pipelineUseMapKey]*pipelineUseMapValue)
+	for _, curStatus := range collectionResource.Status.Versions {
+		for _, pipeline := range curStatus.Pipelines {
+			key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}
+			value := assetUseMap[key]
+			if value == nil {
+				value = &pipelineUseMapValue{}
+				pipeline.DeepCopyInto(&(value.PipelineStatus))
+				assetUseMap[key] = value
+			}
+			value.useCount++
 		}
 	}
 
-	// If couldn't find the pipeline, create one and its associated asset.
-	if matchingPipeline == nil {
-		matchingPipeline = &kabanerov1alpha1.PipelineStatus{Name: pipeline.Id, Url: pipeline.Url, Digest: pipeline.Sha256}
-		matchingPipeline.ActiveAssets = append(matchingPipeline.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{Name: asset.Name, Version: asset.Version, Group: asset.Group, Kind: asset.Kind, Digest: asset.Sha256, Status: assetStatus, StatusMessage: assetStatusMessage})
-		status.ActivePipelines = append(status.ActivePipelines, *matchingPipeline)
-		return
-	}
-
-	// Update the URL and digest of the pipeline in case the URL changed.
-	status.ActivePipelines[matchingPipelineIndex].Url = pipeline.Url
-	status.ActivePipelines[matchingPipelineIndex].Digest = pipeline.Sha256
-
-	// Next find the asset in the Pipeline status.
-	for index, curAssetStatus := range matchingPipeline.ActiveAssets {
-		if assetMatch(curAssetStatus, asset) {
-			// We found it - update the digest and asset status.
-			status.ActivePipelines[matchingPipelineIndex].ActiveAssets[index].Digest = asset.Sha256
-			status.ActivePipelines[matchingPipelineIndex].ActiveAssets[index].Status = assetStatus
-			status.ActivePipelines[matchingPipelineIndex].ActiveAssets[index].StatusMessage = assetStatusMessage
-			return
+	// Reconcile the version changes.  Make a set of versions being removed, and versions being added.  Be
+	// sure to take into consideration the digest on the individual pipeline zips.
+	assetsToDecrement := make(map[pipelineVersion]bool)
+	assetsToIncrement := make(map[pipelineVersion]bool)
+	for _, curStatus := range collectionResource.Status.Versions {
+		for _, pipeline := range curStatus.Pipelines {
+			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.Version}
+			assetsToDecrement[cur] = true
 		}
 	}
 
-	// If the asset was not found, create a status for it
-	status.ActivePipelines[matchingPipelineIndex].ActiveAssets = append(status.ActivePipelines[matchingPipelineIndex].ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{Name: asset.Name, Version: asset.Version, Group: asset.Group, Kind: asset.Kind, Digest: asset.Sha256, Status: assetStatus, StatusMessage: assetStatusMessage})
-}
-
-// Deactivates a collection.
-func deactivate(collectionResource *kabanerov1alpha1.Collection, c client.Client) error {
-
-	// Maintain a list of failed "stuff" here.  We'll replace it later.
-	failedCollectionStatus := &kabanerov1alpha1.CollectionStatus{}
-
-	// failedAssets := []kabanerov1alpha1.RepositoryAssetStatus{}
-	for _, pipeline := range collectionResource.Status.ActivePipelines {
-		sourcePipeline := Pipelines{Id: pipeline.Name, Sha256: pipeline.Digest, Url: pipeline.Url}
-
-		// Iterate and delete each asset we know to be active.
-		for _, asset := range pipeline.ActiveAssets {
-			sourceAsset := CollectionAsset{Name: asset.Name, Group: asset.Group, Version: asset.Version, Kind: asset.Kind, Sha256: asset.Digest}
-
-			u := &unstructured.Unstructured{}
-			u.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   asset.Group,
-				Version: asset.Version,
-				Kind:    asset.Kind,
-			})
-
-			err := c.Get(context.Background(), client.ObjectKey{
-				Namespace: collectionResource.Namespace,
-				Name:      asset.Name,
-			}, u)
-
-			if err != nil {
-				if errors.IsNotFound(err) == false {
-					updateAssetStatus(failedCollectionStatus, sourcePipeline, sourceAsset, err.Error(), assetStatusUnknown)
+	for _, curSpec := range collectionResource.Spec.Versions {
+		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
+			collection := getCollectionForSpecVersion(curSpec, collections)
+			if collection == nil {
+				// This version of the collection was not found in the collection hub.  See if it's currently active.  
+				// If it is, we should continue to use what is active.
+				//activeMatch := false
+				for _, curStatus := range collectionResource.Status.Versions {
+					if curStatus.Version == curSpec.Version {
+						//activeMatch = true
+						for _, pipeline := range curStatus.Pipelines {
+							cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.Version}
+							if assetsToDecrement[cur] == true {
+								delete(assetsToDecrement, cur)
+							} else {
+								assetsToIncrement[cur] = true
+							}
+						}
+						break
+					}
 				}
-				continue
-			}
-
-			err = c.Delete(context.TODO(), u)
-			if err != nil {
-				updateAssetStatus(failedCollectionStatus, sourcePipeline, sourceAsset, err.Error(), assetStatusUnknown)
-				continue
-			}
-		}
-	}
-
-	// See if anything went wrong.  If so, update the asset status and return.
-	if len(failedCollectionStatus.ActivePipelines) > 0 {
-		collectionResource.Status.ActivePipelines = failedCollectionStatus.ActivePipelines
-		return fmt.Errorf("Failed to deactivate collection. One or more assets were not removed")
-	}
-
-	// Everything went fine. Clear the status section and print a message stating that deactivation completed.
-	cstatus := kabanerov1alpha1.CollectionStatus{}
-	collectionResource.Status = cstatus
-	collectionResource.Status.StatusMessage = "The collection has been deactivated."
-
-	return nil
-}
-
-func activate(collectionResource *kabanerov1alpha1.Collection, collection *Collection, c client.Client) error {
-	//The context which will be used when rendering remote yaml
-	renderingContext := map[string]interface{}{
-		"CollectionId":   collection.Id,
-		"CollectionName": collection.Name,
-	}
-
-	// Detect if the version is changing from the active version.  If it is, we need to clean up the
-	// assets from the previous version.
-	if (collectionResource.Status.ActiveVersion != "") && (collectionResource.Status.ActiveVersion != collection.Version) {
-		// Our version change strategy is going to be as follows:
-		// 1) Attempt to load all of the known artifacts.  Any failure, status message and punt.
-		// 2) Delete the artifacts.  If something goes wrong here, the state of the collection is unknown.
-
-		type transformedRemoteManifest struct {
-			m        mf.Manifest
-			assetURL string
-		}
-
-		var transformedManifests []transformedRemoteManifest
-		errorMessage := "Error during version change from " + collectionResource.Status.ActiveVersion + " to " + collection.Version
-
-		for _, pipeline := range collectionResource.Status.ActivePipelines {
-			// Add the Digest to the rendering context.
-			renderingContext["Digest"] = pipeline.Digest[0:8]
-
-			// Retrieve manifests as unstructured
-			manifests, err := GetManifests(pipeline.Url, pipeline.Digest, renderingContext, log)
-			if err != nil {
-				log.Error(err, errorMessage, "resource", pipeline.Url)
-				collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-				return nil // Forces status to be updated
-			}
-
-			for _, asset := range pipeline.ActiveAssets {
-				log.Info(fmt.Sprintf("Preparing to delete asset %v in pipeline %v", asset.Name, pipeline.Name))
-
-				// Look for the correct manifest and assign it to the manifestival object
-				for _, assetYaml := range manifests {
-					if asset.Name == assetYaml.Name {
-
-						resources := []unstructured.Unstructured{assetYaml.Yaml}
-						m, err := mf.FromResources(resources, c)
-
-						log.Info(fmt.Sprintf("Resources: %v", m.Resources))
-
-						transforms := []mf.Transformer{
-							injectNamespace(collectionResource.GetNamespace()),
-						}
-
-						err = m.Transform(transforms...)
-						if err != nil {
-							log.Error(err, errorMessage, "resource", asset.Name)
-							collectionResource.Status.StatusMessage = errorMessage + ": " + err.Error()
-							return nil // Forces status to be updated
-						}
-
-						// Queue the resolved manifest to be deleted in the next step.
-						transformedManifests = append(transformedManifests, transformedRemoteManifest{m, "" /* asset.Url */})
+			} else {
+				for _, pipeline := range collection.collection.Pipelines {
+					cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Sha256}, version: curSpec.Version}
+					if assetsToDecrement[cur] == true {
+						delete(assetsToDecrement, cur)
+					} else {
+						assetsToIncrement[cur] = true
 					}
 				}
 			}
 		}
-
-		// TODO: More work here, need to actually delete something....
-
-		// Indicate there is not currently an active version of this collection.
-		collectionResource.Status.ActiveVersion = ""
-		collectionResource.Status.ActivePipelines = nil
-		collectionResource.Status.Images = nil
 	}
-
-	// Now apply the new version
-	for _, pipeline := range collection.Pipelines {
-		log.Info(fmt.Sprintf("Applying assets %v", pipeline.Url))
-		// Add the Digest to the rendering context.
-		renderingContext["Digest"] = pipeline.Sha256[0:8]
-
-		// Retrieve manifests as unstructured
-		manifests, err := GetManifests(pipeline.Url, pipeline.Sha256, renderingContext, log)
-		if err != nil {
-			return err
+		
+	// Now go thru the maps and update the use counts
+	for cur, _ := range assetsToDecrement {
+		value := assetUseMap[cur.pipelineUseMapKey]
+		if value == nil {
+			return fmt.Errorf("Pipeline version not found in use map: %v", cur)
 		}
 
-		// Apply each yaml individually so that we can debug problems applying a particular asset.
-		for _, asset := range manifests {
-			resources := []unstructured.Unstructured{asset.Yaml}
-			m, err := mf.FromResources(resources, c)
+		value.useCount--
+	}
 
-			log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+	for cur, _ := range assetsToIncrement {
+		value := assetUseMap[cur.pipelineUseMapKey]
+		if value == nil {
+			// Need to add a new entry for this pipeline.
+			value = &pipelineUseMapValue{PipelineStatus: kabanerov1alpha1.PipelineStatus{Url: cur.url, Digest: cur.digest}}
+			assetUseMap[cur.pipelineUseMapKey] = value
+		}
 
-			transforms := []mf.Transformer{
-				injectOwner(collectionResource),
-				injectNamespace(collectionResource.GetNamespace()),
+		value.useCount++
+	}
+
+	// Now iterate thru the asset use map and delete any assets with a use count of 0,
+	// and create any assets with a positive use count.
+	for _, value := range assetUseMap {
+		if value.useCount <= 0 {
+			log.Info(fmt.Sprintf("Deleting assets with use count %v: %v", value.useCount, value))
+
+			for _, asset := range value.ActiveAssets {
+				u := &unstructured.Unstructured{}
+				u.SetGroupVersionKind(schema.GroupVersionKind{
+					Group:   asset.Group,
+					Version: asset.Version,
+					Kind:    asset.Kind,
+				})
+
+				err := c.Get(context.Background(), client.ObjectKey{
+					Namespace: collectionResource.GetNamespace(),
+					Name:      asset.Name,
+				}, u)
+
+				if err != nil {
+					if errors.IsNotFound(err) == false {
+						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
+					}
+				} else {
+					// Get the owner references.  See if we're the last one.
+					ownerRefs := u.GetOwnerReferences()
+					newOwnerRefs := []metav1.OwnerReference{}
+					for _, ownerRef := range ownerRefs {
+						if ownerRef.UID != assetOwner.UID {
+							newOwnerRefs = append(newOwnerRefs, ownerRef)
+						}
+					}
+
+					if len(newOwnerRefs) == 0 {
+						err = c.Delete(context.TODO(), u)
+						if err != nil {
+							log.Error(err, fmt.Sprintf("Unable to delete asset name %v", asset.Name))
+						}
+					} else {
+						u.SetOwnerReferences(newOwnerRefs)
+						err = c.Update(context.TODO(), u)
+						if err != nil {
+							log.Error(err, fmt.Sprintf("Unable to delete owner reference from %v", asset.Name))
+						}
+					}
+				}
+			}
+		}
+	}
+
+	for _, value := range assetUseMap {
+		if value.useCount > 0 {
+			log.Info(fmt.Sprintf("Creating assets with use count %v: %v", value.useCount, value))
+
+			// Check to see if there is already an asset list.  If not, read the manifests and
+			// create one.
+			if len(value.ActiveAssets) == 0 {
+				// Add the Digest to the rendering context.
+				renderingContext["Digest"] = value.Digest[0:8]
+
+				// Retrieve manifests as unstructured.  If we could not get them, skip.
+				manifests, err := GetManifests(value.Url, value.Digest, renderingContext, log)
+				if err != nil {
+					log.Error(err, fmt.Sprintf("Error retrieving manifests at %v", value.Url))
+					value.manifestError = err
+					continue
+				}
+
+				// Save the manifests for later.
+				value.manifests = manifests
+				
+				// Create the asset status slice, but don't apply anything yet.
+				for _, asset := range manifests {
+					value.ActiveAssets = append(value.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{
+						Name: asset.Name,
+						Group: asset.Group,
+					  Version: asset.Version,
+					  Kind: asset.Kind,
+						Digest: asset.Sha256,
+						Status: assetStatusUnknown,
+						StatusMessage: "Asset has not been applied yet.",
+					})
+				}
 			}
 
-			err = m.Transform(transforms...)
-			if err != nil {
-				return err
+			// Now go thru the asset list and see if the objects are there.  If not, create them.
+			for index, asset := range value.ActiveAssets {
+				u := &unstructured.Unstructured{}
+				u.SetGroupVersionKind(schema.GroupVersionKind{
+					Group:   asset.Group,
+					Version: asset.Version,
+					Kind:    asset.Kind,
+				})
+
+				err := c.Get(context.Background(), client.ObjectKey{
+					Namespace: collectionResource.GetNamespace(),
+					Name:      asset.Name,
+				}, u)
+
+				if err != nil {
+					if errors.IsNotFound(err) == false {
+						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
+					} else {
+						// Make sure the manifests are loaded.
+						if len(value.manifests) == 0 {
+							// Add the Digest to the rendering context.
+							renderingContext["Digest"] = value.Digest[0:8]
+
+							// Retrieve manifests as unstructured
+							manifests, err := GetManifests(value.Url, value.Digest, renderingContext, log)
+							if err != nil {
+								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available at %v", asset.Name, value.Url))
+								value.ActiveAssets[index].Status = assetStatusFailed
+								value.ActiveAssets[index].StatusMessage = "Manifests are no longer available at specified URL"
+							} else {
+								// Save the manifests for later.
+								value.manifests = manifests
+							}
+						}
+
+						// Now find the correct manifest and create the object
+						for _, manifest := range value.manifests {
+							if asset.Name == manifest.Name {
+								resources := []unstructured.Unstructured{manifest.Yaml}
+								m, err := mf.FromResources(resources, c)
+
+								log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+
+								transforms := []mf.Transformer{
+									transforms.InjectOwnerReference(assetOwner), 
+									transforms.InjectNamespace(collectionResource.GetNamespace()),
+								}
+
+								err = m.Transform(transforms...)
+								if err != nil {
+									log.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
+									value.ActiveAssets[index].Status = assetStatusFailed
+									value.ActiveAssets[index].Status = err.Error()
+								} else {
+									log.Info(fmt.Sprintf("Applying resources: %v", m.Resources))
+									err = m.ApplyAll()
+									if err != nil {
+										// Update the asset status with the error message
+										log.Error(err, "Error installing the resource", "resource", asset.Name)
+										value.ActiveAssets[index].Status = assetStatusFailed
+										value.ActiveAssets[index].StatusMessage = err.Error()
+									} else {
+										value.ActiveAssets[index].Status = assetStatusActive
+										value.ActiveAssets[index].StatusMessage = ""
+									}
+								}
+							}
+						}
+					}
+				} else {
+					// Add owner reference
+					ownerRefs := u.GetOwnerReferences()
+					foundOurselves := false
+					for _, ownerRef := range ownerRefs {
+						if ownerRef.UID == assetOwner.UID {
+							foundOurselves = true
+						}
+					}
+
+					if foundOurselves == false {
+
+						// There can only be one 'controller' reference, so additional references should not
+						// be controller references.  It's not clear what Kubernetes does with this field.
+						ownerRefs = append(ownerRefs, assetOwner)
+						u.SetOwnerReferences(ownerRefs)
+
+						err = c.Update(context.TODO(), u)
+						if err != nil {
+							log.Error(err, fmt.Sprintf("Unable to add owner reference to %v", asset.Name))
+						}
+					}
+					
+					value.ActiveAssets[index].Status = assetStatusActive
+					value.ActiveAssets[index].StatusMessage = ""
+				}
 			}
+		}
+	}
+	
+	// Now update the CollectionStatus to reflect the current state of things.
+	newCollectionStatus := kabanerov1alpha1.CollectionStatus{}
+	for _, curSpec := range collectionResource.Spec.Versions {
+		newCollectionVersionStatus := kabanerov1alpha1.CollectionVersionStatus{Version: curSpec.Version}
+		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
+			if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateActive) {
+				newCollectionVersionStatus.StatusMessage = "An invalid desiredState value of " + curSpec.DesiredState + " was specified. The collection is activated by default."
+			}
+			newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateActive
+			collection := getCollectionForSpecVersion(curSpec, collections)
+			if collection != nil {
+				for _, pipeline := range collection.collection.Pipelines {
+					key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Sha256}
+					value := assetUseMap[key]
+					if value == nil {
+						// TODO: ???
+					} else {
+						newStatus := kabanerov1alpha1.PipelineStatus{}
+						value.DeepCopyInto(&newStatus)
+						newStatus.Name = pipeline.Id // This may vary by collection version
+						newCollectionVersionStatus.Pipelines = append(newCollectionVersionStatus.Pipelines, newStatus)
+						// If we had a problem loading the pipeline manifests, say so.
+						if value.manifestError != nil {
+							newCollectionVersionStatus.StatusMessage = value.manifestError.Error()
+						}
+					}
+				}
 
-			log.Info(fmt.Sprintf("Applying resources: %v", m.Resources))
-
-			err = m.ApplyAll()
-			if err != nil {
-				// Update the asset status with the error message
-				log.Error(err, "Error installing the resource", "resource", asset.Name)
-				updateAssetStatus(&collectionResource.Status, pipeline, asset, err.Error(), assetStatusFailed)
+				// Update the status of the Collection object to reflect the images used
+				for _, image := range collection.collection.Images {
+					newCollectionVersionStatus.Images = append(newCollectionVersionStatus.Images,
+						kabanerov1alpha1.Image{Id: image.Id, Image: image.Image})
+				}
 			} else {
-				// Update the digest for this asset in the status
-				updateAssetStatus(&collectionResource.Status, pipeline, asset, "", assetStatusActive)
+				// Collection was not available, need to get pipeline information from previous status.
+				foundPrevStatus := false
+				for _, curStatus := range collectionResource.Status.Versions {
+					if curStatus.Version == curSpec.Version {
+						foundPrevStatus = true
+						for _, pipeline := range curStatus.Pipelines {
+							key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}
+							value := assetUseMap[key]
+							if value == nil {
+								// TODO: ???
+							} else {
+								newStatus := kabanerov1alpha1.PipelineStatus{}
+								value.DeepCopyInto(&newStatus)
+								newStatus.Name = pipeline.Name
+								newCollectionVersionStatus.Pipelines = append(newCollectionVersionStatus.Pipelines, newStatus)
+								// If we had a problem loading the pipeline manifests, say so.
+								if value.manifestError != nil {
+									newCollectionVersionStatus.StatusMessage = value.manifestError.Error()
+								}
+							}
+						}
+						newCollectionVersionStatus.Status = curStatus.Status
+						newCollectionVersionStatus.Images = curStatus.Images
+					}
+				}
+
+				// If there was no previous status, then the collection is inactive.
+				if foundPrevStatus == false {
+					newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
+				}
+				
+				// Tell the user that the collection was not in the hub, if no other errors
+				if newCollectionVersionStatus.StatusMessage == "" {
+						newCollectionVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the collection (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
+				}
 			}
+		} else {
+			newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
+			newCollectionVersionStatus.StatusMessage = "The collection has been deactivated."
+		}
+
+		log.Info(fmt.Sprintf("Updated collection status: %#v", newCollectionVersionStatus))
+		newCollectionStatus.Versions = append(newCollectionStatus.Versions, newCollectionVersionStatus)
+	}
+
+	// Need to copy status version [0] to the singleton (for now)
+	if len(newCollectionStatus.Versions) > 0 {
+		newCollectionStatus.ActiveLocation = newCollectionStatus.Versions[0].Location
+		newCollectionStatus.ActivePipelines = newCollectionStatus.Versions[0].Pipelines
+		newCollectionStatus.Status = newCollectionStatus.Versions[0].Status
+		newCollectionStatus.StatusMessage = newCollectionStatus.Versions[0].StatusMessage
+		newCollectionStatus.Images = newCollectionStatus.Versions[0].Images
+
+		if newCollectionStatus.Versions[0].Status != kabanerov1alpha1.CollectionDesiredStateInactive {
+			newCollectionStatus.ActiveVersion = newCollectionStatus.Versions[0].Version
 		}
 	}
-
-	// Update the status of the Collection object to reflect the version we applied.
-	collectionResource.Status.ActiveVersion = collection.Version
-
-	// Update the status of the Collection object to reflect the images used
-	var statusImages []kabanerov1alpha1.Image
-	for _, image := range collection.Images {
-		var statusImage kabanerov1alpha1.Image
-		statusImage.Id = image.Id
-		statusImage.Image = image.Image
-		statusImages = append(statusImages, statusImage)
-	}
-	collectionResource.Status.Images = statusImages
-
+	
+	collectionResource.Status = newCollectionStatus
+	
 	return nil
 }
 
-// Custom transform that leaves the namespace alone for some types
-func injectNamespace(namespace string) mf.Transformer {
-	return func(u *unstructured.Unstructured) error {
-		kind := u.GetKind()
-		if (kind != "TriggerBinding") && (kind != "TriggerTemplate") {
-			return mf.InjectNamespace(namespace)(u)
+func getCollectionForSpecVersion(spec kabanerov1alpha1.CollectionVersion, collections []resolvedCollection) *resolvedCollection {
+	for _, collection := range collections {
+		if collection.collection.Version == spec.Version {
+			return &collection
 		}
-
-		return nil
 	}
-}
-
-// Custom transform that leaves the owner alone for some types
-func injectOwner(owner mf.Owner) mf.Transformer {
-	return func(u *unstructured.Unstructured) error {
-		kind := u.GetKind()
-		if (kind != "TriggerBinding") && (kind != "TriggerTemplate") {
-			return mf.InjectOwner(owner)(u)
-		}
-
-		return nil
-	}
+	return nil
 }

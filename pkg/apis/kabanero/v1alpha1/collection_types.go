@@ -16,11 +16,19 @@ const (
 	CollectionDesiredStateInactive = "inactive"
 )
 
-// CollectionSpec defines the desired state of Collection
+// CollectionSpec defines the desired composition of a Collection
 // +k8s:openapi-gen=true
 type CollectionSpec struct {
+	RepositoryUrl string              `json:"repositoryUrl,omitempty"`
+	Name          string              `json:"name,omitempty"`
+	Version       string              `json:"version,omitempty"`
+	DesiredState  string              `json:"desiredState,omitempty"`
+	Versions      []CollectionVersion `json:"versions,omitempty"`
+}
+
+// CollectionVersion defines the desired composition of a specific collection version.
+type CollectionVersion struct {
 	RepositoryUrl string `json:"repositoryUrl,omitempty"`
-	Name          string `json:"name,omitempty"`
 	Version       string `json:"version,omitempty"`
 	DesiredState  string `json:"desiredState,omitempty"`
 }
@@ -33,8 +41,7 @@ type PipelineStatus struct {
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
 
-// RepositoryAssetStatus defines the observed state of a single asset
-// in a respository, in the collection.
+// RepositoryAssetStatus defines the observed state of a single asset in a respository, in the collection.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`
 	Group         string `json:"group,omitempty"`
@@ -45,17 +52,28 @@ type RepositoryAssetStatus struct {
 	StatusMessage string `json:"statusMessage,omitempty"`
 }
 
-// CollectionStatus defines the observed state of Collection
+// CollectionStatus defines the observed state of a collection
 // +k8s:openapi-gen=true
 type CollectionStatus struct {
-	ActiveVersion     string           `json:"activeVersion,omitempty"`
-	ActiveLocation    string           `json:"activeLocation,omitempty"`
-	ActivePipelines   []PipelineStatus `json:"activePipelines,omitempty"`
-	AvailableVersion  string           `json:"availableVersion,omitempty"`
-	AvailableLocation string           `json:"availableLocation,omitempty"`
-	Status            string           `json:"status,omitempty"`
-	StatusMessage     string           `json:"statusMessage,omitempty"`
-	Images            []Image          `json:"images,omitempty"`
+	ActiveVersion     string                    `json:"activeVersion,omitempty"`
+	ActiveLocation    string                    `json:"activeLocation,omitempty"`
+	ActivePipelines   []PipelineStatus          `json:"activePipelines,omitempty"`
+	AvailableVersion  string                    `json:"availableVersion,omitempty"`
+	AvailableLocation string                    `json:"availableLocation,omitempty"`
+	Status            string                    `json:"status,omitempty"`
+	StatusMessage     string                    `json:"statusMessage,omitempty"`
+	Images            []Image                   `json:"images,omitempty"`
+	Versions          []CollectionVersionStatus `json:"versions,omitempty"`
+}
+
+// CollectionVersionStatus defines the observed state of a specific collection version.
+type CollectionVersionStatus struct {
+	Version       string           `json:"version,omitempty"`
+	Location      string           `json:"location,omitempty"`
+	Pipelines     []PipelineStatus `json:"pipelines,omitempty"`
+	Status        string           `json:"status,omitempty"`
+	StatusMessage string           `json:"statusMessage,omitempty"`
+	Images        []Image          `json:"images,omitempty"`
 }
 
 // Image defines a container image used by a collection
@@ -69,6 +87,8 @@ type Image struct {
 // Collection is the Schema for the collections API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations."
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="Collection status."
 type Collection struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -39,10 +39,10 @@ COLLECTION_CTRLR_REPOSITORY=$(firstword $(subst :, ,${COLLECTION_CTRLR_IMAGE}))
 
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.4.0
+CURRENT_RELEASE=0.5.0
 
 
-.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall
+.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle
 
 build: generate
 	go install ./cmd/manager
@@ -161,7 +161,7 @@ deploy-olm:
 
 	kubectl apply -f deploy/olm/
 
-# Update deployment to correct image
+# Update deployment to correct image 
 ifdef INTERNAL_REGISTRY
 	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE_SVC}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 else
@@ -192,7 +192,7 @@ dependency-report:
 # Requires jq
 
 # Install Test
-int-test-install: creds build-image push-image int-install
+int-test-install: creds build-image push-image int-install int-config
 
 creds:
 	tests/00-credentials.sh
@@ -207,10 +207,12 @@ endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
 
+int-config:
+# Update config to correct image
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero-operator-collection-controller::.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl apply -f -
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl apply -f -
 else
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero-operator-collection-controller::.*!image: ${COLLECTION_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
 endif
 
 # Uninstall Test
@@ -219,7 +221,7 @@ int-test-uninstall: creds int-uninstall
 int-uninstall:
 	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/uninstall.sh
 
-# Collections
+# Collections: Can be run in parallel ( -j ). Test manual pipeline run of collections.
 int-test-collections: int-test-java-microprofile int-test-java-spring-boot2 int-test-nodejs int-test-nodejs-express int-test-nodejs-loopback
 
 int-test-java-microprofile:
@@ -237,3 +239,13 @@ int-test-nodejs-express:
 int-test-nodejs-loopback:
 	tests/14-nodejs-loopback.sh
 
+# Lifecycle: Lifecycle of Kabanero, Collection and owned objects
+int-test-lifecycle: int-test-delete-pipeline int-test-delete-collection int-test-update-index int-test-deactivate-collection
+int-test-delete-pipeline:
+	tests/20-delete-pipeline.sh
+int-test-delete-collection:
+	tests/21-delete-collection.sh
+int-test-update-index:
+	tests/22-update-index.sh
+int-test-deactivate-collection:
+	tests/23-deactivate-collection.sh

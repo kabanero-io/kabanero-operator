@@ -58,6 +58,7 @@ func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
 		req.Header.Add("If-None-Match", cacheData.etag)
 		req.Header.Add("If-Modified-Since", cacheData.date)
 	}
+	req.Header.Add("Accept-Encoding", "gzip")
 
 	// Drive the request. Certificate validation is not disabled by default.
 	client := http.DefaultClient

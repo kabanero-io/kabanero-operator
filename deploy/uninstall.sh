@@ -192,7 +192,7 @@ unsubscribe () {
 			sleep $SLEEP_LONG
 			LOOP_COUNT=`expr $LOOP_COUNT + 1`
 			if [ $LOOP_COUNT -gt 10 ] ; then
-				echo "Timed out waiting for Copied ClusterServiceVersions $CSV to be deleted"
+					echo "Timed out waiting for Copied ClusterServiceVersions $CSV to be deleted"
 				break
 			fi
 		done
