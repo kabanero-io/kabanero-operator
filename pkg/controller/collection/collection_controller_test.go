@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 )
 
@@ -252,8 +252,8 @@ func (c unitTestClient) Get(ctx context.Context, key client.ObjectKey, obj runti
 	u.SetOwnerReferences(owners)
 	return nil
 }
-func (c unitTestClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error { return nil }
-func (c unitTestClient) Create(ctx context.Context, obj runtime.Object) error {
+func (c unitTestClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error { return nil }
+func (c unitTestClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		fmt.Printf("Received invalid create: %v\n", obj)
@@ -277,7 +277,7 @@ func (c unitTestClient) Create(ctx context.Context, obj runtime.Object) error {
 	c.objs[u.GetName()] = u.GetOwnerReferences()
 	return nil
 }
-func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
+func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		fmt.Printf("Received invalid delete: %v\n", obj)
@@ -293,7 +293,10 @@ func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...
 	delete(c.objs, u.GetName())
 	return nil
 }
-func (c unitTestClient) Update(ctx context.Context, obj runtime.Object) error {
+func (c unitTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+	return errors.New("DeleteAllOf is not supported")
+}
+func (c unitTestClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		fmt.Printf("Received invalid update: %v\n", obj)
@@ -310,6 +313,10 @@ func (c unitTestClient) Update(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 func (c unitTestClient) Status() client.StatusWriter { return c }
+
+func (c unitTestClient) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return errors.New("Patch is not supported")
+}
 
 // HTTP handler that serves pipeline zips
 type collectionHandler struct {

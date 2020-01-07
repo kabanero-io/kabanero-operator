@@ -8,7 +8,7 @@ import (
 	mf "github.com/kabanero-io/manifestival"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var cclog = rlog.Log.WithName("collection-controller-install")

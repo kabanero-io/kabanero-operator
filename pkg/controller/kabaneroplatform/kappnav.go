@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var kanlog = rlog.Log.WithName("kabanero-kappnav")
@@ -52,10 +52,13 @@ func getKappnavStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, erro
 	}
 
 	// The default instance is there, see if the UI pod is available.
-	options := &client.ListOptions{Namespace: "kappnav"}
-	options.SetLabelSelector("app.kubernetes.io/component=kappnav-ui")
+	
+	listOptions := []client.ListOption{
+		client.InNamespace("kappnav"),
+		client.MatchingLabels(map[string]string{"app.kubernetes.io/component": "kappnav-ui"}),
+	}
 	podList := &corev1.PodList{}
-	err = c.List(context.Background(), options, podList)
+	err = c.List(context.Background(), podList, listOptions...)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			k.Status.Kappnav.ErrorMessage = "The KAppNav UI pod could not be located."

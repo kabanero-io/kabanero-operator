@@ -5,6 +5,7 @@ import (
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// NOTE: The +listType=set marker are required by OpenAPI generation for list types.
 
 const (
 	// CollectionDesiredStateActive represents a desired collection active state.
@@ -23,6 +24,7 @@ type CollectionSpec struct {
 	Name          string              `json:"name,omitempty"`
 	Version       string              `json:"version,omitempty"`
 	DesiredState  string              `json:"desiredState,omitempty"`
+	// +listType=set
 	Versions      []CollectionVersion `json:"versions,omitempty"`
 }
 
@@ -58,12 +60,15 @@ type RepositoryAssetStatus struct {
 type CollectionStatus struct {
 	ActiveVersion     string                    `json:"activeVersion,omitempty"`
 	ActiveLocation    string                    `json:"activeLocation,omitempty"`
+	// +listType=set
 	ActivePipelines   []PipelineStatus          `json:"activePipelines,omitempty"`
 	AvailableVersion  string                    `json:"availableVersion,omitempty"`
 	AvailableLocation string                    `json:"availableLocation,omitempty"`
 	Status            string                    `json:"status,omitempty"`
 	StatusMessage     string                    `json:"statusMessage,omitempty"`
+	// +listType=set
 	Images            []Image                   `json:"images,omitempty"`
+	// +listType=set
 	Versions          []CollectionVersionStatus `json:"versions,omitempty"`
 }
 
@@ -90,6 +95,7 @@ type Image struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations."
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="Collection status."
+// +kubebuilder:resource:path=collections,scope=Namespaced
 type Collection struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -12,13 +12,11 @@ import (
 	collectionwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/collection"
 	kabanerowebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero"
 
-	apitypes "k8s.io/apimachinery/pkg/types"
-
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 var log = logf.Log.WithName("cmd")
@@ -61,7 +59,7 @@ func getHookNamespace() (string, error) {
 }
 
 func main() {
-	logf.SetLogger(logf.ZapLogger(false))
+	logf.SetLogger(zap.Logger(false))
 
 	printVersion()
 
@@ -95,73 +93,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create the collection validating webhook
-	collectionValidatingWebhook, err := collectionwebhook.BuildValidatingWebhook(&mgr)
-	if err != nil {
-		log.Error(err, "unable to setup collection validating webhook")
-		os.Exit(1)
-	}
+	// Setup the webhook server
+	hookServer := mgr.GetWebhookServer()
+	hookServer.Port = 9443
+	hookServer.Register("/validate-collections", collectionwebhook.BuildValidatingWebhook(&mgr))
+	hookServer.Register("/mutate-collections", collectionwebhook.BuildMutatingWebhook(&mgr))
+	hookServer.Register("/validate-kabaneros", kabanerowebhook.BuildValidatingWebhook(&mgr))
+	hookServer.Register("/mutate-kabaneros", kabanerowebhook.BuildMutatingWebhook(&mgr))
 
-	// Create the collection mutating webhook
-	collectionMutatingWebhook, err := collectionwebhook.BuildMutatingWebhook(&mgr)
-	if err != nil {
-		log.Error(err, "unable to setup collection mutating webhook")
-		os.Exit(1)
-	}
-
-	// Create the kabanero validating webhook
-	kabaneroValidatingWebhook, err := kabanerowebhook.BuildValidatingWebhook(&mgr)
-	if err != nil {
-		log.Error(err, "unable to setup kabanero validating webhook")
-		os.Exit(1)
-	}
-
-	// Create the kabanero mutating webhook
-	kabaneroMutatingWebhook, err := kabanerowebhook.BuildMutatingWebhook(&mgr)
-	if err != nil {
-		log.Error(err, "unable to setup kabanero mutating webhook")
-		os.Exit(1)
-	}
-
-	// Start the webhook server.  Some things to note:
-	// 1) A webhook server requires certificates.  The controller-runtime is
-	//    creating a secret and generates a certificate within it.  This allows
-	//    the Kube API server to use TLS when calling the webhook.
-	// 2) The controller-runtime is auto-generating the secret, service, and
-	//    configurations (ValidatingWebhookConfiguration and
-	//    MutatingWebhookConfiguration) used here.
-	disableWebhookConfigInstaller := false
-	admissionServer, err := webhook.NewServer("collection-admission-server", mgr, webhook.ServerOptions{
-		Port: 9443,
-		CertDir: "/tmp/cert",
-		DisableWebhookConfigInstaller: &disableWebhookConfigInstaller,
-		BootstrapOptions: &webhook.BootstrapOptions{
-			MutatingWebhookConfigName: "webhook.operator.kabanero.io",
-			ValidatingWebhookConfigName: "webhook.operator.kabanero.io",
-			Secret: &apitypes.NamespacedName{
-				Namespace: namespace, // TODO: appropriate namespace
-				Name: "kabanero-operator-admission-webhook",
-			},
-			Service: &webhook.Service{
-				Namespace: namespace, // TODO: appropriate namespace
-				Name: "kabanero-operator-admission-webhook",
-				Selectors: map[string]string{
-					"name": "kabanero-operator-admission-webhook",
-				},
-			},
-		},
-	})
-	if err != nil {
-		log.Error(err, "unable to create a new webhook server")
-		os.Exit(1)
-	}
-
-	err = admissionServer.Register(collectionValidatingWebhook, collectionMutatingWebhook, kabaneroValidatingWebhook, kabaneroMutatingWebhook)
-	if err != nil {
-		log.Error(err, "unable to register webhooks in the admission server")
-		os.Exit(1)
-	}
-	
 	log.Info("Starting the Cmd.")
 
 	// Start the Cmd

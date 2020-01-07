@@ -1,0 +1,114 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-operator-admission-webhook
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - configmaps
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - watch
+  - delete
+- apiGroups:
+  - kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-operator-admission-webhook
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-operator-admission-webhook
+subjects:
+- kind: ServiceAccount
+  name: kabanero-operator-admission-webhook
+roleRef:
+  kind: Role
+  name: kabanero-operator-admission-webhook
+  apiGroup: rbac.authorization.k8s.io
+---  
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-operator-admission-webhook
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: kabanero-operator-admission-webhook-serving-cert
+spec:
+  selector:
+    name: kabanero-operator-admission-webhook
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 9443
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  annotations:
+    service.beta.openshift.io/inject-cabundle: 'true'
+  name: kabanero-operator-admission-webhook-ca-cert
+  namespace: kabanero
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kabanero-operator-admission-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kabanero-operator-admission-webhook
+  template:
+    metadata:
+      labels:
+        name: kabanero-operator-admission-webhook
+    spec:
+      serviceAccountName: kabanero-operator-admission-webhook
+      containers:
+        - name: kabanero-operator-admission-webhook
+          image: {{ .image }}
+          imagePullPolicy: Always
+          env:
+            - name: KABANERO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: kabanero-operator-admission-webhook-serving-cert
+            readOnly: true
+      volumes:
+      - name: kabanero-operator-admission-webhook-serving-cert
+        secret:
+          secretName: kabanero-operator-admission-webhook-serving-cert
