@@ -2,6 +2,7 @@ package kabaneroplatform
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
@@ -105,6 +106,39 @@ func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabane
 	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Removing Kabanero collection controller installation.")
 
+	// First, we need to delete all of the collections that we own.  We must do this first, to let the
+	// collection controller run its finalizer for all of the collections, before deleting the
+	// collection controller pods etc.
+	collectionList := &kabanerov1alpha1.CollectionList{}
+	err := c.List(ctx, collectionList, client.InNamespace(k.GetNamespace()))
+	if err != nil {
+		return fmt.Errorf("Unable to list collections in finalizer: %v", err.Error())
+	}
+
+	collectionCount := 0
+	for _, collection := range collectionList.Items {
+		for _, ownerRef := range collection.OwnerReferences {
+			if ownerRef.UID == k.UID {
+				collectionCount = collectionCount + 1
+				if collection.DeletionTimestamp.IsZero() {
+					err = c.Delete(ctx, &collection)
+					if err != nil {
+						// Just log the error... but continue on to the next object.
+						logger.Error(err, "Unable to delete collection %v", collection.Name)
+					}
+				}
+			}
+		}
+	}
+
+	// If there are still some collections left, need to come back and try again later...
+	if collectionCount > 0 {
+		return fmt.Errorf("Deletion blocked waiting for %v owned Collections to be deleted", collectionCount)
+	}
+
+	// Now that the collections have all been deleted, proceed with the cross-namespace objects.
+	// Objects in this namespace will be deleted implicitly when the Kabanero CR instance is
+	// deleted, because of the OwnerReference in those objects.
 	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
 	if err != nil {
 		logger.Error(err, "Unable to resolve software revision.")
@@ -134,7 +168,7 @@ func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabane
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
