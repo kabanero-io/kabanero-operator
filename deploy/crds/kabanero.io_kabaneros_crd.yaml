@@ -1,0 +1,361 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: kabaneros.kabanero.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.kabaneroInstance.version
+    description: Kabanero operator instance version.
+    name: Version
+    type: string
+  - JSONPath: .status.kabaneroInstance.ready
+    description: Kabanero operator instance readiness status. The status is directly
+      correlated to the availability of the operator's resources dependencies.
+    name: Ready
+    type: string
+  group: kabanero.io
+  names:
+    kind: Kabanero
+    listKind: KabaneroList
+    plural: kabaneros
+    singular: kabanero
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: KabaneroSpec defines the desired state of Kabanero
+          properties:
+            admissionControllerWebhook:
+              properties:
+                image:
+                  type: string
+                repository:
+                  type: string
+                tag:
+                  type: string
+                version:
+                  type: string
+              type: object
+            che:
+              description: CheCustomizationSpec defines customization entries for
+                Che.
+              properties:
+                cheOperatorInstance:
+                  description: CheOperatorInstanceSpec defines customization entries
+                    for the Che operator instance.
+                  properties:
+                    cheWorkspaceClusterRole:
+                      type: string
+                  type: object
+                enable:
+                  type: boolean
+                kabaneroChe:
+                  description: KabaneroCheSpec defines customization entries for Kabanero
+                    Che.
+                  properties:
+                    image:
+                      type: string
+                    repository:
+                      type: string
+                    tag:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+              type: object
+            cliServices:
+              description: KabaneroCliServicesCustomizationSpec defines customization
+                entries for the Kabanero CLI.
+              properties:
+                image:
+                  type: string
+                repository:
+                  type: string
+                sessionExpirationSeconds:
+                  type: string
+                tag:
+                  type: string
+                version:
+                  description: 'Future: Enable     bool   `json:"enable,omitempty"`'
+                  type: string
+              type: object
+            collectionController:
+              description: CollectionControllerSpec defines customization entried
+                for the Kabanero collection controller.
+              properties:
+                image:
+                  type: string
+                repository:
+                  type: string
+                tag:
+                  type: string
+                version:
+                  type: string
+              type: object
+            collections:
+              description: InstanceCollectionConfig defines the customization entries
+                for a set of collections.
+              properties:
+                repositories:
+                  items:
+                    description: RepositoryConfig defines customization entries for
+                      a collection.
+                    properties:
+                      activateDefaultCollections:
+                        type: boolean
+                      name:
+                        type: string
+                      skipCertVerification:
+                        type: boolean
+                      url:
+                        type: string
+                    type: object
+                  type: array
+              type: object
+            events:
+              properties:
+                enable:
+                  type: boolean
+                image:
+                  type: string
+                repository:
+                  type: string
+                tag:
+                  type: string
+                version:
+                  type: string
+              type: object
+            github:
+              description: GithubConfig represents the Github information (public
+                or GHE) where the organization and teams managing the collections
+                live.  Members of the specified team in the specified organization
+                will have admin authority in the Kabanero CLI.
+              properties:
+                apiUrl:
+                  type: string
+                organization:
+                  type: string
+                teams:
+                  items:
+                    type: string
+                  type: array
+              type: object
+            landing:
+              description: KabaneroLandingCustomizationSpec defines customization
+                entries for Kabanero landing page.
+              properties:
+                enable:
+                  type: boolean
+                version:
+                  type: string
+              type: object
+            targetNamespaces:
+              items:
+                type: string
+              type: array
+            tekton:
+              description: TektonCustomizationSpec defines customization entries for
+                Tekton
+              properties:
+                disabled:
+                  type: boolean
+                version:
+                  type: string
+              type: object
+            version:
+              type: string
+          type: object
+        status:
+          description: KabaneroStatus defines the observed state of the Kabanero instance.
+          properties:
+            admissionControllerWebhook:
+              description: Admission webhook instance status
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+              type: object
+            appsody:
+              description: Appsody instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            che:
+              description: Che instance readiness status.
+              properties:
+                cheOperator:
+                  description: CheOperatorStatus defines the observed status details
+                    of the Che operator.
+                  properties:
+                    version:
+                      type: string
+                  type: object
+                errorMessage:
+                  type: string
+                kabaneroChe:
+                  description: KabaneroCheStatus defines the observed status details
+                    of Kabanero Che.
+                  properties:
+                    version:
+                      type: string
+                  type: object
+                kabaneroCheInstance:
+                  description: KabaneroCheInstanceStatus defines the observed status
+                    details of Che instance.
+                  properties:
+                    cheImage:
+                      type: string
+                    cheImageTag:
+                      type: string
+                    cheWorkspaceClusterRole:
+                      type: string
+                  type: object
+                ready:
+                  type: string
+              type: object
+            cli:
+              description: CLI readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                hostnames:
+                  items:
+                    type: string
+                  type: array
+                ready:
+                  type: string
+              type: object
+            collectionController:
+              description: Kabanero collection controller readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            events:
+              description: Events instance status
+              properties:
+                errorMessage:
+                  type: string
+                hostnames:
+                  items:
+                    type: string
+                  type: array
+                ready:
+                  type: string
+              type: object
+            kabaneroInstance:
+              description: Kabanero operator instance readiness status. The status
+                is directly correlated to the availability of resources dependencies.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            kappnav:
+              description: Kabanero Application Navigator instance readiness status.
+              properties:
+                apiLocations:
+                  items:
+                    type: string
+                  type: array
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                uiLocations:
+                  items:
+                    type: string
+                  type: array
+              type: object
+            knativeEventing:
+              description: Knative eventing instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            landing:
+              description: Kabanero Landing page readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            serverless:
+              description: OpenShift serverless operator status.
+              properties:
+                errorMessage:
+                  type: string
+                knativeServing:
+                  description: KnativeServingStatus defines the observed status details
+                    of Knative Serving.
+                  properties:
+                    errorMessage:
+                      type: string
+                    ready:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+            tekton:
+              description: Tekton instance readiness status.
+              properties:
+                errorMessage:
+                  type: string
+                ready:
+                  type: string
+                version:
+                  type: string
+              type: object
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

@@ -71,9 +71,9 @@ func getInstalledCSVName(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogge
 		Kind:    olmapiv1alpha1.SubscriptionKind,
 	})
 
-	listOptions := &client.ListOptions{Namespace: serverlessSubscriptionNamespace}
+	listOptions := []client.ListOption{client.InNamespace(serverlessSubscriptionNamespace)}
 	
-  err := c.List(context.TODO(), listOptions, sList)
+  err := c.List(context.TODO(), sList, listOptions...)
 	if err != nil {
 		return "", err
 	}

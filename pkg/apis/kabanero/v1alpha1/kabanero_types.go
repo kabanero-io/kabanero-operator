@@ -6,6 +6,7 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// NOTE: The +listType=set marker is required by OpenAPI generation for list types.
 
 // +kubebuilder:subresource:status
 
@@ -18,6 +19,7 @@ type KabaneroSpec struct {
 
 	Version string `json:"version,omitempty"`
 
+	// +listType=set
 	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
 
 	Github GithubConfig `json:"github,omitempty"`
@@ -278,14 +280,19 @@ type AdmissionControllerWebhookStatus struct {
 	ErrorMessage string   `json:"errorMessage,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Kabanero is the Schema for the kabaneros API
+// Note that kubebuilder and operator-sdk currently disagree about what the
+// plural of this type should be.  The +kubebuilder:resource marker sets the
+// plural to what operator-sdk expects.
+
 // +k8s:openapi-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations."
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".status.kabaneroInstance.version",description="Kabanero operator instance version."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.kabaneroInstance.ready",description="Kabanero operator instance readiness status. The status is directly correlated to the availability of the operator's resources dependencies."
+// +kubebuilder:resource:path=kabaneros,scope=Namespaced
 type Kabanero struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

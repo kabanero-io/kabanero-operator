@@ -17,13 +17,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -216,7 +216,7 @@ func processYaml(ctx context.Context, k *kabanerov1alpha1.Kabanero, rev versioni
 
 // Returns true if the Che CRD is active. False, otherwise.
 func isCheCRDActive() (bool, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", "")
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		return false, err
 	}

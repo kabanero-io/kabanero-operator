@@ -10,34 +10,20 @@ import (
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
 // BuildValidatingWebhook builds the webhook for the manager to register
-func BuildValidatingWebhook(mgr *manager.Manager) (webhook.Webhook, error) {
-	// Create the validating webhook
-	return builder.NewWebhookBuilder().
-		Name("validating.collection.kabanero.io").
-		Validating().
-		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
-		WithManager(*mgr).
-		ForType(&kabanerov1alpha1.Collection{}).
-		Handlers(&collectionValidator{}).
-		Build()
+func BuildValidatingWebhook(mgr *manager.Manager) *admission.Webhook {
+	return &admission.Webhook{Handler: &collectionValidator{}}
 }
 
 // collectionValidator validates Collections
 type collectionValidator struct {
 	client  client.Client
-	decoder types.Decoder
+	decoder *admission.Decoder
 }
 
 // Implement admission.Handler so the controller can handle admission request.
@@ -45,17 +31,17 @@ type collectionValidator struct {
 var _ admission.Handler = &collectionValidator{}
 
 // collectionValidator admits a collection if it passes validity checks
-func (v *collectionValidator) Handle(ctx context.Context, req types.Request) types.Response {
+func (v *collectionValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	collection := &kabanerov1alpha1.Collection{}
 
 	err := v.decoder.Decode(req, collection)
 	if err != nil {
-		return admission.ErrorResponse(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	allowed, reason, err := v.validateCollectionFn(ctx, collection)
 	if err != nil {
-		return admission.ErrorResponse(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	return admission.ValidationResponse(allowed, reason)
 }
@@ -74,22 +60,14 @@ func (v *collectionValidator) validateCollectionFn(ctx context.Context, collecti
 	return true, "", nil
 }
 
-// collectionValidator implements inject.Client.
-// A client will be automatically injected.
-var _ inject.Client = &collectionValidator{}
-
 // InjectClient injects the client.
 func (v *collectionValidator) InjectClient(c client.Client) error {
 	v.client = c
 	return nil
 }
 
-// podValidator implements inject.Decoder.
-// A decoder will be automatically injected.
-var _ inject.Decoder = &collectionValidator{}
-
 // InjectDecoder injects the decoder.
-func (v *collectionValidator) InjectDecoder(d types.Decoder) error {
+func (v *collectionValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
 }

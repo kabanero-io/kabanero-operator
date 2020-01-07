@@ -9,6 +9,7 @@ import (
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	consolev1 "github.com/openshift/api/console/v1"
@@ -17,9 +18,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	rlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var kllog = rlog.Log.WithName("kabanero-landing")
@@ -273,7 +274,7 @@ func getConsoleLink(c client.Client, linkName string) (*consolev1.ConsoleLink, e
 func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingURL string) error {
 
 	// See if we've added the apps link yet.
-	clientOp := c.Update
+	clientOp := utils.Update
 	consoleLink, err := getConsoleLink(c, "kabanero-app-menu-link")
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -286,7 +287,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 		consoleLink.Spec.Text = "Landing Page"
 		consoleLink.Spec.ApplicationMenu = &consolev1.ApplicationMenuSpec{}
 		consoleLink.Spec.ApplicationMenu.Section = "Kabanero"
-		clientOp = c.Create
+		clientOp = utils.Create
 
 		kllog.Info("Creating ConsoleLink kabanero-app-menu-link")
 	}
@@ -294,13 +295,13 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 	// Stuff that could change (dependent on the landingURL)
 	consoleLink.Spec.Href = landingURL
 	consoleLink.Spec.ApplicationMenu.ImageURL = landingURL + "/img/favicon/favicon-16x16.png"
-	err = clientOp(context.TODO(), consoleLink)
+	err = clientOp(c, context.TODO(), consoleLink)
 	if err != nil {
 		return err
 	}
 
 	// See if we've added the help links yet.
-	clientOp = c.Update
+	clientOp = utils.Update
 	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-docs")
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -311,19 +312,19 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 		consoleLink.Name = "kabanero-help-menu-docs"
 		consoleLink.Spec.Location = "HelpMenu"
 		consoleLink.Spec.Text = "Kabanero Docs"
-		clientOp = c.Create
+		clientOp = utils.Create
 
 		kllog.Info("Creating ConsoleLink kabanero-help-menu-docs")
 	}
 
 	// Stuff that could change (dependent on the landing URL)
 	consoleLink.Spec.Href = landingURL + "/docs"
-	err = clientOp(context.TODO(), consoleLink)
+	err = clientOp(c, context.TODO(), consoleLink)
 	if err != nil {
 		return err
 	}
 
-	clientOp = c.Update
+	clientOp = utils.Update
 	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-guides")
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -334,12 +335,12 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 		consoleLink.Name = "kabanero-help-menu-guides"
 		consoleLink.Spec.Location = "HelpMenu"
 		consoleLink.Spec.Text = "Kabanero Guides"
-		clientOp = c.Create
+		clientOp = utils.Create
 	}
 
 	// Stuff that could change (dependent on the landing URL)
 	consoleLink.Spec.Href = landingURL + "/guides"
-	err = clientOp(context.TODO(), consoleLink)
+	err = clientOp(c, context.TODO(), consoleLink)
 	if err != nil {
 		return err
 	}
@@ -391,7 +392,7 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client)
 	k.Status.Landing.Ready = "False"
 
 	// Create a clientset to drive API operations on resources.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		k.Status.Landing.Ready = "False"
 		k.Status.Landing.ErrorMessage = "Failed to build configuration to retrieve status."
@@ -450,7 +451,7 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client)
 // Returns a Clientset object.
 func getClient() (*kubernetes.Clientset, error) {
 	// Create a clientset to drive API operations on resources.
-	config, err := clientcmd.BuildConfigFromFlags("", "")
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}

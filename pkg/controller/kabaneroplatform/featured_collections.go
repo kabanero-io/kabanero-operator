@@ -5,6 +5,7 @@ import (
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,7 +21,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 
 	// Each key is a collection id.  Get that Collection CR instance and see if the versions are set correctly.
 	for key, value := range collectionMap {
-		updateCollection := cl.Update
+		updateCollection := utils.Update
 		name := types.NamespacedName{
 			Name:      key,
 			Namespace: k.GetNamespace(),
@@ -31,7 +32,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// Not found. Need to create it.
-				updateCollection = cl.Create
+				updateCollection = utils.Create
 				ownerIsController := true
 				collectionResource = &kabanerov1alpha1.Collection{
 					ObjectMeta: metav1.ObjectMeta{
@@ -80,7 +81,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 		}
 
 		// Update the CR instance with the new version information.
-		err = updateCollection(ctx, collectionResource)
+		err = updateCollection(cl, ctx, collectionResource)
 		if err != nil {
 			return err
 		}
