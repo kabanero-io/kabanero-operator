@@ -2,6 +2,8 @@ package kabaneroplatform
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 
@@ -18,46 +20,51 @@ import (
 
 func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
 
-	// We need to create a secret that the admission controller webhook will
-	// populate with certificates.  This must be created outside of the
-	// manifestival applies because we don't want to revert what the admission
-	// controller webhook applies to it.
-	secretInstance := &corev1.Secret{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      "kabanero-operator-admission-webhook",
-		Namespace: k.ObjectMeta.Namespace}, secretInstance)
-
-	if err != nil {
-		if errors.IsNotFound(err) == false {
-			return err
-		}
-
-		// Not found.  Make a new one.
-		var ownerRef metav1.OwnerReference
-		ownerRef, err = getOwnerReference(k, c, reqLogger)
-		if err != nil {
-			return err
-		}
-
-		secretInstance := &corev1.Secret{}
-		secretInstance.ObjectMeta.Name = "kabanero-operator-admission-webhook"
-		secretInstance.ObjectMeta.Namespace = k.ObjectMeta.Namespace
-		secretInstance.ObjectMeta.OwnerReferences = append(secretInstance.ObjectMeta.OwnerReferences, ownerRef)
-
-		reqLogger.Info("Attempting to create the admission controller webhook secret")
-		err = c.Create(context.TODO(), secretInstance)
-
-		if err != nil {
-			return err
-		}
-	}
-	
-	// Deploy the Kabanero admission controller webhook components - service acct, role, etc
+	// Figure out what version of the orchestration we are going to use.
 	rev, err := resolveSoftwareRevision(k, "admission-webhook", k.Spec.AdmissionControllerWebhook.Version)
 	if err != nil {
 		return err
 	}
 
+	// For version 0.4.0 / orchestration v0.1:
+	// We need to create a secret that the admission controller webhook will
+	// populate with certificates.  This must be created outside of the
+	// manifestival applies because we don't want to revert what the admission
+	// controller webhook applies to it.
+	if rev.Version == "0.4.0" {
+		secretInstance := &corev1.Secret{}
+		err := c.Get(context.Background(), types.NamespacedName{
+			Name:      "kabanero-operator-admission-webhook",
+			Namespace: k.ObjectMeta.Namespace}, secretInstance)
+
+		if err != nil {
+			if errors.IsNotFound(err) == false {
+				return err
+			}
+
+			// Not found.  Make a new one.
+			var ownerRef metav1.OwnerReference
+			ownerRef, err = getOwnerReference(k, c, reqLogger)
+			if err != nil {
+				return err
+			}
+
+			secretInstance := &corev1.Secret{}
+			secretInstance.ObjectMeta.Name = "kabanero-operator-admission-webhook"
+			secretInstance.ObjectMeta.Namespace = k.ObjectMeta.Namespace
+			secretInstance.ObjectMeta.OwnerReferences = append(secretInstance.ObjectMeta.OwnerReferences, ownerRef)
+			
+			reqLogger.Info("Attempting to create the admission controller webhook secret")
+			err = c.Create(context.TODO(), secretInstance)
+			
+			if err != nil {
+				return err
+			}
+		}
+	}
+	
+	// Deploy the Kabanero admission controller webhook components - service acct, role, etc
+	
 	//The context which will be used to render any templates
 	templateContext := rev.Identifiers
 
@@ -97,6 +104,57 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 		return err
 	}
 
+	// The webhook needs to use TLS.  Kabanero version 0.4.0 used controller-runtime
+	// 0.1.x which generated its own certificates for webhooks.  Newer versions
+	// of Kabanero use newer versions of controller-runtime which do not generate
+	// their own certificates.  OpenShift is going to inject a certifiate
+	// into a secret, which the webhook pod will use.  The CA certificate needs
+	// to be injected into the mutating webhook configuration and validating
+	// webhook configuration, so that the Kube API server trusts the pod(s).
+	if rev.Version != "0.4.0" {
+		cmInstance := &corev1.ConfigMap{}
+		err = c.Get(context.Background(), types.NamespacedName{
+			Name:      "kabanero-operator-admission-webhook-ca-cert", 
+			Namespace: k.GetNamespace()}, cmInstance)
+		if err != nil {
+			message := "The webhook configuration could not be created"
+			reqLogger.Error(err, message)
+			return fmt.Errorf("%v: %v", message, err.Error())
+		}
+
+		// See if the CA certificate was injected.
+		caCert, ok := cmInstance.Data["service-ca.crt"]
+		if !ok || caCert == "" {
+			err = fmt.Errorf("The configmap did not have the service CA injected")
+			reqLogger.Error(err, "Error creating webhook")
+			return err
+		}
+
+		// Create the mutating webhook and validating webhook configuration
+		encoded := base64.StdEncoding.EncodeToString([]byte(caCert))
+		templateContext["caBundle"] = encoded
+	
+		f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook-config.yaml")
+		if err != nil {
+			return err
+		}
+		
+		s, err := renderOrchestration(f, templateContext)
+		if err != nil {
+			return err
+		}
+
+		m, err := mf.FromReader(strings.NewReader(s), c)
+		if err != nil {
+			return err
+		}
+
+		err = m.ApplyAll()
+		if err != nil {
+			return err
+		}
+	}
+	
 	return nil
 }
 
@@ -117,6 +175,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha1.Kabanero, c client.Cl
 		return err
 	}
 	templateContext["image"] = image
+  templateContext["caBundle"] = ""
 
 	f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook.yaml")
 	if err != nil {
@@ -133,7 +192,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha1.Kabanero, c client.Cl
 		return err
 	}
 
-	transforms := []mf.Transformer{mf.InjectOwner(k), mf.InjectNamespace(k.GetNamespace())}
+	transforms := []mf.Transformer{mf.InjectNamespace(k.GetNamespace())}
 	err = m.Transform(transforms...)
 	if err != nil {
 		return err
@@ -146,6 +205,31 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha1.Kabanero, c client.Cl
 		}
 	}
 
+	// The webhook configs are only created by manifestival later than Kabanero 0.4.0.
+	if rev.Version != "0.4.0" {
+		f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook-config.yaml")
+		if err != nil {
+			return err
+		}
+
+		s, err := renderOrchestration(f, templateContext)
+		if err != nil {
+			return err
+		}
+
+		m, err := mf.FromReader(strings.NewReader(s), c)
+		if err != nil {
+			return err
+		}
+		
+		err = m.DeleteAll()
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+	
 	// Now, clean up the things that the controller-runtime created on
 	// our behalf.
 	secretInstance := &corev1.Secret{}
@@ -157,31 +241,34 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha1.Kabanero, c client.Cl
 		return err
 	}
 
-	serviceInstance := &corev1.Service{}
-	serviceInstance.Name = "kabanero-operator-admission-webhook"
-	serviceInstance.Namespace = k.GetNamespace()
-	err = c.Delete(context.TODO(), serviceInstance)
+	// Some of these things are only created manually at version 0.4.0.
+	if rev.Version == "0.4.0" {
+		serviceInstance := &corev1.Service{}
+		serviceInstance.Name = "kabanero-operator-admission-webhook"
+		serviceInstance.Namespace = k.GetNamespace()
+		err = c.Delete(context.TODO(), serviceInstance)
 
-	if (err != nil) && (errors.IsNotFound(err) == false) {
-		return err
+		if (err != nil) && (errors.IsNotFound(err) == false) {
+			return err
+		}
+
+		mutatingWebhookConfigInstance := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		mutatingWebhookConfigInstance.Name = "webhook.operator.kabanero.io"
+		err = c.Delete(context.TODO(), mutatingWebhookConfigInstance)
+
+		if (err != nil) && (errors.IsNotFound(err) == false) {
+			return err
+		}
+
+		validatingWebhookConfigInstance := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+		validatingWebhookConfigInstance.Name = "webhook.operator.kabanero.io"
+		err = c.Delete(context.TODO(), validatingWebhookConfigInstance)
+
+		if (err != nil) && (errors.IsNotFound(err) == false) {
+			return err
+		}
 	}
-
-	mutatingWebhookConfigInstance := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-	mutatingWebhookConfigInstance.Name = "webhook.operator.kabanero.io"
-	err = c.Delete(context.TODO(), mutatingWebhookConfigInstance)
-
-	if (err != nil) && (errors.IsNotFound(err) == false) {
-		return err
-	}
-
-	validatingWebhookConfigInstance := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-	validatingWebhookConfigInstance.Name = "webhook.operator.kabanero.io"
-	err = c.Delete(context.TODO(), validatingWebhookConfigInstance)
-
-	if (err != nil) && (errors.IsNotFound(err) == false) {
-		return err
-	}
-	
+		
 	return nil
 }
 

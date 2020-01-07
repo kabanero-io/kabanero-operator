@@ -10,34 +10,20 @@ import (
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
 // Builds the webhook for the manager to register
-func BuildValidatingWebhook(mgr *manager.Manager) (webhook.Webhook, error) {
-	// Create the validating webhook
-	return builder.NewWebhookBuilder().
-		Name("validating.kabanero.kabanero.io").
-		Validating().
-		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
-		WithManager(*mgr).
-		ForType(&kabanerov1alpha1.Kabanero{}).
-		Handlers(&kabaneroValidator{}).
-		Build()
+func BuildValidatingWebhook(mgr *manager.Manager) *admission.Webhook {
+	return &admission.Webhook{Handler: &kabaneroValidator{}}
 }
 
 // kabaneroValidator validates kabaneros
 type kabaneroValidator struct {
 	client  client.Client
-	decoder types.Decoder
+	decoder *admission.Decoder
 }
 
 // Implement admission.Handler so the controller can handle admission request.
@@ -45,17 +31,17 @@ type kabaneroValidator struct {
 var _ admission.Handler = &kabaneroValidator{}
 
 // kabaneroValidator admits a kabanero if it passes validity checks
-func (v *kabaneroValidator) Handle(ctx context.Context, req types.Request) types.Response {
+func (v *kabaneroValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	kabanero := &kabanerov1alpha1.Kabanero{}
 
 	err := v.decoder.Decode(req, kabanero)
 	if err != nil {
-		return admission.ErrorResponse(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	allowed, reason, err := v.validatekabaneroFn(ctx, kabanero)
 	if err != nil {
-		return admission.ErrorResponse(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	return admission.ValidationResponse(allowed, reason)
 }
@@ -66,9 +52,9 @@ func (v *kabaneroValidator) validatekabaneroFn(ctx context.Context, pod *kabaner
 	name := pod.ObjectMeta.Name
 	namespace := pod.ObjectMeta.Namespace
 	kabaneroList := &kabanerov1alpha1.KabaneroList{}
-	options := &client.ListOptions{Namespace: namespace}
+	options := []client.ListOption{client.InNamespace(namespace)}
 
-	err := v.client.List(ctx, options, kabaneroList)
+	err := v.client.List(ctx, kabaneroList, options...)
 	if err != nil {
 		return false, fmt.Sprintf("Failed to list Kabaneros in namespace: %s", namespace), err
 	}
@@ -93,22 +79,14 @@ func (v *kabaneroValidator) validatekabaneroFn(ctx context.Context, pod *kabaner
 	}
 }
 
-// kabaneroValidator implements inject.Client.
-// A client will be automatically injected.
-var _ inject.Client = &kabaneroValidator{}
-
 // InjectClient injects the client.
 func (v *kabaneroValidator) InjectClient(c client.Client) error {
 	v.client = c
 	return nil
 }
 
-// podValidator implements inject.Decoder.
-// A decoder will be automatically injected.
-var _ inject.Decoder = &kabaneroValidator{}
-
 // InjectDecoder injects the decoder.
-func (v *kabaneroValidator) InjectDecoder(d types.Decoder) error {
+func (v *kabaneroValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
 }
