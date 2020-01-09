@@ -3,7 +3,7 @@
 set -Eeuox pipefail
 
 COLLECTION="java-spring-boot2"
-APP="sample-java-spring-boot2"
+APP="sample-java-spring-boot2" \
 DOCKER_IMAGE="image-registry.openshift-image-registry.svc:5000/kabanero/${APP}" \
 APP_REPO="https://github.com/kabanero-io/${APP}/" \
 PIPELINE_RUN="${APP}-build-deploy-pipeline-run-kabanero" \
