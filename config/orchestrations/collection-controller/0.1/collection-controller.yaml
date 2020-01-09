@@ -71,6 +71,8 @@ rules:
   resources:
   - pipelines
   - tasks
+  - triggerbindings
+  - triggertemplates
   verbs:
   - delete
   - get

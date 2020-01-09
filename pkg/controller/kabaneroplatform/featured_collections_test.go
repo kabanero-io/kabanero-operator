@@ -40,10 +40,10 @@ func (c unitTestClient) Get(ctx context.Context, key client.ObjectKey, obj runti
 	collection.DeepCopyInto(u)
 	return nil
 }
-func (c unitTestClient) List(ctx context.Context, opts *client.ListOptions, list runtime.Object) error {
+func (c unitTestClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 	return errors.New("List is not supported")
 }
-func (c unitTestClient) Create(ctx context.Context, obj runtime.Object) error {
+func (c unitTestClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 	u, ok := obj.(*kabanerov1alpha1.Collection)
 	if !ok {
 		fmt.Printf("Received invalid create: %v\n", obj)
@@ -60,10 +60,13 @@ func (c unitTestClient) Create(ctx context.Context, obj runtime.Object) error {
 	c.objs[u.Name] = u
 	return nil
 }
-func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
+func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 	return errors.New("Delete is not supported")
 }
-func (c unitTestClient) Update(ctx context.Context, obj runtime.Object) error {
+func (c unitTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+	return errors.New("DeleteAllOf is not supported")
+}
+func (c unitTestClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 	u, ok := obj.(*kabanerov1alpha1.Collection)
 	if !ok {
 		fmt.Printf("Received invalid update: %v\n", obj)
@@ -80,7 +83,9 @@ func (c unitTestClient) Update(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 func (c unitTestClient) Status() client.StatusWriter { return c }
-
+func (c unitTestClient) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return errors.New("Patch is not supported")
+}
 
 // -----------------------------------------------------------------------------------------------
 // HTTP handler that serves pipeline zips

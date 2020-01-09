@@ -46,6 +46,7 @@ type PipelineStatus struct {
 // RepositoryAssetStatus defines the observed state of a single asset in a respository, in the collection.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`
+	Namespace     string `json:"namespace,omitempty"`
 	Group         string `json:"group,omitempty"`
 	Version       string `json:"version,omitempty"`
 	Kind          string `json:"kind,omitempty"`

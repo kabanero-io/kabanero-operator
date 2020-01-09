@@ -87,6 +87,8 @@ spec:
                           type: string
                         kind:
                           type: string
+                        namespace:
+                          type: string
                         status:
                           type: string
                         statusMessage:
@@ -161,6 +163,8 @@ spec:
                               group:
                                 type: string
                               kind:
+                                type: string
+                              namespace:
                                 type: string
                               status:
                                 type: string

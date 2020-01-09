@@ -233,7 +233,7 @@ func TestFindMaxVersionCollectionInvalidSemver(t *testing.T) {
 type unitTestClient struct {
 	// Objects that the client knows about.  This is real simple.... for now.  We just
 	// keep the name, and any owner references.
-	objs map[string][]metav1.OwnerReference
+	objs map[client.ObjectKey][]metav1.OwnerReference
 }
 
 func (c unitTestClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -243,7 +243,7 @@ func (c unitTestClient) Get(ctx context.Context, key client.ObjectKey, obj runti
 		fmt.Printf("Received invalid target object for get: %v\n", obj)
 		return errors.New("Get only supports setting into Unstructured")
 	}
-	owners := c.objs[key.Name]
+	owners := c.objs[key]
 	if len(owners) == 0 {
 		return apierrors.NewNotFound(schema.GroupResource{}, key.Name)
 	}
@@ -261,9 +261,10 @@ func (c unitTestClient) Create(ctx context.Context, obj runtime.Object, opts ...
 	}
 
 	fmt.Printf("Received Create() for %v\n", u.GetName())
-	owners := c.objs[u.GetName()]
+	key := client.ObjectKey{Name: u.GetName(), Namespace: u.GetNamespace()}
+	owners := c.objs[key]
 	if len(owners) > 0 {
-		fmt.Printf("Receive create object already exists: %v\n", u.GetName())
+		fmt.Printf("Receive create object already exists: %v/%v\n", u.GetNamespace(), u.GetName())
 		return apierrors.NewAlreadyExists(schema.GroupResource{}, u.GetName())
 	}
 
@@ -274,7 +275,7 @@ func (c unitTestClient) Create(ctx context.Context, obj runtime.Object, opts ...
 		return errors.New(message)
 	}
 	
-	c.objs[u.GetName()] = u.GetOwnerReferences()
+	c.objs[key] = u.GetOwnerReferences()
 	return nil
 }
 func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
@@ -285,12 +286,13 @@ func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...
 	}
 
 	fmt.Printf("Received Delete() for %v\n", u.GetName())
-	owners := c.objs[u.GetName()]
+	key := client.ObjectKey{Name: u.GetName(), Namespace: u.GetNamespace()}
+	owners := c.objs[key]
 	if len(owners) == 0 {
 		fmt.Printf("Received delete for an object that does not exist: %v\n", obj)
 		return apierrors.NewNotFound(schema.GroupResource{}, u.GetName())
 	}
-	delete(c.objs, u.GetName())
+	delete(c.objs, key)
 	return nil
 }
 func (c unitTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
@@ -304,12 +306,13 @@ func (c unitTestClient) Update(ctx context.Context, obj runtime.Object, opts ...
 	}
 
 	fmt.Printf("Received Update() for %v\n", u.GetName())
-	owners := c.objs[u.GetName()]
+	key := client.ObjectKey{Name: u.GetName(), Namespace: u.GetNamespace()}
+	owners := c.objs[key]
 	if len(owners) == 0 {
 		fmt.Printf("Received update for object that does not exist: %v\n", obj)
 		return apierrors.NewNotFound(schema.GroupResource{}, u.GetName())
 	}
-	c.objs[u.GetName()] = u.GetOwnerReferences()
+	c.objs[key] = u.GetOwnerReferences()
 	return nil
 }
 func (c unitTestClient) Status() client.StatusWriter { return c }
@@ -359,6 +362,10 @@ var digest2Pipeline = fileInfo{
 	name: "/digest2.pipeline.tar.gz",
 	sha256: "c3f28ffca707942a8b351000722f1aebda080e3706aa006650a29d10f4aa226b"}
 
+var triggerPipeline = fileInfo{
+	name: "/trigger.pipeline.tar.gz",
+	sha256: "bba27927b6da1323f264e957c526c4df118d657dd8ad19e08994d70caaf31f73"}
+
 // --------------------------------------------------------------------------------------------------
 // Test that initial collection activation works
 // --------------------------------------------------------------------------------------------------
@@ -386,7 +393,7 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		Images: []Images{defaultImage},
 	}
 
-	client := unitTestClient{map[string][]metav1.OwnerReference{}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -487,7 +494,7 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 	defer server.Close()
 
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
@@ -522,10 +529,10 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}},
-		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: myuid}},
-		"java-microprofile-old-asset": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-old-asset", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -627,7 +634,7 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 
 	pipelineZipUrl := server.URL + basicPipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "inactive"}}},
@@ -658,9 +665,9 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}},
-		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 	
@@ -713,7 +720,7 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 	defer server.Close()
 
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
@@ -729,9 +736,9 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: otheruid}},
-		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: otheruid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid}},
+		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -806,7 +813,7 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 
 	pipelineZipUrl := server.URL + basicPipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "inactive"}}},
@@ -837,9 +844,9 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: otheruid},{UID: myuid}},
-		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: otheruid},{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid},{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid},{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -887,7 +894,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 
 	pipelineZipUrl := server.URL + basicPipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
@@ -918,8 +925,8 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -990,7 +997,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 	
 	pipelineZipUrl := server.URL + deletedPipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
@@ -1021,8 +1028,8 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -1104,7 +1111,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 	defer server.Close()
 	
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
@@ -1119,7 +1126,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 		Pipelines: []Pipelines{{Id: "default", Sha256: badPipeline.sha256, Url: pipelineZipUrl}},
 	}
 
-	client := unitTestClient{map[string][]metav1.OwnerReference{}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -1193,7 +1200,7 @@ func TestReconcileActiveVersionsActivateNotInHub(t *testing.T) {
 	defer server.Close()
 
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
@@ -1229,10 +1236,10 @@ func TestReconcileActiveVersionsActivateNotInHub(t *testing.T) {
 	}
 		
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}},
-		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: myuid}},
-		"java-microprofile-old-asset": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-old-asset", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
 
@@ -1326,7 +1333,7 @@ func TestReconcileActiveVersionsDeactivateNotInHub(t *testing.T) {
 
 	pipelineZipUrl := server.URL + deletedPipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "inactive"}}},
@@ -1350,9 +1357,9 @@ func TestReconcileActiveVersionsDeactivateNotInHub(t *testing.T) {
 	}
 
 	// Tell the client what should currently be there.
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"java-microprofile-build-task": []metav1.OwnerReference{{UID: myuid}},
-		"java-microprofile-build-pipeline": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, nil, client)
 
@@ -1379,6 +1386,157 @@ func TestReconcileActiveVersionsDeactivateNotInHub(t *testing.T) {
 	}
 }
 
+// --------------------------------------------------------------------------------------------------
+// Test that tekton triggers are created in the tekton-pipelines namespace
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(collectionHandler{})
+	defer server.Close()
+	
+	collectionResource := kabanerov1alpha1.Collection{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha1.CollectionSpec{
+			Name: "java-microprofile",
+			Versions: []kabanerov1alpha1.CollectionVersion{{Version: "0.2.5", DesiredState: "active"}}},
+		Status: kabanerov1alpha1.CollectionStatus{},
+	}
+
+	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
+	
+	pipelineZipUrl := server.URL + triggerPipeline.name
+	desiredCollection := Collection{
+		Name: "java-microprofile",
+		Id: "java-microprofile",
+		Version: "0.2.5",
+		Pipelines: []Pipelines{{Id: "default", Sha256: triggerPipeline.sha256, Url: pipelineZipUrl}},
+		Images: []Images{defaultImage},
+	}
+
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
+
+	err := reconcileActiveVersions(&collectionResource, []resolvedCollection{{"", desiredCollection}}, client)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure the collection resource was updated with asset information
+	if len(collectionResource.Status.ActivePipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Collection status should have 1 pipeline, but has %v", len(collectionResource.Status.ActivePipelines)))
+	}
+
+	if collectionResource.Status.ActiveVersion != "0.2.5" {
+		t.Fatal(fmt.Sprintf("Collection active version should be 0.2.5, but is %v", collectionResource.Status.ActiveVersion))
+	}
+
+	// Make sure the assets were created in the collection status
+	pipeline := collectionResource.Status.ActivePipelines[0]
+	if len(pipeline.ActiveAssets) != 3 {
+		t.Fatal(fmt.Sprintf("Pipeline should have 3 assets, but has %v", len(pipeline.ActiveAssets)))
+	}
+
+	for _, asset := range pipeline.ActiveAssets {
+		if asset.Status != assetStatusActive {
+			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+		}
+		if asset.StatusMessage != "" {
+			t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+		}
+		// Check to make sure that the trigger was created in the tekton-pipelines namespace
+		if asset.Name == "java-microprofile-build-trigger-template" {
+			if asset.Namespace != "tekton-pipelines" {
+				t.Fatal(fmt.Sprintf("Asset %v should have been in the tekton-pipelines namespace, but was in %v", asset.Name, asset.Namespace))
+			}
+		} else {
+			if asset.Namespace != "kabanero" {
+				t.Fatal(fmt.Sprintf("Asset %v should have been in the kabanero namespace, but was in %v", asset.Name, asset.Namespace))
+			}
+		}
+	}
+
+	if pipeline.Name != desiredCollection.Pipelines[0].Id {
+		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", desiredCollection.Pipelines[0].Id, pipeline.Name))
+	}
+
+	// Make sure the status versions array was created in the collection status
+	if len(collectionResource.Status.Versions) != 1 {
+		t.Fatal(fmt.Sprintf("Versions array should have 1 entry, but has %v: %v", len(collectionResource.Status.Versions), collectionResource.Status.Versions))
+	}
+	
+	if len(collectionResource.Status.Versions[0].Pipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Collection versions status should have 1 pipeline, but has %v", len(collectionResource.Status.Versions[0].Pipelines)))
+	}
+
+	if collectionResource.Status.Versions[0].Version != "0.2.5" {
+		t.Fatal(fmt.Sprintf("Collection versions active version should be 0.2.5, but is %v", collectionResource.Status.Versions[0].Version))
+	}
+
+	pipeline = collectionResource.Status.Versions[0].Pipelines[0]
+	if len(pipeline.ActiveAssets) != 3 {
+		t.Fatal(fmt.Sprintf("Pipeline should have 3 assets, but has %v", len(pipeline.ActiveAssets)))
+	}
+
+	for _, asset := range pipeline.ActiveAssets {
+		if asset.Status != assetStatusActive {
+			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
+		}
+		if asset.StatusMessage != "" {
+			t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
+		}
+		// Check to make sure that the trigger was created in the tekton-pipelines namespace
+		if asset.Name == "java-microprofile-build-trigger-template" {
+			if asset.Namespace != "tekton-pipelines" {
+				t.Fatal(fmt.Sprintf("Asset %v should have been in the tekton-pipelines namespace, but was in %v", asset.Name, asset.Namespace))
+			}
+		} else {
+			if asset.Namespace != "kabanero" {
+				t.Fatal(fmt.Sprintf("Asset %v should have been in the kabanero namespace, but was in %v", asset.Name, asset.Namespace))
+			}
+		}
+	}
+
+	if pipeline.Name != desiredCollection.Pipelines[0].Id {
+		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", desiredCollection.Pipelines[0].Id, pipeline.Name))
+	}
+	
+	// Make sure the client has the correct objects.
+	if len(client.objs) != 3 {
+		t.Fatal(fmt.Sprintf("Client map should have 3 entries, but has %v: %v", len(client.objs), client.objs))
+	}
+
+	// Make sure the client's objects have an owner set.
+	for key, obj := range client.objs {
+		if key.Name != "java-microprofile-build-trigger-template" {
+			if len(obj) != 1 {
+				t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
+			}
+			if obj[0].UID != collectionResource.UID {
+				t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, collectionResource.UID, obj[0].UID))
+			}
+			if key.Namespace != "kabanero" {
+				t.Fatal(fmt.Sprintf("Client object %v should have been created in kabanero namespace, but was %v", key.Name, key.Namespace))
+			}
+		} else {
+			if len(obj) != 0 {
+				t.Fatal(fmt.Sprintf("Client object %v should have 0 owners, but has %v: %v", key, len(obj), obj))
+			}
+			if key.Namespace != "tekton-pipelines" {
+				t.Fatal(fmt.Sprintf("Client object %v should have been created in tekton-pipelines namespace, but was %v", key.Name, key.Namespace))
+			}
+		}
+	}
+
+	// Make sure the status lists the images
+	if len(collectionResource.Status.Images) != 1 {
+		t.Fatal(fmt.Sprintf("Status should contain one image, but contains %v: %#v", len(collectionResource.Status.Images), collectionResource.Status))
+	}
+
+	if collectionResource.Status.Images[0].Image != defaultImage.Image {
+		t.Fatal(fmt.Sprintf("Image should be %v, but is %v", defaultImage.Image, collectionResource.Status.Images[0].Image))
+	}
+}
+
 // ==================================================================================================
 // --------------------------------------------------------------------------------------------------
 // The following tests activate multiple versions of a collection.
@@ -1394,7 +1552,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 	defer server.Close()
 
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{
@@ -1420,7 +1578,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 			Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}}},
 	}}
 
-	client := unitTestClient{map[string][]metav1.OwnerReference{}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
 	err := reconcileActiveVersions(&collectionResource, collections, client)
 
@@ -1504,7 +1662,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 	defer server.Close()
 
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{
@@ -1531,7 +1689,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}}},
 	}}
 	
-	client := unitTestClient{map[string][]metav1.OwnerReference{}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
 	err := reconcileActiveVersions(&collectionResource, collections, client)
 
@@ -1608,7 +1766,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub
 	pipeline1ZipUrl := server.URL + digest1Pipeline.name
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{
@@ -1643,9 +1801,9 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub
 			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
 		}}}
 
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"build-task-0238ff31": []metav1.OwnerReference{{UID: myuid}},
-		"build-pipeline-0238ff31": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "build-task-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-pipeline-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 	
 	err := reconcileActiveVersions(&collectionResource, collections, client)
 
@@ -1729,7 +1887,7 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
 
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{{ Version: "0.2.6", DesiredState: "active" }}},
@@ -1783,11 +1941,11 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 		}},
 	}
 
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"build-task-0238ff31": []metav1.OwnerReference{{UID: myuid}},
-		"build-pipeline-0238ff31": []metav1.OwnerReference{{UID: myuid}},
-		"build-task-c3f28ffc": []metav1.OwnerReference{{UID: myuid}},
-		"build-pipeline-c3f28ffc": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "build-task-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-pipeline-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-task-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-pipeline-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, collections, client)
 
@@ -1853,7 +2011,7 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 	pipeline1ZipUrl := server.URL + digest1Pipeline.name
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid},
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha1.CollectionSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha1.CollectionVersion{
@@ -1910,11 +2068,11 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 		},
 	}}
 
-	client := unitTestClient{map[string][]metav1.OwnerReference{
-		"build-task-0238ff31": []metav1.OwnerReference{{UID: myuid}},
-		"build-pipeline-0238ff31": []metav1.OwnerReference{{UID: myuid}},
-		"build-task-c3f28ffc": []metav1.OwnerReference{{UID: myuid}},
-		"build-pipeline-c3f28ffc": []metav1.OwnerReference{{UID: myuid}}}}
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
+		client.ObjectKey{Name: "build-task-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-pipeline-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-task-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
+		client.ObjectKey{Name: "build-pipeline-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
 	err := reconcileActiveVersions(&collectionResource, collections, client)
 
