@@ -13,8 +13,7 @@ DOCKER_IMAGE="${DOCKER_IMAGE:-image-registry.openshift-image-registry.svc:5000/k
 # Appsody project GitHub repository #
 APP_REPO="${APP_REPO:-https://github.com/kabanero-io/sample-java-microprofile/}"
 
-COLLECTION="java-microprofile"
-APP="sample-java-microprofile"
+APP="${APP:-sample-java-microprofile}"
 PIPELINE_RUN="${PIPELINE_RUN:-java-microprofile-build-deploy-pipeline-run-kabanero}"
 PIPELINE_REF="${PIPELINE_REF:-java-microprofile-build-push-deploy-pipeline}"
 DOCKER_IMAGE_REF="${DOCKER_IMAGE_REF:-java-microprofile-docker-image}"
