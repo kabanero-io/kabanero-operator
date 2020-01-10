@@ -58,16 +58,15 @@ func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
 		req.Header.Add("If-None-Match", cacheData.etag)
 		req.Header.Add("If-Modified-Since", cacheData.date)
 	}
-	req.Header.Add("Accept-Encoding", "gzip")
 
 	// Drive the request. Certificate validation is not disabled by default.
-	client := http.DefaultClient
+	transport := &http.Transport{DisableCompression: true}
 	if skipCertVerify {
 		config := &tls.Config{InsecureSkipVerify: skipCertVerify}
-		transport := &http.Transport{TLSClientConfig: config}
-		client = &http.Client{Transport: transport}
+		transport.TLSClientConfig = config
 	}
 
+	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
 
 	// If something went horribly wrong, tell the user.
