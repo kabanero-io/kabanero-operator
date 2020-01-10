@@ -747,6 +747,9 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 						// If we had a problem loading the pipeline manifests, say so.
 						if value.manifestError != nil {
 							newCollectionVersionStatus.StatusMessage = value.manifestError.Error()
+							// TODO: For the case where we could not read one or more pipeline zips, do we
+							//       want to make the state "unknown"?  Having it be "active" is sort of
+							//       misleading because things may not be active.
 						}
 					}
 				}
@@ -789,6 +792,9 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 				}
 				
 				// Tell the user that the collection was not in the hub, if no other errors
+				// TODO: This error message is wrong... it's using the URL from the collection CR instance,
+				//       but the list of potential collection matches came from the Kabanero CR instance.
+				//       When we stop relying on the Kabanero CR instance, this message will be correct.
 				if newCollectionVersionStatus.StatusMessage == "" {
 						newCollectionVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the collection (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
 				}
@@ -823,6 +829,15 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 func getCollectionForSpecVersion(spec kabanerov1alpha1.CollectionVersion, collections []resolvedCollection) *resolvedCollection {
 	for _, collection := range collections {
 		if collection.collection.Version == spec.Version {
+			// Make sure all pipelines have a Sha256 set.  If they don't, complain but set a default one.
+			// Later on, if we attempt to retrieve the pipeline zip, it will fail.
+			for index, pipeline := range collection.collection.Pipelines {
+				if len(pipeline.Sha256) != 64 {
+					err := fmt.Errorf("Sha256 length %v is not valid", len(pipeline.Sha256))
+					log.Error(err, fmt.Sprintf("Collection ID %v version %v pipeline ID %v has an invalid Sha256 %v", collection.collection.Id, collection.collection.Version, pipeline.Id, pipeline.Sha256))
+					collection.collection.Pipelines[index].Sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+				}
+			}
 			return &collection
 		}
 	}

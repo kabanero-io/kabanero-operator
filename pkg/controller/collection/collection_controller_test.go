@@ -993,7 +993,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 
 	deletedPipeline := fileInfo{
 		name: "/deleted.pipeline.tar.gz",
-		sha256: "aaaabbbbccccdddd"}
+		sha256: "ABCD000000000000000000000000000000000000000000000000000000000000"}
 	
 	pipelineZipUrl := server.URL + deletedPipeline.name
 	collectionResource := kabanerov1alpha1.Collection{
