@@ -835,7 +835,7 @@ func getCollectionForSpecVersion(spec kabanerov1alpha1.CollectionVersion, collec
 				if len(pipeline.Sha256) != 64 {
 					err := fmt.Errorf("Sha256 length %v is not valid", len(pipeline.Sha256))
 					log.Error(err, fmt.Sprintf("Collection ID %v version %v pipeline ID %v has an invalid Sha256 %v", collection.collection.Id, collection.collection.Version, pipeline.Id, pipeline.Sha256))
-					collection.collection.Pipelines[index].Sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+					collection.collection.Pipelines[index].Sha256 = strings.Repeat("0", 64)
 				}
 			}
 			return &collection
