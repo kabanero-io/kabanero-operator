@@ -43,6 +43,7 @@ type KabaneroSpec struct {
 
 // InstanceCollectionConfig defines the customization entries for a set of collections.
 type InstanceCollectionConfig struct {
+	// +listType=set
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
 
@@ -51,9 +52,10 @@ type InstanceCollectionConfig struct {
 // of the specified team in the specified organization will have admin
 // authority in the Kabanero CLI.
 type GithubConfig struct {
-	Organization string   `json:"organization,omitempty"`
-	Teams        []string `json:"teams,omitempty"`
-	ApiUrl       string   `json:"apiUrl,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	// +listType=set
+	Teams  []string `json:"teams,omitempty"`
+	ApiUrl string   `json:"apiUrl,omitempty"`
 }
 
 // RepositoryConfig defines customization entries for a collection.
@@ -207,9 +209,10 @@ type KnativeServingStatus struct {
 
 // CliStatus defines the observed status details of the Kabanero CLI.
 type CliStatus struct {
-	Ready        string   `json:"ready,omitempty"`
-	ErrorMessage string   `json:"errorMessage,omitempty"`
-	Hostnames    []string `json:"hostnames,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// +listType=set
+	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 // KabaneroLandingPageStatus defines the observed status details of the Kabanero landing page.
@@ -228,9 +231,11 @@ type AppsodyStatus struct {
 
 // KappnavStatus defines the observed status details of Kubernetes Application Navigator.
 type KappnavStatus struct {
-	Ready        string   `json:"ready,omitempty"`
-	ErrorMessage string   `json:"errorMessage,omitempty"`
-	UiLocations  []string `json:"uiLocations,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// +listType=set
+	UiLocations []string `json:"uiLocations,omitempty"`
+	// +listType=set
 	ApiLocations []string `json:"apiLocations,omitempty"`
 }
 
@@ -262,9 +267,10 @@ type KabaneroCheInstanceStatus struct {
 
 // EventsStatus defines the observed status details of the Kabanero events.
 type EventsStatus struct {
-	Ready        string   `json:"ready,omitempty"`
-	ErrorMessage string   `json:"errorMessage,omitempty"`
-	Hostnames    []string `json:"hostnames,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	// +listType=set
+	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 // CollectionControllerStatus defines the observed status details of the Kabanero collection controller.
@@ -276,10 +282,9 @@ type CollectionControllerStatus struct {
 
 // AdmissionControllerWebhookStatus defines the observed status details of the Kabanero mutating and validating admission webhooks.
 type AdmissionControllerWebhookStatus struct {
-	Ready        string   `json:"ready,omitempty"`
-	ErrorMessage string   `json:"errorMessage,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
-
 
 // Kabanero is the Schema for the kabaneros API
 // Note that kubebuilder and operator-sdk currently disagree about what the
@@ -307,7 +312,8 @@ type Kabanero struct {
 type KabaneroList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Kabanero `json:"items"`
+	// +listType=set
+	Items []Kabanero `json:"items"`
 }
 
 func init() {
