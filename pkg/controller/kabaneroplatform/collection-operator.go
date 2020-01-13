@@ -23,7 +23,7 @@ const (
 
 // Installs the Kabanero collection controller.
 func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
+	logger := cclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling Kabanero collection controller installation.")
 
 	// Deploy the Kabanero collection operator.
@@ -96,14 +96,14 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kaba
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 // Removes the cross-namespace objects created during the collection controller
 // deployment.
 func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
+	logger := cclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Removing Kabanero collection controller installation.")
 
 	// First, we need to delete all of the collections that we own.  We must do this first, to let the

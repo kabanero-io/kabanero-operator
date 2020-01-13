@@ -20,28 +20,29 @@ const (
 // CollectionSpec defines the desired composition of a Collection
 // +k8s:openapi-gen=true
 type CollectionSpec struct {
-	RepositoryUrl string              `json:"repositoryUrl,omitempty"`
-	SkipCertVerification bool         `json:"skipCertVerification,omitempty"`
-	Name          string              `json:"name,omitempty"`
-	Version       string              `json:"version,omitempty"`
-	DesiredState  string              `json:"desiredState,omitempty"`
+	RepositoryUrl        string `json:"repositoryUrl,omitempty"`
+	SkipCertVerification bool   `json:"skipCertVerification,omitempty"`
+	Name                 string `json:"name,omitempty"`
+	Version              string `json:"version,omitempty"`
+	DesiredState         string `json:"desiredState,omitempty"`
 	// +listType=set
-	Versions      []CollectionVersion `json:"versions,omitempty"`
+	Versions []CollectionVersion `json:"versions,omitempty"`
 }
 
 // CollectionVersion defines the desired composition of a specific collection version.
 type CollectionVersion struct {
-	RepositoryUrl string `json:"repositoryUrl,omitempty"`
-	Version       string `json:"version,omitempty"`
-	DesiredState  string `json:"desiredState,omitempty"`
-	SkipCertVerification bool `json:"skipCertVerification,omitempty"`
+	RepositoryUrl        string `json:"repositoryUrl,omitempty"`
+	Version              string `json:"version,omitempty"`
+	DesiredState         string `json:"desiredState,omitempty"`
+	SkipCertVerification bool   `json:"skipCertVerification,omitempty"`
 }
 
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
 type PipelineStatus struct {
-	Name         string                  `json:"name,omitEmpty"`
-	Url          string                  `json:"url,omitEmpty"`
-	Digest       string                  `json:"digest,omitEmpty"`
+	Name   string `json:"name,omitEmpty"`
+	Url    string `json:"url,omitEmpty"`
+	Digest string `json:"digest,omitEmpty"`
+	// +listType=set
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
 
@@ -60,28 +61,30 @@ type RepositoryAssetStatus struct {
 // CollectionStatus defines the observed state of a collection
 // +k8s:openapi-gen=true
 type CollectionStatus struct {
-	ActiveVersion     string                    `json:"activeVersion,omitempty"`
-	ActiveLocation    string                    `json:"activeLocation,omitempty"`
+	ActiveVersion  string `json:"activeVersion,omitempty"`
+	ActiveLocation string `json:"activeLocation,omitempty"`
 	// +listType=set
-	ActivePipelines   []PipelineStatus          `json:"activePipelines,omitempty"`
-	AvailableVersion  string                    `json:"availableVersion,omitempty"`
-	AvailableLocation string                    `json:"availableLocation,omitempty"`
-	Status            string                    `json:"status,omitempty"`
-	StatusMessage     string                    `json:"statusMessage,omitempty"`
+	ActivePipelines   []PipelineStatus `json:"activePipelines,omitempty"`
+	AvailableVersion  string           `json:"availableVersion,omitempty"`
+	AvailableLocation string           `json:"availableLocation,omitempty"`
+	Status            string           `json:"status,omitempty"`
+	StatusMessage     string           `json:"statusMessage,omitempty"`
 	// +listType=set
-	Images            []Image                   `json:"images,omitempty"`
+	Images []Image `json:"images,omitempty"`
 	// +listType=set
-	Versions          []CollectionVersionStatus `json:"versions,omitempty"`
+	Versions []CollectionVersionStatus `json:"versions,omitempty"`
 }
 
 // CollectionVersionStatus defines the observed state of a specific collection version.
 type CollectionVersionStatus struct {
-	Version       string           `json:"version,omitempty"`
-	Location      string           `json:"location,omitempty"`
+	Version  string `json:"version,omitempty"`
+	Location string `json:"location,omitempty"`
+	// +listType=set
 	Pipelines     []PipelineStatus `json:"pipelines,omitempty"`
 	Status        string           `json:"status,omitempty"`
 	StatusMessage string           `json:"statusMessage,omitempty"`
-	Images        []Image          `json:"images,omitempty"`
+	// +listType=set
+	Images []Image `json:"images,omitempty"`
 }
 
 // Image defines a container image used by a collection
@@ -112,7 +115,8 @@ type Collection struct {
 type CollectionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Collection `json:"items"`
+	// +listType=set
+	Items []Collection `json:"items"`
 }
 
 func init() {
