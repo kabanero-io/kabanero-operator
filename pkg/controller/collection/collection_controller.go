@@ -3,10 +3,12 @@ package collection
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
@@ -23,14 +25,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var log = logf.Log.WithName("controller_collection")
+var cIDRegex = regexp.MustCompile("^[a-z]([a-z0-9-]*[a-z0-9])?$")
 
 const (
 	// Asset status.
@@ -171,6 +174,16 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	reqLogger.Info("Resolved Kabanero", "kabanero", k)
 
+	// If the collection is being deleted, and our finalizer is set, process it.
+	beingDeleted, err := processDeletion(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if beingDeleted {
+		return reconcile.Result{}, nil
+	}
+
 	// Collection objects which existed prior to the spec.versions array will not
 	// have the versions array filled in.  Try to fill it in if we can.  Nothing
 	// fancy here... if one or the other is empty, fill it in.  Then re-reconcile.
@@ -199,15 +212,15 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	// the reconciler can reference it.
 	if (len(instance.Status.Status) > 0) && (len(instance.Status.Versions) == 0) {
 		instance.Status.Versions = []kabanerov1alpha1.CollectionVersionStatus{{
-			Version: instance.Status.ActiveVersion,
-			Location: instance.Status.ActiveLocation,
-			Pipelines: instance.Status.ActivePipelines,
-			Status: instance.Status.Status,
+			Version:       instance.Status.ActiveVersion,
+			Location:      instance.Status.ActiveLocation,
+			Pipelines:     instance.Status.ActivePipelines,
+			Status:        instance.Status.Status,
 			StatusMessage: instance.Status.StatusMessage,
-			Images: instance.Status.Images,
+			Images:        instance.Status.Images,
 		}}
 	}
-	
+
 	rr, err := r.ReconcileCollection(instance, k)
 
 	r.client.Status().Update(ctx, instance)
@@ -410,7 +423,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 
 	// Process the versions array and activate (or deactivate) the desired versions.
 	err = reconcileActiveVersions(c, matchingCollections, r.client)
-	
+
 	// No version of the collection could be found.  If there is no active version, update
 	// the status message so the user knows that something needs to be done.
 	if c.Status.ActiveVersion == "" {
@@ -421,15 +434,15 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 
 // A key to the pipeline use count map
 type pipelineUseMapKey struct {
-	url string
+	url    string
 	digest string
 }
 
 // The value in the pipeline use count map
 type pipelineUseMapValue struct {
 	kabanerov1alpha1.PipelineStatus
-	useCount int64
-	manifests []CollectionAsset
+	useCount      int64
+	manifests     []CollectionAsset
 	manifestError error
 }
 
@@ -439,7 +452,43 @@ type pipelineVersion struct {
 	version string
 }
 
+// Some objects need to get created in a specific namespace.  Try and figure out what that is.
+func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string) string {
+	kind := u.GetKind()
+
+	// Presently, TriggerBinding and TriggerTemplate objects are created
+	// in the tekton-pipelines namespace.
+	if (kind == "TriggerBinding") || (kind == "TriggerTemplate") {
+		return "tekton-pipelines"
+	}
+
+	return defaultNamespace
+}
+
 func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, collections []resolvedCollection, c client.Client) error {
+
+	// Gather the known collection asset (*-tasks, *-pipeline) substitution data.
+	renderingContext := make(map[string]interface{})
+	if len(collections) > 0 {
+		// The collection id is the name of the Appsody stack directory ("the stack name from the stack path").
+		// Appsody stack creation namimg constrains the length to 68 characters:
+		// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
+		// and cannot end in a dash."
+		cID := collections[0].collection.Id
+		if len(cID) > 68 {
+			return fmt.Errorf("Failed to reconcile collection because an invalid collection id of %v was found. The collection id must must be 68 characters or less. For more details see the Appsody stack create command documentation", cID)
+		}
+
+		if !cIDRegex.MatchString(cID) {
+			return fmt.Errorf("Failed to reconcile collection because an invalid collection id of %v was found. The collection id value must follow stack creation name rules. For more details see the Appsody stack create command documentation", cID)
+		}
+
+		renderingContext["CollectionId"] = cID
+
+		// From a stack point of view, the (collection) name is a "title or short name for the stack (used on the website)"
+		// No need to check for restrictions.
+		renderingContext["CollectionName"] = collections[0].collection.Name
+	}
 
 	ownerIsController := false
 	assetOwner := metav1.OwnerReference{
@@ -448,12 +497,6 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 		Name:       collectionResource.ObjectMeta.Name,
 		UID:        collectionResource.ObjectMeta.UID,
 		Controller: &ownerIsController,
-	}
-
-	renderingContext := make(map[string]interface{})
-	if len(collections) > 0 {
-		renderingContext["CollectionId"] = collections[0].collection.Id
-		renderingContext["CollectionName"] = collections[0].collection.Name
 	}
 
 	// Multiple versions of the same collection, could be using the same pipeline zip.  Count how many
@@ -487,7 +530,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha1.CollectionDesiredStateInactive) {
 			collection := getCollectionForSpecVersion(curSpec, collections)
 			if collection == nil {
-				// This version of the collection was not found in the collection hub.  See if it's currently active.  
+				// This version of the collection was not found in the collection hub.  See if it's currently active.
 				// If it is, we should continue to use what is active.
 				//activeMatch := false
 				for _, curStatus := range collectionResource.Status.Versions {
@@ -516,7 +559,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 			}
 		}
 	}
-		
+
 	// Now go thru the maps and update the use counts
 	for cur, _ := range assetsToDecrement {
 		value := assetUseMap[cur.pipelineUseMapKey]
@@ -545,45 +588,12 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 			log.Info(fmt.Sprintf("Deleting assets with use count %v: %v", value.useCount, value))
 
 			for _, asset := range value.ActiveAssets {
-				u := &unstructured.Unstructured{}
-				u.SetGroupVersionKind(schema.GroupVersionKind{
-					Group:   asset.Group,
-					Version: asset.Version,
-					Kind:    asset.Kind,
-				})
-
-				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: collectionResource.GetNamespace(),
-					Name:      asset.Name,
-				}, u)
-
-				if err != nil {
-					if errors.IsNotFound(err) == false {
-						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
-					}
-				} else {
-					// Get the owner references.  See if we're the last one.
-					ownerRefs := u.GetOwnerReferences()
-					newOwnerRefs := []metav1.OwnerReference{}
-					for _, ownerRef := range ownerRefs {
-						if ownerRef.UID != assetOwner.UID {
-							newOwnerRefs = append(newOwnerRefs, ownerRef)
-						}
-					}
-
-					if len(newOwnerRefs) == 0 {
-						err = c.Delete(context.TODO(), u)
-						if err != nil {
-							log.Error(err, fmt.Sprintf("Unable to delete asset name %v", asset.Name))
-						}
-					} else {
-						u.SetOwnerReferences(newOwnerRefs)
-						err = c.Update(context.TODO(), u)
-						if err != nil {
-							log.Error(err, fmt.Sprintf("Unable to delete owner reference from %v", asset.Name))
-						}
-					}
+				// Old assets may not have a namespace set - correct that now.
+				if len(asset.Namespace) == 0 {
+					asset.Namespace = collectionResource.GetNamespace()
 				}
+
+				deleteAsset(c, asset, assetOwner)
 			}
 		}
 	}
@@ -595,7 +605,9 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 			// Check to see if there is already an asset list.  If not, read the manifests and
 			// create one.
 			if len(value.ActiveAssets) == 0 {
-				// Add the Digest to the rendering context.
+				// Add the Digest to the rendering context. No need to validate if the digest was tampered
+				// with here. Later one and before we do anything with this, we will have validated the specified
+				// digest against the generated digest from the archive.
 				renderingContext["Digest"] = value.Digest[0:8]
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
@@ -608,16 +620,18 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 
 				// Save the manifests for later.
 				value.manifests = manifests
-				
+
 				// Create the asset status slice, but don't apply anything yet.
 				for _, asset := range manifests {
+					// Figure out what namespace we should create the object in.
 					value.ActiveAssets = append(value.ActiveAssets, kabanerov1alpha1.RepositoryAssetStatus{
-						Name: asset.Name,
-						Group: asset.Group,
-					  Version: asset.Version,
-					  Kind: asset.Kind,
-						Digest: asset.Sha256,
-						Status: assetStatusUnknown,
+						Name:          asset.Name,
+						Namespace:     getNamespaceForObject(&asset.Yaml, collectionResource.GetNamespace()),
+						Group:         asset.Group,
+						Version:       asset.Version,
+						Kind:          asset.Kind,
+						Digest:        asset.Sha256,
+						Status:        assetStatusUnknown,
 						StatusMessage: "Asset has not been applied yet.",
 					})
 				}
@@ -625,6 +639,12 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 
 			// Now go thru the asset list and see if the objects are there.  If not, create them.
 			for index, asset := range value.ActiveAssets {
+				// Old assets may not have a namespace set - correct that now.
+				if len(asset.Namespace) == 0 {
+					asset.Namespace = collectionResource.GetNamespace()
+					value.ActiveAssets[index].Namespace = asset.Namespace
+				}
+
 				u := &unstructured.Unstructured{}
 				u.SetGroupVersionKind(schema.GroupVersionKind{
 					Group:   asset.Group,
@@ -633,13 +653,15 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 				})
 
 				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: collectionResource.GetNamespace(),
+					Namespace: asset.Namespace,
 					Name:      asset.Name,
 				}, u)
 
 				if err != nil {
 					if errors.IsNotFound(err) == false {
 						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
+						value.ActiveAssets[index].Status = assetStatusUnknown
+						value.ActiveAssets[index].StatusMessage = "Unable to check asset: " + err.Error()
 					} else {
 						// Make sure the manifests are loaded.
 						if len(value.manifests) == 0 {
@@ -667,8 +689,8 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 								log.Info(fmt.Sprintf("Resources: %v", m.Resources))
 
 								transforms := []mf.Transformer{
-									transforms.InjectOwnerReference(assetOwner), 
-									mf.InjectNamespace(collectionResource.GetNamespace()),
+									transforms.InjectOwnerReference(assetOwner),
+									mf.InjectNamespace(asset.Namespace),
 								}
 
 								err = m.Transform(transforms...)
@@ -714,14 +736,14 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 							log.Error(err, fmt.Sprintf("Unable to add owner reference to %v", asset.Name))
 						}
 					}
-					
+
 					value.ActiveAssets[index].Status = assetStatusActive
 					value.ActiveAssets[index].StatusMessage = ""
 				}
 			}
 		}
 	}
-	
+
 	// Now update the CollectionStatus to reflect the current state of things.
 	newCollectionStatus := kabanerov1alpha1.CollectionStatus{}
 	for _, curSpec := range collectionResource.Spec.Versions {
@@ -786,10 +808,10 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 				if foundPrevStatus == false {
 					newCollectionVersionStatus.Status = kabanerov1alpha1.CollectionDesiredStateInactive
 				}
-				
+
 				// Tell the user that the collection was not in the hub, if no other errors
 				if newCollectionVersionStatus.StatusMessage == "" {
-						newCollectionVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the collection (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
+					newCollectionVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the collection (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
 				}
 			}
 		} else {
@@ -813,9 +835,9 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 			newCollectionStatus.ActiveVersion = newCollectionStatus.Versions[0].Version
 		}
 	}
-	
+
 	collectionResource.Status = newCollectionStatus
-	
+
 	return nil
 }
 
@@ -825,5 +847,138 @@ func getCollectionForSpecVersion(spec kabanerov1alpha1.CollectionVersion, collec
 			return &collection
 		}
 	}
+	return nil
+}
+
+// Drives collection instance deletion processing. This includes creating a finalizer, handling
+// collection instance cleanup logic, and finalizer removal.
+func processDeletion(ctx context.Context, collection *kabanerov1alpha1.Collection, c client.Client, reqLogger logr.Logger) (bool, error) {
+	// The collection instance is not deleted. Create a finalizer if it was not created already.
+	collectionFinalizer := "kabanero.io/collection-controller"
+	foundFinalizer := false
+	for _, finalizer := range collection.Finalizers {
+		if finalizer == collectionFinalizer {
+			foundFinalizer = true
+		}
+	}
+
+	beingDeleted := !collection.DeletionTimestamp.IsZero()
+	if !beingDeleted {
+		if !foundFinalizer {
+			collection.Finalizers = append(collection.Finalizers, collectionFinalizer)
+			err := c.Update(ctx, collection)
+			if err != nil {
+				reqLogger.Error(err, "Unable to set the collection controller finalizer.")
+				return beingDeleted, err
+			}
+		}
+
+		return beingDeleted, nil
+	}
+
+	// The instance is being deleted.
+	if foundFinalizer {
+		// Drive collection cleanup processing.
+		err := cleanup(ctx, collection, c, reqLogger)
+		if err != nil {
+			reqLogger.Error(err, "Error during cleanup processing.")
+			return beingDeleted, err
+		}
+
+		// Remove the finalizer entry from the instance.
+		var newFinalizerList []string
+		for _, finalizer := range collection.Finalizers {
+			if finalizer == collectionFinalizer {
+				continue
+			}
+			newFinalizerList = append(newFinalizerList, finalizer)
+		}
+
+		collection.Finalizers = newFinalizerList
+		err = c.Update(ctx, collection)
+
+		if err != nil {
+			reqLogger.Error(err, "Error while attempting to remove the finalizer.")
+			return beingDeleted, err
+		}
+	}
+
+	return beingDeleted, nil
+}
+
+// Handles the finalizer cleanup logic for the Collection instance.
+func cleanup(ctx context.Context, collection *kabanerov1alpha1.Collection, c client.Client, reqLogger logr.Logger) error {
+	ownerIsController := false
+	assetOwner := metav1.OwnerReference{
+		APIVersion: collection.APIVersion,
+		Kind:       collection.Kind,
+		Name:       collection.Name,
+		UID:        collection.UID,
+		Controller: &ownerIsController,
+	}
+
+	// Run thru the status and delete everything.... we're just going to try once since it's unlikely
+	// that anything that goes wrong here would be rectified by a retry.
+	for _, version := range collection.Status.Versions {
+		for _, pipeline := range version.Pipelines {
+			for _, asset := range pipeline.ActiveAssets {
+				// Old assets may not have a namespace set - correct that now.
+				if len(asset.Namespace) == 0 {
+					asset.Namespace = collection.GetNamespace()
+				}
+
+				deleteAsset(c, asset, assetOwner)
+			}
+		}
+	}
+
+	return nil
+}
+
+// Deletes an asset.  This can mean removing an object owner, or completely deleting it.
+func deleteAsset(c client.Client, asset kabanerov1alpha1.RepositoryAssetStatus, assetOwner metav1.OwnerReference) error {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   asset.Group,
+		Version: asset.Version,
+		Kind:    asset.Kind,
+	})
+
+	err := c.Get(context.Background(), client.ObjectKey{
+		Namespace: asset.Namespace,
+		Name:      asset.Name,
+	}, u)
+
+	if err != nil {
+		if errors.IsNotFound(err) == false {
+			log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
+			return err
+		}
+	} else {
+		// Get the owner references.  See if we're the last one.
+		ownerRefs := u.GetOwnerReferences()
+		newOwnerRefs := []metav1.OwnerReference{}
+		for _, ownerRef := range ownerRefs {
+			if ownerRef.UID != assetOwner.UID {
+				newOwnerRefs = append(newOwnerRefs, ownerRef)
+			}
+		}
+
+		if len(newOwnerRefs) == 0 {
+			err = c.Delete(context.TODO(), u)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("Unable to delete asset name %v", asset.Name))
+				return err
+			}
+		} else {
+			u.SetOwnerReferences(newOwnerRefs)
+			err = c.Update(context.TODO(), u)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("Unable to delete owner reference from %v", asset.Name))
+				return err
+			}
+		}
+	}
+
 	return nil
 }

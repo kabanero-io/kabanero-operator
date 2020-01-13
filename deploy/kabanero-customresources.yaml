@@ -314,3 +314,25 @@ subjects:
 - kind: ServiceAccount
   name: kabanero-pipeline
   namespace: kabanero
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kabanero-trigger-role 
+  namespace: tekton-pipelines
+  labels:
+    kabanero.io/install: 25-triggers-role
+rules:
+- apiGroups:
+  - tekton.dev
+  resources:
+  - triggerbindings
+  - triggertemplates
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch

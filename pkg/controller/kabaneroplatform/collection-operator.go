@@ -2,6 +2,7 @@ package kabaneroplatform
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
@@ -22,7 +23,7 @@ const (
 
 // Installs the Kabanero collection controller.
 func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
-	logger := chelog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
+	logger := cclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling Kabanero collection controller installation.")
 
 	// Deploy the Kabanero collection operator.
@@ -66,6 +67,104 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kaba
 	}
 
 	err = m.ApplyAll()
+	if err != nil {
+		return err
+	}
+
+	// Create a RoleBinding in the tekton-pipelines namespace that will allow
+	// the collection controller to create triggerbinding and triggertemplate
+	// objects in the tekton-pipelines namespace.
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateCtx["kabaneroNamespace"] = k.GetNamespace()
+
+	f, err = rev.OpenOrchestration("collection-controller-tekton.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err = renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	m, err = mf.FromReader(strings.NewReader(s), c)
+	if err != nil {
+		return err
+	}
+
+	err = m.ApplyAll()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Removes the cross-namespace objects created during the collection controller
+// deployment.
+func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+	logger := cclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
+	logger.Info("Removing Kabanero collection controller installation.")
+
+	// First, we need to delete all of the collections that we own.  We must do this first, to let the
+	// collection controller run its finalizer for all of the collections, before deleting the
+	// collection controller pods etc.
+	collectionList := &kabanerov1alpha1.CollectionList{}
+	err := c.List(ctx, collectionList, client.InNamespace(k.GetNamespace()))
+	if err != nil {
+		return fmt.Errorf("Unable to list collections in finalizer: %v", err.Error())
+	}
+
+	collectionCount := 0
+	for _, collection := range collectionList.Items {
+		for _, ownerRef := range collection.OwnerReferences {
+			if ownerRef.UID == k.UID {
+				collectionCount = collectionCount + 1
+				if collection.DeletionTimestamp.IsZero() {
+					err = c.Delete(ctx, &collection)
+					if err != nil {
+						// Just log the error... but continue on to the next object.
+						logger.Error(err, "Unable to delete collection %v", collection.Name)
+					}
+				}
+			}
+		}
+	}
+
+	// If there are still some collections left, need to come back and try again later...
+	if collectionCount > 0 {
+		return fmt.Errorf("Deletion blocked waiting for %v owned Collections to be deleted", collectionCount)
+	}
+
+	// Now that the collections have all been deleted, proceed with the cross-namespace objects.
+	// Objects in this namespace will be deleted implicitly when the Kabanero CR instance is
+	// deleted, because of the OwnerReference in those objects.
+	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
+	if err != nil {
+		logger.Error(err, "Unable to resolve software revision.")
+		return err
+	}
+
+	templateCtx := rev.Identifiers
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateCtx["kabaneroNamespace"] = k.GetNamespace()
+
+	f, err := rev.OpenOrchestration("collection-controller-tekton.yaml")
+	if err != nil {
+		return err
+	}
+
+	s, err := renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	m, err := mf.FromReader(strings.NewReader(s), c)
+	if err != nil {
+		return err
+	}
+
+	err = m.DeleteAll()
 	if err != nil {
 		return err
 	}

@@ -59,7 +59,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 			// Handle the case where the collection existed before the versions array was added to the Collection CRD.
 			// If the versions array is empty, sync it up.
 			if (len(collectionResource.Spec.Versions) == 0) && (len(collectionResource.Spec.Version) != 0) {
-				collectionResource.Spec.Versions = []kabanerov1alpha1.CollectionVersion{{RepositoryUrl: collectionResource.Spec.RepositoryUrl, Version: collectionResource.Spec.Version, DesiredState: collectionResource.Spec.DesiredState}}
+				collectionResource.Spec.Versions = []kabanerov1alpha1.CollectionVersion{{RepositoryUrl: collectionResource.Spec.RepositoryUrl, SkipCertVerification: collectionResource.Spec.SkipCertVerification, Version: collectionResource.Spec.Version, DesiredState: collectionResource.Spec.DesiredState}}
 			}
 		}
 
@@ -71,6 +71,7 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 				if collectionVersion.Version == collection.Version {
 					foundVersion = true
 					collectionVersion.RepositoryUrl = collection.RepositoryUrl
+					collectionVersion.SkipCertVerification = collection.SkipCertVerification
 				}
 			}
 
@@ -110,7 +111,7 @@ func featuredCollections(k *kabanerov1alpha1.Kabanero) (map[string][]kabanerov1a
 		}
 		
 		for _, c := range index.Collections {
-			collectionMap[c.Id] = append(collectionMap[c.Id], kabanerov1alpha1.CollectionVersion{RepositoryUrl: r.Url, Version: c.Version, DesiredState: desiredState})
+			collectionMap[c.Id] = append(collectionMap[c.Id], kabanerov1alpha1.CollectionVersion{RepositoryUrl: r.Url, Version: c.Version, DesiredState: desiredState, SkipCertVerification: r.SkipCertVerification})
 		}		
 	}
 

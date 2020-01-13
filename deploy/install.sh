@@ -2,6 +2,8 @@
 
 set -Eeox pipefail
 
+openshift_master_default_subdomain="${openshift_master_default_subdomain:-ibm.com}"
+
 RELEASE="${RELEASE:-0.5.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
@@ -33,6 +35,15 @@ OCHEAD=$(printf "$OCMIN\n$OCVER" | sort -V | head -n 1)
 if [ "$OCMIN" != "$OCHEAD" ]; then
   printf "oc client version is $OCVER. Minimum oc client version required is $OCMIN.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest".
   exit 1
+fi
+
+# Check to see if we're upgrading, and if so, that we're at N-1 or N.
+if [ `oc get subscription kabanero-operator -n kabanero --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then
+		CSV=$(oc get subscription kabanero-operator -n kabanero --output=jsonpath={.status.installedCSV})
+    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[45]\..* ]]; then
+        printf "Cannot upgrade kabanero-operator CSV version $CSV to $RELEASE.  Upgrade is supported from the previous minor release."
+        exit 1
+    fi
 fi
 
 # Check Subscriptions: subscription-name, namespace
@@ -200,8 +211,8 @@ done
 
 # Tekton Dashboard
 oc new-project tekton-pipelines || true
-oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-webhooks-extension-release.yaml
-oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.2.1/openshift-tekton-dashboard-release.yaml
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
+oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-openshift-tekton-dashboard-release.yaml
 
 # Network policy for kabanero and tekton pipelines namespaces
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-network-policy
@@ -214,6 +225,10 @@ fi
 
 # Create service account to used by pipelines
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pipeline-sa
+
+# Role used by the collection controller to manipulate triggers in the
+# tekton-pipelines namespace (for use by tekton github webhooks extension)
+oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Install complete.  give instructions for how to create an instance.
 SAMPLE_KAB_INSTANCE_URL=https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/config/samples/default.yaml
