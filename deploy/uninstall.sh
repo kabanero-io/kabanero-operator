@@ -247,7 +247,7 @@ do
   unset CRDNAMES
   CRDNAMES=$(oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD)
   if [ -n "$CRDNAMES" ]; then
-    echo $CRDNAMES | xargs -r -n 1 oc delete crd
+    echo $CRDNAMES | xargs -n 1 oc delete crd
   fi
 done
 

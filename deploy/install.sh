@@ -28,7 +28,7 @@ fi
 
 # oc version
 OCMIN="4.2.0"
-OCVER=$(oc version -o=yaml | grep  gitVersion | head -1 | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+OCVER=$(oc version -o=yaml | grep  gitVersion | head -1 | sed -nE 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
 OCHEAD=$(printf "$OCMIN\n$OCVER" | sort -V | head -n 1)
 if [ "$OCMIN" != "$OCHEAD" ]; then
   printf "oc client version is $OCVER. Minimum oc client version required is $OCMIN.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest".
