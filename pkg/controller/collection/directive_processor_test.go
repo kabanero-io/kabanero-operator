@@ -104,6 +104,38 @@ spec:
         name: build-task-12345678
     `),
 		},
+		{
+			name: "Substitute StackId Digest",
+			provided: []byte(`
+#Kabanero! on activate substitute StackId for text 'StackId'
+#Kabanero! on activate substitute Digest for text 'Digest'
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: StackId-build-deploy-pipeline-Digest
+spec:
+  resources:
+  - resource1
+  tasks:
+    - name: build-task
+      taskRef:
+        name: StackId-build-task-Digest
+    `),
+
+			expected: []byte(`
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: my-stack-build-deploy-pipeline-12345678
+spec:
+  resources:
+  - resource1
+  tasks:
+    - name: build-task
+      taskRef:
+        name: my-stack-build-task-12345678
+    `),
+		},
 	}
 
 	for _, tc := range tests {
@@ -112,6 +144,7 @@ spec:
 				"CollectionName": "My Collection Name",
 				"CollectionId":   "my-collection",
 				"Digest":         "12345678",
+				"StackId":        "my-stack",
 			}
 
 			r := &DirectiveProcessor{}
