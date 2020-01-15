@@ -10,7 +10,7 @@ SLEEP_SHORT="${SLEEP_SHORT:-2}"
 
 # Optional components (yes/no)
 ENABLE_KAPPNAV="${ENABLE_KAPPNAV:-no}"
-
+ENABLE_KEYCLOAK="${ENABLE_KEYCLOAK:-no}"
 
 ### Check prereqs
 
@@ -223,6 +223,16 @@ if [ "$ENABLE_KAPPNAV" == "yes" ]
 then
   oc apply -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/optional.yaml --selector=kabanero.io/component=kappnav
 fi
+
+# Install Keycloak if selected
+if [ "$ENABLE_KEYCLOAK" == "yes" ]
+then
+   #final official URL but haven't been tested yet	
+   # bash |  curl  https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/keycloak-install.sh 
+   # for testing on private branch before using final URL
+   bash |  curl https://github.com/meiaus/kabanero-operator/tree/master/deploy/keycloak-install.sh
+fi
+
 
 # Create service account to used by pipelines
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pipeline-sa
