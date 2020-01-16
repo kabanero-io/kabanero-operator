@@ -484,6 +484,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 		}
 
 		renderingContext["CollectionId"] = cID
+		renderingContext["StackId"] = cID
 
 		// From a stack point of view, the (collection) name is a "title or short name for the stack (used on the website)"
 		// No need to check for restrictions.
