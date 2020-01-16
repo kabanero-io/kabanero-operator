@@ -113,6 +113,14 @@ do
 done
 oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
+# Delete Keycloak if it was installed by the kabanero install script.
+if [ `oc get deploymentConfig -n kabanero --output=jsonpath='{range .items[0]}{"\n"}{@.metadata.name}{end}' --ignore-not-found | wc -l` -gt 0 ] ; then
+   # official final URL but is not tested yet
+   # bash <(curl -s https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/keycloak-uninstall.sh)
+   # For testing purpose: temporarily using GSA server before final URL available
+   bash <(curl -s -u meichang:mypwd https://rtpgsa.ibm.com/projects/w/wassvt/PersonaTest/meichang/keycloak-uninstall.sh)
+fi  
+ 
 # Delete the Role used by the collection controller to manipulate triggers
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
