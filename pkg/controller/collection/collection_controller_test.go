@@ -41,7 +41,7 @@ func init() {
 }
 
 func TestReconcileCollection(t *testing.T) {
-	r := &ReconcileCollection{indexResolver: func(kabanerov1alpha1.RepositoryConfig) (*Index, error) {
+	r := &ReconcileCollection{indexResolver: func(kabanerov1alpha1.RepositoryConfig, []Pipelines, []Trigger, string	) (*Index, error) {
 		return &Index{
 			URL:        "http://some/URL/to/V2/collection/index",
 			APIVersion: "v2",
