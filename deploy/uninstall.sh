@@ -112,12 +112,7 @@ do
   fi
 done
 oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
-
-# Delete Keycloak if it was installed by the kabanero install script.
-if [ `oc get deploymentConfig -n kabanero --output=jsonpath='{range .items[0]}{"\n"}{@.metadata.name}{end}' --ignore-not-found | wc -l` -gt 0 ] ; then
-   curl -L -s https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/keycloak-uninstall.sh | bash 
-fi  
- 
+  
 # Delete the Role used by the collection controller to manipulate triggers
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
@@ -172,6 +167,10 @@ do
   fi
 done
 
+# Delete Keycloak if it was installed by the kabanero install script.
+if [ `oc get deploymentConfig -n kabanero --output=jsonpath='{range .items[0]}{"\n"}{@.metadata.name}{end}' --ignore-not-found | wc -l` -gt 0 ] ; then
+   curl -L -s https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/keycloak-uninstall.sh | bash 
+fi 
 
 ### Subscriptions
 
