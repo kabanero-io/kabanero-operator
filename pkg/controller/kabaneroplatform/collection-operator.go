@@ -181,7 +181,7 @@ func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha1.Kaba
 	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
 	if err != nil {
 		message := "Unable to retrieve the collection controller version."
-		kanlog.Error(err, message)
+		cclog.Error(err, message)
 		k.Status.CollectionController.ErrorMessage = message + ": " + err.Error()
 		return false, err
 	}
@@ -195,7 +195,7 @@ func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha1.Kaba
 
 	if err != nil {
 		message := "Unable to retrieve the Kabanero collection controller deployment object."
-		kanlog.Error(err, message)
+		cclog.Error(err, message)
 		k.Status.CollectionController.ErrorMessage = message + ": " + err.Error()
 		return false, err
 	}
