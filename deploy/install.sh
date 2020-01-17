@@ -228,10 +228,7 @@ fi
 # Install Keycloak if selected
 if [ "$ENABLE_KEYCLOAK" == "yes" ]
 then
-   #final official URL but is not tested yet
-   # bash <(curl -s https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/keycloak-install.sh)
-   # For testing purpose: temporarily using GSA server before final URL available
-    bash <(curl -s -u meichang:mypwd https://rtpgsa.ibm.com/projects/w/wassvt/PersonaTest/meichang/keycloak-install.sh)
+   curl -L -s https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/keycloak-install.sh | bash 
 fi
 
 # Create service account to used by pipelines
