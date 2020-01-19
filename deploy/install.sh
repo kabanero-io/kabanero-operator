@@ -225,18 +225,18 @@ then
   oc apply -f https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/deploy/optional.yaml --selector=kabanero.io/component=kappnav
 fi
 
-# Install Keycloak if selected
-if [ "$ENABLE_KEYCLOAK" == "yes" ]
-then
-   curl -L -s https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/keycloak-install.sh | bash 
-fi
-
 # Create service account to used by pipelines
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pipeline-sa
 
 # Role used by the collection controller to manipulate triggers in the
 # tekton-pipelines namespace (for use by tekton github webhooks extension)
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
+
+# Install Keycloak if selected
+if [ "$ENABLE_KEYCLOAK" == "yes" ]
+then
+   curl -L -s https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/keycloak-install.sh | bash 
+fi
 
 # Install complete.  give instructions for how to create an instance.
 SAMPLE_KAB_INSTANCE_URL=https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/config/samples/default.yaml

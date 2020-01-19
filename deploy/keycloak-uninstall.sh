@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -Eeox pipefail
+
 keycloakapp=$(oc get deploymentConfig -n kabanero --output=jsonpath='{range .items[0]}{"\n"}{@.metadata.name}{end}' --ignore-not-found)
 
 if [[ ${keycloakapp} ]]; then
@@ -18,9 +20,8 @@ if [[ ${keycloakapp} ]]; then
     oc delete pvc ${keycloakapp}-postgresql-claim -n kabanero 
     echo ""
 
-    if [[ $? -ne 0 ]]; then
-        echo "keycloak application ${keycloakapp} is not found"
-        exit 1
-    fi
+else    
+    echo "keycloak application ${keycloakapp} is not found"
+    exit 1
 fi
 
