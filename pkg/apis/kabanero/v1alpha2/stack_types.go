@@ -27,7 +27,6 @@ type StackSpec struct {
 
 // StackVersion defines the desired composition of a specific stack version.
 type StackVersion struct {
-	RepositoryUrl        string  `json:"repositoryUrl,omitempty"`
 	// +listType=set
 	Pipelines            []PipelineSpec `json:"pipelines,omitempty"`
 	Version              string  `json:"version,omitempty"`
