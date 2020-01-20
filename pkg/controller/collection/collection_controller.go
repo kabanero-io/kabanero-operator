@@ -356,7 +356,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 		r_log.Error(err, "Could not make kabanero the owner of the collection")
 	}
 
-	// Retreive all matching collection names from all remote indexes.
+	// Retrieve all matching collection names from all remote indexes.
 	// TODO: Start using the URL in the Collection object so we don't need to reference the
 	//       parent Kabanero anymore.
 	var matchingCollections []resolvedCollection

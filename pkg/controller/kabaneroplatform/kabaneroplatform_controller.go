@@ -249,7 +249,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// If all resoruce dependencies are not in the ready state, reconcile again in 60 seconds.
+	// If all resource dependencies are not in the ready state, reconcile again in 60 seconds.
 	if !isReady {
 		return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 	}

@@ -29,14 +29,14 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kaba
 	// Deploy the Kabanero collection operator.
 	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
 	if err != nil {
-		logger.Error(err, "Kabanero collection controller deloyment failed. Unable to resolve software revision.")
+		logger.Error(err, "Kabanero collection controller deployment failed. Unable to resolve software revision.")
 		return err
 	}
 
 	templateCtx := rev.Identifiers
 	image, err := imageUriWithOverrides(k.Spec.CollectionController.Repository, k.Spec.CollectionController.Tag, k.Spec.CollectionController.Image, rev)
 	if err != nil {
-		logger.Error(err, "Kabanero collection controller deloyment failed. Unable to process image overrides.")
+		logger.Error(err, "Kabanero collection controller deployment failed. Unable to process image overrides.")
 		return err
 	}
 	templateCtx["image"] = image

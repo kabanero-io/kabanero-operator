@@ -53,7 +53,7 @@ func initializeChe(k *kabanerov1alpha1.Kabanero) {
 }
 
 func reconcileChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, ctrlr controller.Controller) error {
-	// The Che entry was not configured in the spec. Concider Che to be disabled.
+	// The Che entry was not configured in the spec. Consider Che to be disabled.
 	if *k.Spec.Che.Enable == false {
 		cleanupChe(ctx, k, c)
 		return nil
@@ -178,7 +178,7 @@ func watchCheInstance(ctrlr controller.Controller) error {
 	return err
 }
 
-// Applies or deletes the specfied yaml file.
+// Applies or deletes the specified yaml file.
 func processYaml(ctx context.Context, k *kabanerov1alpha1.Kabanero, rev versioning.SoftwareRevision, templateCtx map[string]interface{}, c client.Client, fileName string, apply bool) error {
 	f, err := rev.OpenOrchestration(fileName)
 	if err != nil {
@@ -621,7 +621,7 @@ func validateSoftwareImageTag(instance map[string]interface{}, imageInterface in
 	return nil
 }
 
-// Retuns the installed Che operator version.
+// Returns the installed Che operator version.
 func getCheOperatorVersion(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
 	cok := client.ObjectKey{
 		Namespace: k.Namespace,

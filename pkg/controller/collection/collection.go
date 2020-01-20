@@ -43,7 +43,7 @@ type Templates struct {
 	Url string `yaml:"url,omitempty"`
 }
 
-// PipelineManifest holds the collection's associated pipelime manifests.
+// PipelineManifest holds the collection's associated pipeline manifests.
 type PipelineManifest struct {
 	Contents []PipelineFiles `yaml:"contents,omitempty"`
 }

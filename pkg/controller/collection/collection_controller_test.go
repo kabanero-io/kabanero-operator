@@ -418,7 +418,7 @@ func TestCollectionIDValidation(t *testing.T) {
 		}
 	}
 
-	// Test invalid id staritng with a number.
+	// Test invalid id starting with a number.
 	invalidID = "0-java-microprofile"
 	desiredCollection.Id = invalidID
 	err = reconcileActiveVersions(&collectionResource, []resolvedCollection{{"http://repo/url", desiredCollection}}, client)
@@ -431,7 +431,7 @@ func TestCollectionIDValidation(t *testing.T) {
 		}
 	}
 
-	// Test invalid id staritng with a dot char.
+	// Test invalid id starting with a dot char.
 	invalidID = "java-microprofile.1-0"
 	desiredCollection.Id = invalidID
 	err = reconcileActiveVersions(&collectionResource, []resolvedCollection{{"http://repo/url", desiredCollection}}, client)

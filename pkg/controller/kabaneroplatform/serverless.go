@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Constansts
+// Constants
 const (
 	serverlessSubscriptionName      = "serverless-operator"
 	serverlessSubscriptionNamespace = "openshift-operators"
@@ -35,7 +35,7 @@ func getServerlessStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogge
 		return false, err
 	}
 
-	// Find and set the serveless version.
+	// Find and set the serverless version.
 	csvVersion, err := getServerlessCSVVersion(k, c, installedCSVName, reqLogger)
 	if err != nil {
 		message := "Unable to retrieve the version of installed serverless CSV with the name of " + installedCSVName

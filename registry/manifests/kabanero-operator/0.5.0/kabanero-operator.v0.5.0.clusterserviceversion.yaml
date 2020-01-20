@@ -167,7 +167,7 @@ spec:
           path: kabaneroInstance.ready
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: Kantive eventing readiness status.
+        - description: Knative eventing readiness status.
           displayName: Knative Eventing Readiness
           path: knativeEventing.ready
           x-descriptors:
