@@ -74,8 +74,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                  repositoryUrl:
-                    type: string
                   skipCertVerification:
                     type: boolean
                   version:
