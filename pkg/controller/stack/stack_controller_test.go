@@ -98,11 +98,7 @@ func TestReconcileStack(t *testing.T) {
 		},
 	}
 
-	k := &kabanerov1alpha2.Kabanero{
-		ObjectMeta: metav1.ObjectMeta{UID: "1"},
-	}
-
-	r.ReconcileStack(c, k)
+	r.ReconcileStack(c)
 }
 
 // Test that failed assets are detected in the Stack instance status
@@ -146,94 +142,6 @@ func TestNoFailedAssetsEmptyStatus(t *testing.T) {
 	}
 }
 
-// Test that I can find the max version of a stack
-func TestFindMaxVersionStack(t *testing.T) {
-
-	stack1 := Stack{Version: "0.0.1"}
-	stack2 := Stack{Version: "0.0.2"}
-
-	var stacks []resolvedStack
-	stacks = append(stacks, resolvedStack{stack: stack1})
-	stacks = append(stacks, resolvedStack{stack: stack2})
-
-	maxStack := findMaxVersionStack(stacks)
-
-	if maxStack == nil {
-		t.Fatal("Did not find a max version")
-	}
-
-	if maxStack.stack.Version != "0.0.2" {
-		t.Fatal("Returned max version (" + maxStack.stack.Version + ") was not 0.0.2")
-	}
-}
-
-// Test that I can find the max version of a stack when there is only 1 stack
-func TestFindMaxVersionStackOne(t *testing.T) {
-
-	stack1 := Stack{Version: "0.0.1"}
-
-	var stacks []resolvedStack
-	stacks = append(stacks, resolvedStack{stack: stack1})
-
-	maxStack := findMaxVersionStack(stacks)
-
-	if maxStack == nil {
-		t.Fatal("Did not find a max version")
-	}
-
-	if maxStack.stack.Version != "0.0.1" {
-		t.Fatal("Returned max version (" + maxStack.stack.Version + ") was not 0.0.1")
-	}
-}
-
-// Test that I do not find a max version with no input stacks.  Technically this is an invalid case.
-func TestFindMaxVersionStackEmpty(t *testing.T) {
-
-	var stacks []resolvedStack
-	maxStack := findMaxVersionStack(stacks)
-
-	if maxStack != nil {
-		t.Fatal("Should not have found a max version.")
-	}
-}
-
-// Test that I can specify just a major.minor semver (invalid) and still be OK
-func TestFindMaxVersionStackMajorMinor(t *testing.T) {
-
-	stack1 := Stack{Version: "0.1"}
-	stack2 := Stack{Version: "0.2"}
-
-	var stacks []resolvedStack
-	stacks = append(stacks, resolvedStack{stack: stack1})
-	stacks = append(stacks, resolvedStack{stack: stack2})
-
-	maxStack := findMaxVersionStack(stacks)
-
-	if maxStack == nil {
-		t.Fatal("Did not find a max version")
-	}
-
-	if maxStack.stack.Version != "0.2" {
-		t.Fatal("Returned max version (" + maxStack.stack.Version + ") was not 0.2")
-	}
-}
-
-// Test that if I just have invalid semvers, I don't find a max version.
-func TestFindMaxVersionStackInvalidSemver(t *testing.T) {
-
-	stack1 := Stack{Version: "blah"}
-	stack2 := Stack{Version: "5nope"}
-
-	var stacks []resolvedStack
-	stacks = append(stacks, resolvedStack{stack: stack1})
-	stacks = append(stacks, resolvedStack{stack: stack2})
-
-	maxStack := findMaxVersionStack(stacks)
-
-	if maxStack != nil {
-		t.Fatal("Should not have found a max version (" + maxStack.stack.Version + ")")
-	}
-}
 
 // -------------------------------------------------------------------------------
 // Asset reuse tests

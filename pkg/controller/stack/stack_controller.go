@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
@@ -20,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -160,19 +158,6 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	// Resolve the kabanero instance
-	// TODO: issue #92, when repo is added to the Stack, there will be no need for the Kabanero
-	//       object here.
-	var k *kabanerov1alpha2.Kabanero
-	l := kabanerov1alpha2.KabaneroList{}
-	err = r.client.List(context.Background(), &l, client.InNamespace(instance.GetNamespace()))
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	for _, _k := range l.Items {
-		k = &_k
-	}
-	reqLogger.Info("Resolved Kabanero", "kabanero", k)
 
 	// If the stack is being deleted, and our finalizer is set, process it.
 	beingDeleted, err := processDeletion(ctx, instance, r.client, reqLogger)
@@ -184,7 +169,7 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, nil
 	}
 
-	rr, err := r.ReconcileStack(instance, k)
+	rr, err := r.ReconcileStack(instance)
 
 	r.client.Status().Update(ctx, instance)
 
@@ -216,91 +201,15 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 }
 
 
-
-
-// Finds the stack with the highest semver.  Caller has validated that resolvedStack
-// contains at least one stack.
-func findMaxVersionStack(stacks []resolvedStack) *resolvedStack {
-	log.Info(fmt.Sprintf("findMaxVersionStack: processing %v stacks", len(stacks)))
-
-	var maxStack *resolvedStack
-	var err error
-	maxVersion, _ := semver.Make("0.0.0")
-	curVersion, _ := semver.Make("0.0.0")
-
-	for _, stack := range stacks {
-		switch {
-		case stack.stack.Version != "":
-			curVersion, err = semver.ParseTolerant(stack.stack.Version)
-
-			if err != nil {
-				log.Info(fmt.Sprintf("findMaxVersionStack: Invalid semver " + stack.stack.Version))
-			}
-		}
-
-		if err == nil {
-			if curVersion.Compare(maxVersion) > 0 {
-				maxStack = &stack
-				maxVersion = curVersion
-			}
-		}
-	}
-
-	// It's possible we didn't find a valid semver, in which case we'd return nil.
-	return maxStack
-}
-
-func (r *ReconcileStack) ensureStackHasOwner(c *kabanerov1alpha2.Stack, k *kabanerov1alpha2.Kabanero) error {
-	foundKabanero := false
-	ownerReferences := c.GetOwnerReferences()
-	if ownerReferences != nil {
-		for _, ownerRef := range ownerReferences {
-			if ownerRef.Kind == "Kabanero" {
-				if ownerRef.UID == k.ObjectMeta.UID {
-					foundKabanero = true
-				}
-			}
-		}
-	}
-	if !foundKabanero {
-		// Get kabanero instance. Input one does not have APIVersion or Kind.
-		ownerIsController := true
-		kInstance := &kabanerov1alpha2.Kabanero{}
-		name := types.NamespacedName{
-			Name:      k.ObjectMeta.Name,
-			Namespace: c.GetNamespace(),
-		}
-		err := r.client.Get(context.Background(), name, kInstance)
-		if err != nil {
-			return err
-		}
-
-		// Make kabanero the owner of the stack
-		ownerRef := metav1.OwnerReference{
-			APIVersion: kInstance.TypeMeta.APIVersion,
-			Kind:       kInstance.TypeMeta.Kind,
-			Name:       kInstance.ObjectMeta.Name,
-			UID:        kInstance.ObjectMeta.UID,
-			Controller: &ownerIsController,
-		}
-		c.SetOwnerReferences(append(c.GetOwnerReferences(), ownerRef))
-		err = r.client.Update(context.Background(), c)
-		if err != nil {
-			return err
-		}
-		log.Info("Updated stack owner")
-	}
-	return nil
-}
-
 // Used internally by ReconcileStack to store matching stacks
+// Could be less cumbersome to just use kabanerov1alpha2.Stack
 type resolvedStack struct {
 	repositoryURL string
 	stack    Stack
 }
 
 // ReconcileStack activates or deactivates the input stack.
-func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack, k *kabanerov1alpha2.Kabanero) (reconcile.Result, error) {
+func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Result, error) {
 	r_log := log.WithValues("Request.Namespace", c.GetNamespace()).WithValues("Request.Name", c.GetName())
 
 	// Clear the status message, we'll generate a new one if necessary
@@ -317,127 +226,45 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack, k *kabanerov1
 
 	r_log = r_log.WithValues("Stack.Name", stackName)
 
-	// A stack created by the CLI might not have kabanero as the owner.
-	// In that case we want to make kabanero the owner
-	err := r.ensureStackHasOwner(c, k)
-	if err != nil {
-		r_log.Error(err, "Could not make kabanero the owner of the stack")
-	}
-
-
-
-	// Retreive all matching stack names from all remote indexes.
-	// TODO: Start using the URL in the Stack object so we don't need to reference the
-	//       parent Kabanero anymore.
 	var matchingStacks []resolvedStack
-	repositories := k.Spec.Stacks.Repositories
-
-	for _, repo := range repositories {
-		index, err := r.indexResolver(repo)
-		if err != nil {
-			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
+	
+	// 388 - Copy the kabanerov1alpha2.Stack info needed into local Stack singleton
+	for _, version := range c.Spec.Versions {
+		var stack Stack
+		stack.Name = c.Spec.Name
+		stack.Id = c.Spec.Name
+		stack.Version = version.Version
+		
+		var pipelines []Pipelines 
+		for _, kpipeline := range version.Pipelines {
+			var pipeline Pipelines
+			pipeline.Id = kpipeline.Id
+			pipeline.Sha256 = kpipeline.Sha256
+			pipeline.Url = kpipeline.Url
+			pipelines = append(pipelines, pipeline)
 		}
-		// Handle Index Stack version
-		switch apiVersion := index.APIVersion; apiVersion {
-		case "v2":
-			/* - 388
-			// Search for all versions of the stack in this repository index.
-			_stacks, err := SearchStack(stackName, index)
-			if err != nil {
-				r_log.Error(err, "Could not search the provided index")
-			}
-			// Build out the list of all stacks across all repository indexes
-			for _, stack := range _stacks {
-				matchingStacks = append(matchingStacks, resolvedStack{stack: stack, repositoryURL: repo.Url})
-			}
-			*/
-			
-			// 388 - Copy the kabanerov1alpha2.Stack info needed into local Stack singleton
-			for _, version := range c.Spec.Versions {
-				var stack Stack
-				stack.Name = c.Spec.Name
-				stack.Id = c.Spec.Name
-				stack.Version = version.Version
-				
-				var pipelines []Pipelines 
-				for _, kpipeline := range version.Pipelines {
-					var pipeline Pipelines
-					pipeline.Id = kpipeline.Id
-					pipeline.Sha256 = kpipeline.Sha256
-					pipeline.Url = kpipeline.Url
-					pipelines = append(pipelines, pipeline)
-				}
-				stack.Pipelines = pipelines
-				
-				var images []Images
-				for _, kimage := range version.Images {
-					var image Images
-					image.Id = kimage.Id
-					image.Image = kimage.Image
-					images = append(images, image)
-				}
-				stack.Images = images
-				
-				matchingStacks = append(matchingStacks, resolvedStack{stack: stack, repositoryURL: ""})
-			}
-
-		default:
-			fmt.Sprintf("Index is unsupported version: %s", apiVersion)
+		stack.Pipelines = pipelines
+		
+		var images []Images
+		for _, kimage := range version.Images {
+			var image Images
+			image.Id = kimage.Id
+			image.Image = kimage.Image
+			images = append(images, image)
 		}
+		stack.Images = images
+		
+		matchingStacks = append(matchingStacks, resolvedStack{stack: stack, repositoryURL: ""})
 	}
 
-
-
-
-/* - TODO - Delete, no longer valid?
-	// We have a list of all stacks that match the name.  We'll use this list to see
-	// if we have one at the requested version, as well as find the one at the highest level
-	// to inform the user if an upgrade is available.
-	if len(matchingStacks) > 0 {
-		specVersion, semverErr := semver.ParseTolerant(c.Spec.Versions.Version)
-		if semverErr == nil {
-			// Search for the highest version.  Update the Status field if one is found that
-			// is higher than the requested version.  This will only work if the Spec.Version adheres
-			// to the semver standard.
-			upgradeStack := findMaxVersionStack(matchingStacks)
-			if upgradeStack != nil {
-				// The upgrade stack semver is valid, we tested it in findMaxVersionStack
-				upgradeVersion, _ := semver.Make("0.0.0")
-				switch {
-				case upgradeStack.stack.Version != "":
-					upgradeVersion, _ = semver.ParseTolerant(upgradeStack.stack.Version)
-					if upgradeVersion.Compare(specVersion) > 0 {
-						c.Status.AvailableVersion = upgradeStack.stack.Version
-						c.Status.AvailableLocation = upgradeStack.repositoryURL
-					} else {
-						c.Status.AvailableVersion = ""
-						c.Status.AvailableLocation = ""
-					}
-				}
-
-			} else {
-				// None of the stacks versions adher to semver standards
-				c.Status.AvailableVersion = ""
-				c.Status.AvailableLocation = ""
-			}
-		} else {
-			r_log.Error(semverErr, "Could not determine upgrade availability for stack "+stackName)
-		}
-	}
-*/
 
 	// Process the versions array and activate (or deactivate) the desired versions.
-	err = reconcileActiveVersions(c, matchingStacks, r.client)
-
-
-/* - TODO - Delete, no longer valid?
-	// No version of the stack could be found.  If there is no active version, update
-	// the status message so the user knows that something needs to be done.
-	if c.Status.ActiveVersion == "" {
-		c.Status.StatusMessage = "No version of the stack is available."
+	err := reconcileActiveVersions(c, matchingStacks, r.client)
+	if err != nil {
+		// TODO - what is useful to print?
+		log.Error(err, fmt.Sprintf("Error during reconcileActiveVersions"))
 	}
-*/
-	
+
 	return reconcile.Result{}, nil
 }
 
