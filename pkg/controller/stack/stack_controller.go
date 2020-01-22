@@ -324,6 +324,8 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack, k *kabanerov1
 		r_log.Error(err, "Could not make kabanero the owner of the stack")
 	}
 
+
+
 	// Retreive all matching stack names from all remote indexes.
 	// TODO: Start using the URL in the Stack object so we don't need to reference the
 	//       parent Kabanero anymore.
@@ -338,21 +340,54 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack, k *kabanerov1
 		// Handle Index Stack version
 		switch apiVersion := index.APIVersion; apiVersion {
 		case "v2":
+			/* - 388
 			// Search for all versions of the stack in this repository index.
 			_stacks, err := SearchStack(stackName, index)
 			if err != nil {
 				r_log.Error(err, "Could not search the provided index")
 			}
-
 			// Build out the list of all stacks across all repository indexes
 			for _, stack := range _stacks {
 				matchingStacks = append(matchingStacks, resolvedStack{stack: stack, repositoryURL: repo.Url})
+			}
+			*/
+			
+			// 388 - Copy the kabanerov1alpha2.Stack info needed into local Stack singleton
+			for _, version := range c.Spec.Versions {
+				var stack Stack
+				stack.Name = c.Spec.Name
+				stack.Id = c.Spec.Name
+				stack.Version = version.Version
+				
+				var pipelines []Pipelines 
+				for _, kpipeline := range version.Pipelines {
+					var pipeline Pipelines
+					pipeline.Id = kpipeline.Id
+					pipeline.Sha256 = kpipeline.Sha256
+					pipeline.Url = kpipeline.Url
+					pipelines = append(pipelines, pipeline)
+				}
+				stack.Pipelines = pipelines
+				
+				var images []Images
+				for _, kimage := range version.Images {
+					var image Images
+					image.Id = kimage.Id
+					image.Image = kimage.Image
+					images = append(images, image)
+				}
+				stack.Images = images
+				
+				matchingStacks = append(matchingStacks, resolvedStack{stack: stack, repositoryURL: ""})
 			}
 
 		default:
 			fmt.Sprintf("Index is unsupported version: %s", apiVersion)
 		}
 	}
+
+
+
 
 /* - TODO - Delete, no longer valid?
 	// We have a list of all stacks that match the name.  We'll use this list to see
