@@ -821,7 +821,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, stacks []res
 
 				// Tell the user that the stack was not in the hub, if no other errors
 				if newStackVersionStatus.StatusMessage == "" {
-					newStackVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the stack (%v) is not available at %v", curSpec.Version, curSpec.RepositoryUrl)
+					newStackVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the stack (%v) is not available", curSpec.Version)
 				}
 			}
 		} else {

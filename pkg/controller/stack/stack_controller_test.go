@@ -1933,7 +1933,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
-	badRepositoryUrl := "https://bogus.com/kabanero_index.yaml"
+	// badRepositoryUrl := "https://bogus.com/kabanero_index.yaml"
 	pipeline1ZipUrl := server.URL + digest1Pipeline.name
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
 	stackResource := kabanerov1alpha2.Stack{
@@ -1941,7 +1941,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub
 		Spec: kabanerov1alpha2.StackSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{
-				{Version: "0.2.5", DesiredState: "active", RepositoryUrl: badRepositoryUrl},
+				{Version: "0.2.5", DesiredState: "active"},
 				{Version: "0.2.6", DesiredState: "active"}}},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
@@ -2012,7 +2012,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub
 		}
 
 		// Version 0.2.5 was deleted from the stack hub.  Make sure there is an error set.
-		if (curStatus.Version == "0.2.5") && (strings.Contains(curStatus.StatusMessage, badRepositoryUrl) == false) {
+		if (curStatus.Version == "0.2.5") && (strings.Contains(curStatus.StatusMessage, "(0.2.5) is not available") == false) {
 			t.Fatal(fmt.Sprintf("Stack version 0.2.5 should have an error message due to stack not being in hub, but has: %v", curStatus.StatusMessage))
 		}
 
