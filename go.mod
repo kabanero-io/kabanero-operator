@@ -7,10 +7,8 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.8 // indirect
 	github.com/Azure/go-autorest v12.0.0+incompatible // indirect
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/docker/distribution v2.7.0+incompatible // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.3
-	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-containerregistry v0.0.0-20191218175032-34fb8ff33bed // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/kabanero-io/manifestival v0.0.0-20191230200607-194733cd27d9

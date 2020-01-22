@@ -541,7 +541,7 @@ github.com/operator-framework/operator-sdk v0.9.0 h1:moY3n5vsg4OpD3FzHvqI68Fv+gJ
 github.com/operator-framework/operator-sdk v0.9.0/go.mod h1:7eW7ldXmvenehIMVdO2zCdERf/828Mrftq4u7GS0I68=
 github.com/operator-framework/operator-sdk v0.10.0 h1:k2yovBNxaya06yIkJ1e6lNsqiWjhS32G+d2LUdjuu/E=
 github.com/operator-framework/operator-sdk v0.10.0/go.mod h1:7eW7ldXmvenehIMVdO2zCdERf/828Mrftq4u7GS0I68=
-github.com/operator-framework/operator-sdk v0.11.0 h1:If0MefBJjPGYAW6Os6azpTMoaFtsSlXRlQctF23/ORs=
+github.com/operator-framework/operator-sdk v0.11.0 h1:tQumPT2UjD6uhggfAerRbPt+rWOPKC80DmgKUEqeGYo=
 github.com/operator-framework/operator-sdk v0.11.0/go.mod h1:Oo+O2br5qR6XSLWY/GgIvTvpsEKtzeWp+I3rHF0WIq8=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c/go.mod h1:VyrYX9gd7irzKovcSS6BIIEwPRkP2Wm2m9ufcdFSJ34=
