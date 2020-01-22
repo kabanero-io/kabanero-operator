@@ -81,7 +81,8 @@ type RepositoryConfig struct {
 	Name                       string `json:"name,omitempty"`
 	Url                        string `json:"url,omitempty"`
 	SkipCertVerification       bool   `json:"skipCertVerification,omitempty"`
-	// TODO: Pipeline and trigger (and image) over-rides
+	// +listType=set
+	Pipelines                  []PipelineSpec `json:"pipelines,omitempty"`
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
