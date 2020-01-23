@@ -20,7 +20,7 @@ kabanero:
     kabanero-che: "0.6.0"
     events: "0.1.0"
     collection-controller: "0.5.0-rc.1"
-    stack-controller: "0.5.0-rc.1"
+    stack-controller: "0.6.0-alpha.1"
     admission-webhook: "0.5.0-rc.1"
 - version: "0.5.0"
   related-versions: 
@@ -156,6 +156,13 @@ related-software:
       repository: "kabanero/kabanero-operator-collection-controller"
       tag: "0.4.0"
 
+  stack-controller: 
+  - version: "0.6.0-alpha.1"
+    orchestrations: "orchestrations/stack-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-stack-controller"
+      tag: "0.6.0-alpha.1"
+      
   admission-webhook:
   - version: "0.5.0-rc.1"
     orchestrations: "orchestrations/admission-webhook/0.2"

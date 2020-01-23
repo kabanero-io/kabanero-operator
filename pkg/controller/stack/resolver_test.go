@@ -9,8 +9,10 @@ import (
 func TestResolveIndex(t *testing.T) {
 	repoConfig := kabanerov1alpha2.RepositoryConfig{
 		Name:                       "name",
-		Url:                        "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator-index.yaml",
-		SkipCertVerification: true,
+		Https: kabanerov1alpha2.HttpsProtocolFile{
+			Url: "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator-index.yaml",
+			SkipCertVerification: true,
+		},
 	}
 
 	index, err := ResolveIndex(repoConfig)
