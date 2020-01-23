@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -83,7 +84,16 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 
 	// Export the github API URL, if it's set.  This is used by the security portion of the microservice.
 	if len(k.Spec.Github.ApiUrl) > 0 {
-		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", k.Spec.Github.ApiUrl))
+		apiUrlString := k.Spec.Github.ApiUrl
+		apiUrl, err := url.Parse(apiUrlString)
+		if len(apiUrl.Scheme) == 0 {
+			apiUrl.Scheme = "https"
+		}
+		if err != nil {
+			reqLogger.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
+			apiUrl, _ = url.Parse("https://api.github.com")
+		}
+		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrlString))
 	}
 
 	// Set JwtExpiration for login duration/timeout
