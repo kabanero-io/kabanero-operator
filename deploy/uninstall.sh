@@ -251,3 +251,6 @@ do
   fi
 done
 
+
+# Delete tekton-pipelines namespace to clean up loose artifacts from dashboard that cause problems on reinstall
+oc delete namespace tekton-pipelines --ignore-not-found
