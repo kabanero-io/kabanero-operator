@@ -93,7 +93,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 			reqLogger.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
 			apiUrl, _ = url.Parse("https://api.github.com")
 		}
-		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrlString))
+		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrl.String()))
 	}
 
 	// Set JwtExpiration for login duration/timeout
