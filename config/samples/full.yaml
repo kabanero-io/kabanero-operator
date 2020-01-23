@@ -43,6 +43,17 @@ spec:
     # Overrides the image uri
     image: kabanero/kabanero-operator-collection-controller:0.5.0-rc.1
 
+  stackController:
+    # Overrides the setting for version on this component
+    version: "0.5.0-rc.1"
+
+    # Overrides the image as a separate repository or tag
+    repository: kabanero/kabaner-operator-stack-controller
+    tag: "0.5.0-rc.1"
+
+    # Overrides the image uri
+    image: kabanero/kabanero-operator-stack-controller:0.5.0-rc.1
+
   landing:
     # The landing page is enabled by default. To disable specify false.
     enable: true
