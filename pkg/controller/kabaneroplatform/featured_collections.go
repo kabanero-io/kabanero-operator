@@ -100,7 +100,7 @@ type collectionData struct {
 func featuredCollections(k *kabanerov1alpha1.Kabanero) (map[string][]kabanerov1alpha1.CollectionVersion, error) {
 	collectionMap := make(map[string][]kabanerov1alpha1.CollectionVersion)
 	for _, r := range k.Spec.Collections.Repositories {
-		index, err := collection.ResolveIndex(r)
+		index, err := collection.ResolveIndex(r, []collection.Pipelines{}, []collection.Trigger{}, "")
 		if err != nil {
 			return nil, err
 		}

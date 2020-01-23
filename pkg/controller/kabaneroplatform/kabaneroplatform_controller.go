@@ -204,6 +204,14 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	/* TODO Deploy the kabanero operator stack controller.
+	err = reconcileStackController(ctx, instance, r.client)
+	if err != nil {
+		reqLogger.Error(err, "Error deploying the kabanero stack controller.")
+		return reconcile.Result{}, err
+	}
+	*/
+
 	// Deploy feature collection resources.
 	err = reconcileFeaturedCollections(ctx, instance, r.client)
 	if err != nil {
@@ -341,7 +349,14 @@ func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Cl
 	if err != nil {
 		return err
 	}
-	
+
+	/* TODO Remove the cross-namespace objects that the stack controller uses.
+	err = cleanupStackController(ctx, k, client)
+	if err != nil {
+		return err
+	}
+	*/
+
 	return nil
 }
 

@@ -11,6 +11,11 @@ SLEEP_SHORT="${SLEEP_SHORT:-2}"
 # Optional components (yes/no)
 ENABLE_KAPPNAV="${ENABLE_KAPPNAV:-no}"
 
+# Find we are running on MAC.
+MAC_EXEC=false
+if [ "$(uname -s)" == "Darwin" ]; then
+   MAC_EXEC=true
+fi
 
 ### Check prereqs
 
@@ -28,7 +33,13 @@ fi
 
 # oc version
 OCMIN="4.2.0"
-OCVER=$(oc version -o=yaml | grep  gitVersion | head -1 | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+
+SEDOPT="nre"
+if [[ $MAC_EXEC == true ]]; then
+  SEDOPT="nE"
+fi
+
+OCVER=$(oc version -o=yaml | grep  gitVersion | head -1 | sed -$SEDOPT 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
 OCHEAD=$(printf "$OCMIN\n$OCVER" | sort -V | head -n 1)
 if [ "$OCMIN" != "$OCHEAD" ]; then
   printf "oc client version is $OCVER. Minimum oc client version required is $OCMIN.\nhttps://mirror.openshift.com/pub/openshift-v4/clients/oc/latest".
@@ -212,8 +223,8 @@ oc new-project tekton-pipelines || true
 
 openshift_master_default_subdomain=$(oc get ingresses.config.openshift.io cluster --output=jsonpath={.spec.domain})
 
-curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
-oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-openshift-tekton-dashboard-release.yaml
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.4.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
+oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
 
 # Network policy for kabanero and tekton pipelines namespaces
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-network-policy

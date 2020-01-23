@@ -130,7 +130,7 @@ type ReconcileCollection struct {
 	scheme *runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
-	indexResolver func(kabanerov1alpha1.RepositoryConfig) (*Index, error)
+	indexResolver func(kabanerov1alpha1.RepositoryConfig, []Pipelines, []Trigger, string) (*Index, error)
 }
 
 // Reconcile reads that state of the cluster for a Collection object and makes changes based on the state read
@@ -363,7 +363,7 @@ func (r *ReconcileCollection) ReconcileCollection(c *kabanerov1alpha1.Collection
 	repositories := k.Spec.Collections.Repositories
 
 	for _, repo := range repositories {
-		index, err := r.indexResolver(repo)
+		index, err := r.indexResolver(repo, []Pipelines{}, []Trigger{}, "")
 		if err != nil {
 			return reconcile.Result{Requeue: true, RequeueAfter: 60 * time.Second}, err
 		}
@@ -484,6 +484,7 @@ func reconcileActiveVersions(collectionResource *kabanerov1alpha1.Collection, co
 		}
 
 		renderingContext["CollectionId"] = cID
+		renderingContext["StackId"] = cID
 
 		// From a stack point of view, the (collection) name is a "title or short name for the stack (used on the website)"
 		// No need to check for restrictions.

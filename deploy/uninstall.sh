@@ -117,8 +117,8 @@ oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Tekton Dashboard
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-openshift-tekton-dashboard-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/openshift-tekton-webhooks-extension-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
 
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
@@ -247,7 +247,10 @@ do
   unset CRDNAMES
   CRDNAMES=$(oc get crds -o=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep '.*\.'$CRD)
   if [ -n "$CRDNAMES" ]; then
-    echo $CRDNAMES | xargs -r -n 1 oc delete crd
+    echo $CRDNAMES | xargs -n 1 oc delete crd
   fi
 done
 
+
+# Delete tekton-pipelines namespace to clean up loose artifacts from dashboard that cause problems on reinstall
+oc delete namespace tekton-pipelines --ignore-not-found
