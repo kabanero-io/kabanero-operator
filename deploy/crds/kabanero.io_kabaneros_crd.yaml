@@ -492,11 +492,18 @@ spec:
                       description: PipelineSpec defines the sets of default pipelines
                         for the stacks.
                       properties:
+                        https:
+                          description: HttpsProtocolFile defines how to retrieve a
+                            file over https
+                          properties:
+                            skipCertVerification:
+                              type: boolean
+                            url:
+                              type: string
+                          type: object
                         id:
                           type: string
                         sha256:
-                          type: string
-                        url:
                           type: string
                       type: object
                     type: array
@@ -505,6 +512,15 @@ spec:
                       description: RepositoryConfig defines customization entries
                         for a stack.
                       properties:
+                        https:
+                          description: HttpsProtocolFile defines how to retrieve a
+                            file over https
+                          properties:
+                            skipCertVerification:
+                              type: boolean
+                            url:
+                              type: string
+                          type: object
                         name:
                           type: string
                         pipelines:
@@ -512,18 +528,21 @@ spec:
                             description: PipelineSpec defines the sets of default
                               pipelines for the stacks.
                             properties:
+                              https:
+                                description: HttpsProtocolFile defines how to retrieve
+                                  a file over https
+                                properties:
+                                  skipCertVerification:
+                                    type: boolean
+                                  url:
+                                    type: string
+                                type: object
                               id:
                                 type: string
                               sha256:
                                 type: string
-                              url:
-                                type: string
                             type: object
                           type: array
-                        skipCertVerification:
-                          type: boolean
-                        url:
-                          type: string
                       type: object
                     type: array
                 type: object
@@ -536,11 +555,18 @@ spec:
                   description: TriggerSpec defines the sets of default triggers for
                     the stacks
                   properties:
+                    https:
+                      description: HttpsProtocolFile defines how to retrieve a file
+                        over https
+                      properties:
+                        skipCertVerification:
+                          type: boolean
+                        url:
+                          type: string
+                      type: object
                     id:
                       type: string
                     sha256:
-                      type: string
-                    url:
                       type: string
                   type: object
                 type: array
