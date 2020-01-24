@@ -123,8 +123,9 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 		if err != nil {
 			kllog.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
 			apiUrl, _ = url.Parse("https://api.github.com")
+		} else if len(apiUrl.Scheme) == 0 {
+			apiUrl.Scheme = "https"
 		}
-
 		hostname := apiUrl.Hostname()
 		if hostname == "api.github.com" {
 			transforms = append(transforms, kabTransforms.AddEnvVariable("USER_API", "https://api.github.com/user"))
