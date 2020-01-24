@@ -93,7 +93,7 @@ spec:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.3/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.4/kabanero-index.yaml
 
       # Sets the collection resource's initial desiredState value to active or inactive when 
       # the CR instance is initially deployed. Post CR instance deployment, updates to 
