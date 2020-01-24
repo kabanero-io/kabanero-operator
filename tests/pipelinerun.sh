@@ -71,7 +71,7 @@ spec:
   - name: docker-image
     resourceRef:
       name: ${DOCKER_IMAGE_REF}
-  serviceAccount: kabanero-operator
+  serviceAccountName: kabanero-pipeline
   timeout: 60m
 EOF
 
