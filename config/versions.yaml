@@ -81,6 +81,11 @@ kabanero:
 
 related-software:
   landing:
+  - version: "0.5.0"
+    orchestrations: "orchestrations/landing/0.1"
+    identifiers:
+      repository: "kabanero/landing"
+      tag: "0.5.0"
   - version: "0.5.0-rc.2"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
