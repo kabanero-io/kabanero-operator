@@ -275,7 +275,7 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 	// The instance is being deleted.
 	if foundFinalizer {
 		// Drive kabanero cleanup processing.
-		err := cleanup(ctx, k, client)
+		err := cleanup(ctx, k, client, reqLogger)
 		if err != nil {
 			reqLogger.Error(err, "Error during cleanup processing.")
 			return beingDeleted, err
@@ -310,13 +310,15 @@ func processDeletion(ctx context.Context, k *kabanerov1alpha1.Kabanero, client c
 }
 
 // Handles all cleanup logic for the Kabanero instance.
-func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Client) error {
+func cleanup(ctx context.Context, k *kabanerov1alpha1.Kabanero, client client.Client, reqLogger logr.Logger) error {
 	// if landing enabled
 	if k.Spec.Landing.Enable == nil || (k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == true) {
 		// Remove landing page customizations for the current namespace.
 		err := removeWebConsoleCustomization(k)
 		if err != nil {
-			return err
+			// Don't loop forever trying to remove the web console customization.
+			// If it didn't work, just print an error and let finalization continue.
+			reqLogger.Error(err, "Error cleaning up web console customization in finalizer")
 		}
 	}
 
