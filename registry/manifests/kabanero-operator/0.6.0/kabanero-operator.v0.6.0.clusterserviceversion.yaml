@@ -27,7 +27,7 @@ metadata:
               "repositories": [
                 {
                   "name": "incubator",
-                  "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.3/kabanero-index.yaml"
+                  "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.4/kabanero-index.yaml"
                 }
               ]
             }
@@ -55,7 +55,7 @@ metadata:
             "name": "java-microprofile",
             "versions": [
               { "version": "0.2.21",
-                "repositoryUrl": "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.3/kabanero-index.yaml",
+                "repositoryUrl": "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.4/kabanero-index.yaml",
                 "pipelines": [
                   { "id": "default",
                     "sha256": "8e36cce12c473efd76a0e11458db6c845eca6cf99e50d76b40b5cf7675adf59e",
