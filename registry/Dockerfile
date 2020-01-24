@@ -1,4 +1,4 @@
-FROM quay.io/operator-framework/upstream-registry-builder as builder
+FROM quay.io/operator-framework/upstream-registry-builder:v1.5.6 as builder
 
 # This dockerfile is taken from the operator-registry upstream example
 COPY manifests manifests
