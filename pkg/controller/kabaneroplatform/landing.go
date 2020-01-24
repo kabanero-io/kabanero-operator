@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	mf "github.com/kabanero-io/manifestival"
@@ -26,7 +26,7 @@ import (
 var kllog = rlog.Log.WithName("kabanero-landing")
 
 // Deploys resources and customizes to the Openshift web console.
-func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func deployLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	// if enable is false do not deploy the landing page
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
 		err := cleanupLandingPage(k, c)
@@ -156,7 +156,7 @@ func deployLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 	return err
 }
 
-func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func cleanupLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	err := removeWebConsoleCustomization(k, c)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -224,7 +224,7 @@ func cleanupLandingPage(k *kabanerov1alpha1.Kabanero, c client.Client) error {
 }
 
 // Retrieves the landing URL from the landing Route.
-func getLandingURL(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
+func getLandingURL(k *kabanerov1alpha2.Kabanero, c client.Client) (string, error) {
 	landingURL := ""
 
 	// Get the Route instance.
@@ -272,7 +272,7 @@ func getConsoleLink(c client.Client, linkName string) (*consolev1.ConsoleLink, e
 }
 
 // Adds customizations to the OpenShift web console.
-func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingURL string) error {
+func customizeWebConsole(k *kabanerov1alpha2.Kabanero, c client.Client, landingURL string) error {
 
 	// See if we've added the apps link yet.
 	clientOp := utils.Update
@@ -350,7 +350,7 @@ func customizeWebConsole(k *kabanerov1alpha1.Kabanero, c client.Client, landingU
 }
 
 // Removes customizations from the openshift console.
-func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func removeWebConsoleCustomization(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	// Since these are cluster level objects, they cannot set a namespace-level owner and must be
 	// removed manually.
 	consoleLink, err := getConsoleLink(c, "kabanero-app-menu-link")
@@ -381,14 +381,14 @@ func removeWebConsoleCustomization(k *kabanerov1alpha1.Kabanero, c client.Client
 }
 
 // Retrieves the current kabanero landing page status.
-func getKabaneroLandingPageStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
+func getKabaneroLandingPageStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
 	// If disabled. Nothing to do. No need to display status if disabled.
 	if (k.Spec.Landing.Enable != nil) && (*k.Spec.Landing.Enable == false) {
 		k.Status.Landing = nil
 		return true, nil
 	}
 
-	k.Status.Landing = &kabanerov1alpha1.KabaneroLandingPageStatus{}
+	k.Status.Landing = &kabanerov1alpha2.KabaneroLandingPageStatus{}
 	k.Status.Landing.ErrorMessage = ""
 	k.Status.Landing.Ready = "False"
 

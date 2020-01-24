@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	tektoncdv1alpha1 "github.com/tektoncd/operator/pkg/apis/operator/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Retrieves the Tekton instance status.
-func getTektonStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
+func getTektonStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
 	k.Status.Tekton.ErrorMessage = ""
 	k.Status.Tekton.Ready = "False"
 

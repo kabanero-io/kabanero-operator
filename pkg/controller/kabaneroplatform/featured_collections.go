@@ -3,8 +3,8 @@ package kabaneroplatform
 import (
 	"context"
 
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller/collection"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/stack"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,29 +12,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
-	// Resolve the collections which are currently featured across the various indexes.
-	collectionMap, err := featuredCollections(k)
+func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client) error {
+	// Resolve the stacks which are currently featured across the various indexes.
+	stackMap, err := featuredStacks(k)
 	if err != nil {
 		return err
 	}
 
-	// Each key is a collection id.  Get that Collection CR instance and see if the versions are set correctly.
-	for key, value := range collectionMap {
-		updateCollection := utils.Update
+	// Each key is a stack id.  Get that Stack CR instance and see if the versions are set correctly.
+	for key, value := range stackMap {
+		updateStack := utils.Update
 		name := types.NamespacedName{
 			Name:      key,
 			Namespace: k.GetNamespace(),
 		}
 
-		collectionResource := &kabanerov1alpha1.Collection{}
-		err := cl.Get(ctx, name, collectionResource)
+		stackResource := &kabanerov1alpha2.Stack{}
+		err := cl.Get(ctx, name, stackResource)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// Not found. Need to create it.
-				updateCollection = utils.Create
+				updateStack = utils.Create
 				ownerIsController := true
-				collectionResource = &kabanerov1alpha1.Collection{
+				stackResource = &kabanerov1alpha2.Stack{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      key,
 						Namespace: k.GetNamespace(),
@@ -48,40 +48,34 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 							},
 						},
 					},
-					Spec: kabanerov1alpha1.CollectionSpec{
+					Spec: kabanerov1alpha2.StackSpec{
 						Name:         key,
 					},
 				}
 			} else {
 				return err
 			}
-		} else {
-			// Handle the case where the collection existed before the versions array was added to the Collection CRD.
-			// If the versions array is empty, sync it up.
-			if (len(collectionResource.Spec.Versions) == 0) && (len(collectionResource.Spec.Version) != 0) {
-				collectionResource.Spec.Versions = []kabanerov1alpha1.CollectionVersion{{RepositoryUrl: collectionResource.Spec.RepositoryUrl, SkipCertVerification: collectionResource.Spec.SkipCertVerification, Version: collectionResource.Spec.Version, DesiredState: collectionResource.Spec.DesiredState}}
-			}
 		}
 
 		// Add each version to the versions array if it's not already there.  If it's already there, just
 		// update the repository URL, don't touch the desired state.
-		for _, collection := range value {
+		for _, stack := range value {
 			foundVersion := false
-			for _, collectionVersion := range collectionResource.Spec.Versions {
-				if collectionVersion.Version == collection.Version {
+			for _, stackVersion := range stackResource.Spec.Versions {
+				if stackVersion.Version == stack.Version {
 					foundVersion = true
-					collectionVersion.RepositoryUrl = collection.RepositoryUrl
-					collectionVersion.SkipCertVerification = collection.SkipCertVerification
+					stackVersion.Pipelines = stack.Pipelines
+					stackVersion.SkipCertVerification = stack.SkipCertVerification
 				}
 			}
 
 			if foundVersion == false {
-				collectionResource.Spec.Versions = append(collectionResource.Spec.Versions, collection)
+				stackResource.Spec.Versions = append(stackResource.Spec.Versions, stack)
 			}
 		}
 
 		// Update the CR instance with the new version information.
-		err = updateCollection(cl, ctx, collectionResource)
+		err = updateStack(cl, ctx, stackResource)
 		if err != nil {
 			return err
 		}
@@ -90,30 +84,38 @@ func reconcileFeaturedCollections(ctx context.Context, k *kabanerov1alpha1.Kaban
 	return nil
 }
 
-// Holds collection related data.
-type collectionData struct {
-	Collections      []*collection.Collection
-	repositoryConfig kabanerov1alpha1.RepositoryConfig
-}
+// Resolves all stacks for the given Kabanero instance
+func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2.StackVersion, error) {
 
-// Resolves all collections for the given Kabanero instance
-func featuredCollections(k *kabanerov1alpha1.Kabanero) (map[string][]kabanerov1alpha1.CollectionVersion, error) {
-	collectionMap := make(map[string][]kabanerov1alpha1.CollectionVersion)
-	for _, r := range k.Spec.Collections.Repositories {
-		index, err := collection.ResolveIndex(r, []collection.Pipelines{}, []collection.Trigger{}, "")
+	stackMap := make(map[string][]kabanerov1alpha2.StackVersion)
+	for _, r := range k.Spec.Stacks.Repositories {
+		// Figure out what set of pipelines to use.  The Kabanero instance defines a default
+		// set, but this can be over-ridden by the specific repository.
+		pipelines := r.Pipelines
+		if len(pipelines) == 0 {
+			pipelines = k.Spec.Stacks.Pipelines
+		}
+
+		indexPipelines := []stack.Pipelines{}
+		for _, pipeline := range pipelines {
+			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Url})
+		}
+		
+		index, err := stack.ResolveIndex(r, indexPipelines, []stack.Trigger{}, "")
 		if err != nil {
 			return nil, err
 		}
 
-		desiredState := kabanerov1alpha1.CollectionDesiredStateActive
-		if r.ActivateDefaultCollections == false {
-			desiredState = kabanerov1alpha1.CollectionDesiredStateInactive
-		}
-		
-		for _, c := range index.Collections {
-			collectionMap[c.Id] = append(collectionMap[c.Id], kabanerov1alpha1.CollectionVersion{RepositoryUrl: r.Url, Version: c.Version, DesiredState: desiredState, SkipCertVerification: r.SkipCertVerification})
+		// Create the stack versions
+		for _, c := range index.Stacks {
+			pipelines := []kabanerov1alpha2.PipelineSpec{}
+			for _, pipeline := range c.Pipelines {
+				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Url})
+			}
+			
+			stackMap[c.Id] = append(stackMap[c.Id], kabanerov1alpha2.StackVersion{Pipelines: pipelines, Version: c.Version, SkipCertVerification: r.SkipCertVerification})
 		}		
 	}
 
-	return collectionMap, nil
+	return stackMap, nil
 }

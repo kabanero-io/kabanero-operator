@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -22,7 +22,7 @@ const (
 )
 
 // Retrieves the Appsody deployment status.
-func getAppsodyStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
+func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	ready := false
 
 	// Get the appsody version.
@@ -135,7 +135,7 @@ func getNestedString(genObject interface{}, key string) (string, error) {
 }
 
 // Returns the installed Appsody operator version.
-func getAppsodyOperatorVersion(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
+func getAppsodyOperatorVersion(k *kabanerov1alpha2.Kabanero, c client.Client) (string, error) {
 	cok := client.ObjectKey{
 		Namespace: appsodyDeploymentNamespace,
 		Name:      appsodySubscriptionName}

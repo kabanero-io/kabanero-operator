@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 
 	// Figure out what version of the orchestration we are going to use.
 	rev, err := resolveSoftwareRevision(k, "admission-webhook", k.Spec.AdmissionControllerWebhook.Version)
@@ -160,7 +160,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 
 // Removes the admission webhook server, as well as the resources
 // created by controller-runtime that support the webhook.
-func cleanupAdmissionControllerWebhook(k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 
 	rev, err := resolveSoftwareRevision(k, "admission-webhook", k.Spec.AdmissionControllerWebhook.Version)
 	if err != nil {
@@ -274,7 +274,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha1.Kabanero, c client.Cl
 
 // Check to see if the admission controller webhook is set up correctly.
 
-func getAdmissionControllerWebhookStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
+func getAdmissionControllerWebhookStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	k.Status.AdmissionControllerWebhook.Ready = "False"
 	k.Status.AdmissionControllerWebhook.ErrorMessage = ""
 

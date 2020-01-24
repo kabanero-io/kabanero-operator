@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-func reconcileEvents(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
+func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 
 	// The Events entry was not configured in the spec.  We should disable it.
 	if k.Spec.Events.Enable == false {
@@ -81,7 +81,7 @@ func reconcileEvents(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl clien
 }
 
 // Remove the events resources
-func cleanupEvents(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client) error {
+func cleanupEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client) error {
 	rev, err := resolveSoftwareRevision(k, "events", k.Spec.Events.Version)
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func cleanupEvents(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.
 
 
 // Tries to see if the events route has been assigned a hostname.
-func getEventsRouteStatus(k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
+func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
 
 	// If disabled. Nothing to do. No need to display status if disabled.
 	if k.Spec.Events.Enable == false {
@@ -158,7 +158,7 @@ func getEventsRouteStatus(k *kabanerov1alpha1.Kabanero, cl client.Client, reqLog
 		return true, nil
 	}
 
-	k.Status.Events = &kabanerov1alpha1.EventsStatus{}
+	k.Status.Events = &kabanerov1alpha2.EventsStatus{}
 	k.Status.Events.Ready = "False"
 	
 	// Check that the route is accepted
@@ -206,7 +206,7 @@ func getEventsRouteStatus(k *kabanerov1alpha1.Kabanero, cl client.Client, reqLog
 }
 
 // Creates the default events secret
-func createDefaultEventsSecret(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+func createDefaultEventsSecret(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 	secretName := "default-events-secret"
 
 	// Check if the Secret already exists.
