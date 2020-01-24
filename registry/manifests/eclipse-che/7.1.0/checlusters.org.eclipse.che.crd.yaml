@@ -57,7 +57,7 @@ spec:
                 identityProviderImage:
                   description: Overrides the container image used in the Identity
                     Provider (Keycloak / RH SSO) deployment. This includes the image
-                    tag. Omit it or leave it empty to use the defaut container image
+                    tag. Omit it or leave it empty to use the default container image
                     provided by the operator.
                   type: string
                 identityProviderImagePullPolicy:
@@ -105,10 +105,10 @@ spec:
                   type: string
                 openShiftoAuth:
                   description: 'Enables the integration of the identity provider (Keycloak
-                    / RHSSO) with OpenShift OAuth. Enabled by defaumt on OpenShift.
+                    / RHSSO) with OpenShift OAuth. Enabled by default on OpenShift.
                     This will allow users to directly login with their Openshift user
                     throug the Openshift login, and have their workspaces created
-                    under personnal OpenShift namespaces. WARNING: the `kuebadmin`
+                    under personal OpenShift namespaces. WARNING: the `kuebadmin`
                     user is NOT supported, and logging through it will NOT allow accessing
                     the Che Dashboard.'
                   type: boolean
@@ -158,7 +158,7 @@ spec:
                 postgresImage:
                   description: Overrides the container image used in the Postgres
                     database deployment. This includes the image tag. Omit it or leave
-                    it empty to use the defaut container image provided by the operator.
+                    it empty to use the default container image provided by the operator.
                   type: string
                 postgresImagePullPolicy:
                   description: Overrides the image pull policy used in the Postgres
@@ -171,7 +171,7 @@ spec:
                 on upstream Kubernetes.
               properties:
                 ingressClass:
-                  description: 'Ingress class that will define the which controler
+                  description: 'Ingress class that will define the which controller
                     will manage ingresses. Defaults to `nginx`. NB: This drives the
                     `is kubernetes.io/ingress.class` annotation on Che-related ingresses.'
                   type: string
@@ -223,17 +223,17 @@ spec:
                 cheFlavor:
                   description: Flavor of the installation. This is either `che` for
                     upstream Che installations, or `codeready` for CodeReady Workspaces
-                    installation. In most cases the default value should not be overriden.
+                    installation. In most cases the default value should not be overridden.
                   type: string
                 cheHost:
                   description: Public hostname of the installed Che server. This will
                     be automatically set by the operator. In most cases the default
-                    value set by the operator should not be overriden.
+                    value set by the operator should not be overridden.
                   type: string
                 cheImage:
                   description: Overrides the container image used in Che deployment.
                     This does NOT include the container image tag. Omit it or leave
-                    it empty to use the defaut container image provided by the operator.
+                    it empty to use the default container image provided by the operator.
                   type: string
                 cheImagePullPolicy:
                   description: Overrides the image pull policy used in Che deployment.
@@ -242,7 +242,7 @@ spec:
                   type: string
                 cheImageTag:
                   description: Overrides the tag of the container image used in Che
-                    deployment. Omit it or leave it empty to use the defaut image
+                    deployment. Omit it or leave it empty to use the default image
                     tag provided by the operator.
                   type: string
                 cheLogLevel:
@@ -267,7 +267,7 @@ spec:
                 devfileRegistryImage:
                   description: Overrides the container image used in the Devfile registry
                     deployment. This includes the image tag. Omit it or leave it empty
-                    to use the defaut container image provided by the operator.
+                    to use the default container image provided by the operator.
                   type: string
                 devfileRegistryMemoryLimit:
                   description: Overrides the memory limit used in the Devfile registry
@@ -311,7 +311,7 @@ spec:
                 pluginRegistryImage:
                   description: Overrides the container image used in the Plugin registry
                     deployment. This includes the image tag. Omit it or leave it empty
-                    to use the defaut container image provided by the operator.
+                    to use the default container image provided by the operator.
                   type: string
                 pluginRegistryMemoryLimit:
                   description: Overrides the memory limit used in the Plugin registry
@@ -396,7 +396,7 @@ spec:
                 pvcJobsImage:
                   description: Overrides the container image used to create sub-paths
                     in the Persistent Volumes. This includes the image tag. Omit it
-                    or leave it empty to use the defaut container image provided by
+                    or leave it empty to use the default container image provided by
                     the operator. See also the `preCreateSubPaths` field.
                   type: string
                 pvcStrategy:

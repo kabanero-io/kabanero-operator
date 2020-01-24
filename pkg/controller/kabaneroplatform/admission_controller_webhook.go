@@ -107,7 +107,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 	// The webhook needs to use TLS.  Kabanero version 0.4.0 used controller-runtime
 	// 0.1.x which generated its own certificates for webhooks.  Newer versions
 	// of Kabanero use newer versions of controller-runtime which do not generate
-	// their own certificates.  OpenShift is going to inject a certifiate
+	// their own certificates.  OpenShift is going to inject a certificate
 	// into a secret, which the webhook pod will use.  The CA certificate needs
 	// to be injected into the mutating webhook configuration and validating
 	// webhook configuration, so that the Kube API server trusts the pod(s).

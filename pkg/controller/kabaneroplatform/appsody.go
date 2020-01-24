@@ -134,7 +134,7 @@ func getNestedString(genObject interface{}, key string) (string, error) {
 	return value, nil
 }
 
-// Retuns the installed Appsody operator version.
+// Returns the installed Appsody operator version.
 func getAppsodyOperatorVersion(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
 	cok := client.ObjectKey{
 		Namespace: appsodyDeploymentNamespace,

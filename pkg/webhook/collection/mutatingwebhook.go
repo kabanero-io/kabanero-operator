@@ -77,7 +77,7 @@ func processUpdate(current *kabanerov1alpha1.Collection, new *kabanerov1alpha1.C
 	if len(new.Spec.Versions) > 0 {
 		// New collection.Spec and new collection.Spec.Versions[0] values are the same.
 		if areMixedVersionModelCollectionsEqual(new, new) {
-			// Make a basic check to see if new collection.Spec.Versions[0] and new colleciton.Spec values are the same because they are cleared.
+			// Make a basic check to see if new collection.Spec.Versions[0] and new collection.Spec values are the same because they are cleared.
 			if areSpecVersionValuesCleared(new) && areSpecVersions0ValuesCleared(new) {
 				return fmt.Errorf("The new collection.Spec and collection.Spec.versions[0] were not specified. New Collection: %v. Current collection: %v", new, current)
 			}
@@ -85,8 +85,8 @@ func processUpdate(current *kabanerov1alpha1.Collection, new *kabanerov1alpha1.C
 			return nil
 		}
 
-		// New colleciton.Spec != new collection.Spec.Versions[0].
-		// Current colleciton.Spec == new collection.Spec.
+		// New collection.Spec != new collection.Spec.Versions[0].
+		// Current collection.Spec == new collection.Spec.
 		if areSpecVersionValuesEqual(current, new) {
 			// Current collection.Spec != New collection.Spec.Versions[0].
 			if !areMixedVersionModelCollectionsEqual(current, new) {
@@ -109,8 +109,8 @@ func processUpdate(current *kabanerov1alpha1.Collection, new *kabanerov1alpha1.C
 			return nil
 		}
 
-		// New colleciton.Spec != new collection.Spec.Versions[0].
-		// Current colleciton.Spec != new collection.Spec.
+		// New collection.Spec != new collection.Spec.Versions[0].
+		// Current collection.Spec != new collection.Spec.
 		// Current collection.Spec == new collection.Spec.Versions[0].
 		if areMixedVersionModelCollectionsEqual(current, new) {
 			// New Collection.Spec values were cleared. Copy collection.Spec.Versions[0] to collection.Spec
@@ -127,8 +127,8 @@ func processUpdate(current *kabanerov1alpha1.Collection, new *kabanerov1alpha1.C
 			return nil
 		}
 
-		// New colleciton.Spec != new collection.Spec.Versions[0].
-		// Current colleciton.Spec != new collection.Spec.
+		// New collection.Spec != new collection.Spec.Versions[0].
+		// Current collection.Spec != new collection.Spec.
 		// Current collection.Spec != new collection.Spec.Versions[0].
 		// Current collection.Spec.Versions[0] = new collection.Spec.Versions[0].
 		if len(current.Spec.Versions) > 0 && areSpecVersions0ValuesEqual(current, new) {
