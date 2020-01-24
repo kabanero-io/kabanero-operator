@@ -86,12 +86,12 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 	if len(k.Spec.Github.ApiUrl) > 0 {
 		apiUrlString := k.Spec.Github.ApiUrl
 		apiUrl, err := url.Parse(apiUrlString)
-		if len(apiUrl.Scheme) == 0 {
-			apiUrl.Scheme = "https"
-		}
+
 		if err != nil {
 			reqLogger.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
 			apiUrl, _ = url.Parse("https://api.github.com")
+		} else if len(apiUrl.Scheme) == 0 {
+			apiUrl.Scheme = "https"
 		}
 		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrl.String()))
 	}
