@@ -121,18 +121,27 @@ oc delete -f $KABANERO_SUBSCRIPTIONS_YAML  --ignore-not-found --selector kabaner
 
 ### CatalogSource
 
+# Install Kabanero CatalogSource
+oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+
+# Check the kabanero-catalog CatalogSource pod is Running
+unset STATUS
+until [ "$STATUS" == "Running" ]
+do
+  echo "Waiting for CatalogSource kabanero-catalog pod to be ready."
+  STATUS=$(oc -n openshift-marketplace get pod -l olm.catalogSource=kabanero-catalog --output=jsonpath={.items[0].status.phase})
+  sleep $SLEEP_SHORT
+done
+
 # Stop the catalog-operator pod to avoid ready state bug
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=0
 sleep $SLEEP_LONG
-
-# Install Kabanero CatalogSource
-oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
 
 # Restart the catalog-operator pod to avoid ready state bug
 sleep $SLEEP_LONG
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=1
 
-# Check the CatalogSource is ready
+# Check the kabanero-catalog CatalogSource is ready
 unset LASTOBSERVEDSTATE
 until [ "$LASTOBSERVEDSTATE" == "READY" ]
 do
