@@ -295,7 +295,7 @@ func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero,
 					for k, p := range indexCollection.Pipelines {
 						stackInstance.Spec.Versions[i].Pipelines[k].Id = p.Id
 						stackInstance.Spec.Versions[i].Pipelines[k].Sha256 = p.Sha256
-						stackInstance.Spec.Versions[i].Pipelines[k].Url = p.Url
+						stackInstance.Spec.Versions[i].Pipelines[k].Https.Url = p.Url
 	}
 
 					continue
@@ -316,7 +316,7 @@ func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero,
 		for k, p := range pipelines {
 			stackInstance.Spec.Versions[i].Pipelines[k].Id = p.Name
 			stackInstance.Spec.Versions[i].Pipelines[k].Sha256 = p.Digest
-			stackInstance.Spec.Versions[i].Pipelines[k].Url = p.Url
+			stackInstance.Spec.Versions[i].Pipelines[k].Https.Url = p.Url
 		}
 	}
 

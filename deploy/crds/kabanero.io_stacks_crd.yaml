@@ -66,11 +66,18 @@ spec:
                       description: PipelineSpec defines the sets of default pipelines
                         for the stacks.
                       properties:
+                        https:
+                          description: HttpsProtocolFile defines how to retrieve a
+                            file over https
+                          properties:
+                            skipCertVerification:
+                              type: boolean
+                            url:
+                              type: string
+                          type: object
                         id:
                           type: string
                         sha256:
-                          type: string
-                        url:
                           type: string
                       type: object
                     type: array

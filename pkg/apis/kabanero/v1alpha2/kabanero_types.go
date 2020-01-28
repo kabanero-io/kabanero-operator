@@ -57,14 +57,20 @@ type InstanceStackConfig struct {
 type PipelineSpec struct {
 	Id string `json:"id,omitempty"`
 	Sha256 string `json:"sha256,omitempty"`
-	Url string `json:"url,omitempty"`
+	Https HttpsProtocolFile `json:"https,omitempty"`
+}
+
+// HttpsProtocolFile defines how to retrieve a file over https
+type HttpsProtocolFile struct {
+	Url                  string `json:"url,omitempty"`
+	SkipCertVerification bool   `json:"skipCertVerification,omitempty"`
 }
 
 // TriggerSpec defines the sets of default triggers for the stacks
 type TriggerSpec struct {
 	Id string `json:"id,omitempty"`
 	Sha256 string `json:"sha256,omitempty"`
-	Url string `json:"url,omitempty"`
+	Https HttpsProtocolFile `json:"https,omitempty"`
 }
 
 // GithubConfig represents the Github information (public or GHE) where
@@ -81,10 +87,9 @@ type GithubConfig struct {
 // RepositoryConfig defines customization entries for a stack.
 type RepositoryConfig struct {
 	Name                       string `json:"name,omitempty"`
-	Url                        string `json:"url,omitempty"`
-	SkipCertVerification       bool   `json:"skipCertVerification,omitempty"`
 	// +listType=set
 	Pipelines                  []PipelineSpec `json:"pipelines,omitempty"`
+	Https                      HttpsProtocolFile `json:"https,omitempty"`
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.

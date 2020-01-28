@@ -35,6 +35,7 @@ type Pipelines struct {
 	Id     string `yaml:"id,omitempty"`
 	Sha256 string `yaml:"sha256,omitempty"`
 	Url    string `yaml:"url,omitempty"`
+	SkipCertVerification bool `yaml:"skipCertVerification,omitempty"`
 }
 
 // Templates holds the stack's associated template data.

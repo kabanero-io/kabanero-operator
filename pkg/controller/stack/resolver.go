@@ -11,7 +11,7 @@ import (
 
 // ResolveIndex returns a structure representation of the yaml file represented by the index.
 func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipelines, triggers []Trigger, imagePrefix string) (*Index, error) {
-	url := repoConf.Url
+	url := repoConf.Https.Url
 
 	// user may specify url to yaml file or directory
 	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url)
@@ -22,7 +22,7 @@ func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipeli
 		url = url + "/index.yaml"
 	}
 
-	b, err := getFromCache(url, repoConf.SkipCertVerification)
+	b, err := getFromCache(url, repoConf.Https.SkipCertVerification)
 	if err != nil {
 		return nil, err
 	}

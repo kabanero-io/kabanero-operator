@@ -240,7 +240,7 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 			var pipeline Pipelines
 			pipeline.Id = kpipeline.Id
 			pipeline.Sha256 = kpipeline.Sha256
-			pipeline.Url = kpipeline.Url
+			pipeline.Url = kpipeline.Https.Url
 			pipelines = append(pipelines, pipeline)
 		}
 		stack.Pipelines = pipelines

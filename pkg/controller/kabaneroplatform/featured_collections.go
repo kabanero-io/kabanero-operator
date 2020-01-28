@@ -98,7 +98,7 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2
 
 		indexPipelines := []stack.Pipelines{}
 		for _, pipeline := range pipelines {
-			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Url})
+			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Https.Url, SkipCertVerification: pipeline.Https.SkipCertVerification})
 		}
 		
 		index, err := stack.ResolveIndex(r, indexPipelines, []stack.Trigger{}, "")
@@ -110,10 +110,11 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2
 		for _, c := range index.Stacks {
 			pipelines := []kabanerov1alpha2.PipelineSpec{}
 			for _, pipeline := range c.Pipelines {
-				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Url})
+				pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: pipeline.Url, SkipCertVerification: pipeline.SkipCertVerification}
+				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl})
 			}
 			
-			stackMap[c.Id] = append(stackMap[c.Id], kabanerov1alpha2.StackVersion{Pipelines: pipelines, Version: c.Version, SkipCertVerification: r.SkipCertVerification})
+			stackMap[c.Id] = append(stackMap[c.Id], kabanerov1alpha2.StackVersion{Pipelines: pipelines, Version: c.Version})
 		}		
 	}
 

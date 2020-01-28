@@ -174,7 +174,8 @@ func (r *ReconcileKabanero) convertTo_v1alpha2(kabInstanceUnstructured *unstruct
 
 	// Now convert the collections to stacks
 	for _, collectionRepoConfig := range kabInstanceV1.Spec.Collections.Repositories {
-		stackRepoConfig := kabanerov1alpha2.RepositoryConfig{Name: collectionRepoConfig.Name, Url: collectionRepoConfig.Url, SkipCertVerification: collectionRepoConfig.SkipCertVerification}
+		httpsConfig := kabanerov1alpha2.HttpsProtocolFile{Url: collectionRepoConfig.Url, SkipCertVerification: collectionRepoConfig.SkipCertVerification}
+		stackRepoConfig := kabanerov1alpha2.RepositoryConfig{Name: collectionRepoConfig.Name, Https: httpsConfig}
 		// TODO: Pipelines?
 		kabInstanceV2.Spec.Stacks.Repositories = append(kabInstanceV2.Spec.Stacks.Repositories, stackRepoConfig)
 	}

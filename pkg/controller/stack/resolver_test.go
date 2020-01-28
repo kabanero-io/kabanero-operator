@@ -9,8 +9,10 @@ import (
 func TestResolveIndex(t *testing.T) {
 	repoConfig := kabanerov1alpha2.RepositoryConfig{
 		Name:                       "name",
-		Url:                        "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator-index.yaml",
-		SkipCertVerification: true,
+		Https: kabanerov1alpha2.HttpsProtocolFile{
+			Url: "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator-index.yaml",
+			SkipCertVerification: true,
+		},
 	}
 
 	index, err := ResolveIndex(repoConfig, []Pipelines{}, []Trigger{}, "")
@@ -29,8 +31,8 @@ func TestResolveIndex(t *testing.T) {
 
 func TestResolveIndexForStacks(t *testing.T) {
 	repoConfig := kabanerov1alpha2.RepositoryConfig{
-		Name:                       "openLibertyTest",
-		Url:                        "https://github.com/appsody/stacks/releases/download/java-openliberty-v0.1.2/incubator-index.yaml",
+		Name:  "openLibertyTest",
+		Https: kabanerov1alpha2.HttpsProtocolFile{Url: "https://github.com/appsody/stacks/releases/download/java-openliberty-v0.1.2/incubator-index.yaml"},
 	}
 
 	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
