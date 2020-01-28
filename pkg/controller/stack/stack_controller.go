@@ -128,7 +128,7 @@ type ReconcileStack struct {
 	scheme *runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
-	indexResolver func(kabanerov1alpha2.RepositoryConfig) (*Index, error)
+	indexResolver func(kabanerov1alpha2.RepositoryConfig, []Pipelines, []Trigger, string) (*Index, error)
 }
 
 // Reconcile reads that state of the cluster for a Stack object and makes changes based on the state read
@@ -319,7 +319,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, stacks []res
 			return fmt.Errorf("Failed to reconcile stack because an invalid stack id of %v was found. The stack id value must follow stack creation name rules. For more details see the Appsody stack create command documentation", cID)
 		}
 
-		renderingContext["StackId"] = cID
+		renderingContext["CollectionId"] = cID
 		renderingContext["StackId"] = cID
 
 		// From a stack point of view, the (stack) name is a "title or short name for the stack (used on the website)"
@@ -586,7 +586,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, stacks []res
 	for _, curSpec := range stackResource.Spec.Versions {
 		newStackVersionStatus := kabanerov1alpha2.StackVersionStatus{Version: curSpec.Version}
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
-			if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateActive) {
+			if (len(curSpec.DesiredState) > 0) && (!strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateActive)) {
 				newStackVersionStatus.StatusMessage = "An invalid desiredState value of " + curSpec.DesiredState + " was specified. The stack is activated by default."
 			}
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive

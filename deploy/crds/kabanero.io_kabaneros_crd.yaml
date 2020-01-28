@@ -433,6 +433,19 @@ spec:
                     description: 'Future: Enable     bool   `json:"enable,omitempty"`'
                     type: string
                 type: object
+              collectionController:
+                description: CollectionControllerSpec defines customization entried
+                  for the Kabanero collection controller.
+                properties:
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
               events:
                 properties:
                   enable:
@@ -612,6 +625,16 @@ spec:
                       type: string
                     type: array
                   ready:
+                    type: string
+                type: object
+              collectionController:
+                description: Kabanero collection controller readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
+                    type: string
+                  version:
                     type: string
                 type: object
               events:
