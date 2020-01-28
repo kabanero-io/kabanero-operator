@@ -160,9 +160,6 @@ type KabaneroStatus struct {
 	// Kabanero operator instance readiness status. The status is directly correlated to the availability of resources dependencies.
 	KabaneroInstance KabaneroInstanceStatus `json:"kabaneroInstance,omitempty"`
 
-	// Knative eventing instance readiness status.
-	KnativeEventing KnativeEventingStatus `json:"knativeEventing,omitempty"`
-
 	// OpenShift serverless operator status.
 	Serverless ServerlessStatus `json:"serverless,omitempty"`
 
@@ -206,13 +203,6 @@ type KabaneroInstanceStatus struct {
 
 // TektonStatus defines the observed status details of Tekton.
 type TektonStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
-}
-
-// KnativeEventingStatus defines the observed status details of Knative Eventing.
-type KnativeEventingStatus struct {
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	Version      string `json:"version,omitempty"`

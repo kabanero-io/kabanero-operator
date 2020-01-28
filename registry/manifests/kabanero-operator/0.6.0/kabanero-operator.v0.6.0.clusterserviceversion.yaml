@@ -92,7 +92,6 @@ spec:
     4.2.  The following operators must be installed in the cluster:
     * [OpenShift Service Mesh](https://docs.openshift.com/container-platform/4.2/service_mesh/service_mesh_install/installing-ossm.html)
     * [OpenShift Serverless Operator](https://docs.openshift.com/container-platform/4.2/serverless/installing-openshift-serverless.html)
-    * [Knative Eventing Operator](https://github.com/openshift-knative/knative-eventing-operator)
     * [Openshift Pipelines Operator](https://github.com/openshift/tektoncd-pipeline-operator)
     * [Appsody Operator](https://github.com/appsody/appsody-operator/)
 
@@ -224,11 +223,6 @@ spec:
           path: kabaneroInstance.ready
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: Kantive eventing readiness status.
-          displayName: Knative Eventing Readiness
-          path: knativeEventing.ready
-          x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
         - description: Serverless readiness status.
           displayName: Serverless Readiness
           path: serverless.ready
@@ -256,7 +250,7 @@ spec:
             - 'urn:alm:descriptor:com.tectonic.ui:label'
     # The required CRDs are not listed due to OLM's random catalog selection,
     # but the following are required:
-    # Knative Serving, Knative Eventing, Tekton, Appsody
+    # Knative Serving, Tekton, Appsody
     required:
   install:
     spec:

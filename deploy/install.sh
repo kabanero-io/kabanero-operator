@@ -178,7 +178,7 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=11-subsc
 # Verify Subscriptions
 checksub servicemeshoperator openshift-operators
 
-# Install 12-subscription (eventing, serving)
+# Install 12-subscription (serving)
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=12-subscription
 
 # Verify Subscriptions
@@ -216,8 +216,6 @@ do
 	sleep $SLEEP_SHORT
 done
 
-# Github Sources
-oc apply -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
 # Need to wait for knative serving CRDs before installing tekton webhook extension
 until oc get crd services.serving.knative.dev 

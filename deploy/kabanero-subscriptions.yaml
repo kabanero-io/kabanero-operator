@@ -70,22 +70,6 @@ spec:
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: knative-eventing-operator
-  namespace: openshift-operators
-  labels:
-    kabanero.io/install: 12-subscription
-spec:
-  channel: kabanero-0.4
-  config:
-    resources: {}
-  installPlanApproval: Automatic
-  name: knative-eventing-operator
-  source: kabanero-catalog
-  sourceNamespace: openshift-marketplace
----
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
   name: serverless-operator
   namespace: openshift-operators
   labels:
