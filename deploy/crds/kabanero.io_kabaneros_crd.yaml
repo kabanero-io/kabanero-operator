@@ -390,33 +390,6 @@ spec:
                   version:
                     type: string
                 type: object
-              che:
-                description: CheCustomizationSpec defines customization entries for
-                  Che.
-                properties:
-                  cheOperatorInstance:
-                    description: CheOperatorInstanceSpec defines customization entries
-                      for the Che operator instance.
-                    properties:
-                      cheWorkspaceClusterRole:
-                        type: string
-                    type: object
-                  enable:
-                    type: boolean
-                  kabaneroChe:
-                    description: KabaneroCheSpec defines customization entries for
-                      Kabanero Che.
-                    properties:
-                      image:
-                        type: string
-                      repository:
-                        type: string
-                      tag:
-                        type: string
-                      version:
-                        type: string
-                    type: object
-                type: object
               cliServices:
                 description: KabaneroCliServicesCustomizationSpec defines customization
                   entries for the Kabanero CLI.
@@ -432,6 +405,46 @@ spec:
                   version:
                     description: 'Future: Enable     bool   `json:"enable,omitempty"`'
                     type: string
+                type: object
+              codeReadyWorkspaces:
+                description: CRWCustomizationSpec defines customization entries for
+                  codeready-workspaces.
+                properties:
+                  enable:
+                    type: boolean
+                  operator:
+                    description: CRWOperatorSpec defines customization entries for
+                      the codeready-workspaces operator.
+                    properties:
+                      customResourceInstance:
+                        description: CRWOperatorCustomResourceSpec defines custom
+                          resource customization entries for the codeready-workspaces
+                          operator.
+                        properties:
+                          cheWorkspaceClusterRole:
+                            type: string
+                          devFileRegistryImage:
+                            description: CWRCustomResourceDevFileRegImage defines
+                              DevFileRegistryImage custom resource customization for
+                              the codeready-workspaces operator.
+                            properties:
+                              image:
+                                type: string
+                              repository:
+                                type: string
+                              tag:
+                                type: string
+                              version:
+                                type: string
+                            type: object
+                          openShiftOAuth:
+                            type: boolean
+                          selfSignedCert:
+                            type: boolean
+                          tlsSupport:
+                            type: boolean
+                        type: object
+                    type: object
                 type: object
               collectionController:
                 description: CollectionControllerSpec defines customization entried
@@ -617,39 +630,6 @@ spec:
                   version:
                     type: string
                 type: object
-              che:
-                description: Che instance readiness status.
-                properties:
-                  cheOperator:
-                    description: CheOperatorStatus defines the observed status details
-                      of the Che operator.
-                    properties:
-                      version:
-                        type: string
-                    type: object
-                  kabaneroChe:
-                    description: KabaneroCheStatus defines the observed status details
-                      of Kabanero Che.
-                    properties:
-                      version:
-                        type: string
-                    type: object
-                  kabaneroCheInstance:
-                    description: KabaneroCheInstanceStatus defines the observed status
-                      details of Che instance.
-                    properties:
-                      cheImage:
-                        type: string
-                      cheImageTag:
-                        type: string
-                      cheWorkspaceClusterRole:
-                        type: string
-                    type: object
-                  message:
-                    type: string
-                  ready:
-                    type: string
-                type: object
               cli:
                 description: CLI readiness status.
                 properties:
@@ -659,6 +639,42 @@ spec:
                     type: array
                   message:
                     type: string
+                  ready:
+                    type: string
+                type: object
+              codereadyWorkspaces:
+                description: Codeready-workspaces instance readiness status.
+                properties:
+                  errorMessage:
+                    type: string
+                  operator:
+                    description: CRWOperatorStatus defines the observed status details
+                      of the codeready-workspaces operator.
+                    properties:
+                      instance:
+                        description: CRWInstanceStatus defines the observed status
+                          details of the codeready-workspaces operator custom resource.
+                        properties:
+                          cheWorkspaceClusterRole:
+                            type: string
+                          devfileRegistryImage:
+                            type: string
+                          openShiftOAuth:
+                            type: boolean
+                          selfSignedCert:
+                            type: boolean
+                          tlsSupport:
+                            type: boolean
+                        required:
+                        - cheWorkspaceClusterRole
+                        - devfileRegistryImage
+                        - openShiftOAuth
+                        - selfSignedCert
+                        - tlsSupport
+                        type: object
+                      version:
+                        type: string
+                    type: object
                   ready:
                     type: string
                 type: object

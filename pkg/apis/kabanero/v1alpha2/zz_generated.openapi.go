@@ -131,9 +131,9 @@ func schema_pkg_apis_kabanero_v1alpha2_KabaneroSpec(ref common.ReferenceCallback
 							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroLandingCustomizationSpec"),
 						},
 					},
-					"che": {
+					"codeReadyWorkspaces": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CheCustomizationSpec"),
+							Ref: ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CRWCustomizationSpec"),
 						},
 					},
 					"events": {
@@ -165,7 +165,7 @@ func schema_pkg_apis_kabanero_v1alpha2_KabaneroSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.AdmissionControllerWebhookCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CheCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CollectionControllerSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.EventsCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.GithubConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.InstanceStackConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroCliServicesCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroLandingCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.SsoCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.StackControllerSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.TriggerSpec"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.AdmissionControllerWebhookCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CRWCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CollectionControllerSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.EventsCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.GithubConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.InstanceStackConfig", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroCliServicesCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroLandingCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.SsoCustomizationSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.StackControllerSpec", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.TriggerSpec"},
 	}
 }
 
@@ -218,10 +218,10 @@ func schema_pkg_apis_kabanero_v1alpha2_KabaneroStatus(ref common.ReferenceCallba
 							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KappnavStatus"),
 						},
 					},
-					"che": {
+					"codereadyWorkspaces": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Che instance readiness status.",
-							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CheStatus"),
+							Description: "Codeready-workspaces instance readiness status.",
+							Ref:         ref("github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CRWStatus"),
 						},
 					},
 					"events": {
@@ -258,7 +258,7 @@ func schema_pkg_apis_kabanero_v1alpha2_KabaneroStatus(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.AdmissionControllerWebhookStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.AppsodyStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CheStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CollectionControllerStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.EventsStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroLandingPageStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KappnavStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.ServerlessStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.SsoStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.StackControllerStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.TektonStatus"},
+			"github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.AdmissionControllerWebhookStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.AppsodyStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CRWStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CliStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.CollectionControllerStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.EventsStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroInstanceStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KabaneroLandingPageStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.KappnavStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.ServerlessStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.SsoStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.StackControllerStatus", "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2.TektonStatus"},
 	}
 }
 

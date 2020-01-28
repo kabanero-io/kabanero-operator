@@ -134,15 +134,15 @@ spec:
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: eclipse-che
+  name: codeready-workspaces
   namespace: kabanero
   labels:
     kabanero.io/install: 14-subscription
 spec:
-  channel: kabanero-0.4
+  channel: latest
   installPlanApproval: Automatic
-  name: eclipse-che
-  source: kabanero-catalog
+  name: codeready-workspaces
+  source: redhat-operators
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1

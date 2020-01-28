@@ -1,0 +1,58 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: eclipse-codewind
+  labels:
+    app: eclipse-codewind
+rules:
+- apiGroups: ["extensions", ""]
+  resources: ["ingresses", "ingresses/status", "podsecuritypolicies"]
+  verbs: ["delete", "create", "patch", "get", "list", "update", "watch", "use"]
+
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["delete", "create", "patch", "get", "list"]
+
+- apiGroups: [""]
+  resources: ["pods", "pods/portforward", "pods/log", "pods/exec"]
+  verbs: ["get", "list", "create", "delete", "watch"]
+
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "create", "watch", "delete", "patch", "update"]
+
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "patch"]
+
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "create", "delete", "patch"]
+
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "create", "update", "delete", "patch"]
+
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims", "persistentvolumeclaims/finalizers", "persistentvolumeclaims/status"]
+  verbs: ["*"]
+
+- apiGroups: ["apps", "extensions"]
+  resources: ["deployments"]
+  verbs: ["watch", "get", "list", "create", "update", "delete", "patch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources: ["replicasets", "replicasets/finalizers"]
+  verbs: ["get", "list", "update", "delete"]
+
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["rolebindings", "roles", "clusterroles"]
+  verbs: ["create", "get", "patch", "list"]
+
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch", "update"]
+
+- apiGroups: ["route.openshift.io"]
+  resources: ["routes", "routes/custom-host"]
+  verbs: ["get", "list", "create", "delete", "watch", "patch", "update"]

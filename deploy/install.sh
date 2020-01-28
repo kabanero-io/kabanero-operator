@@ -117,6 +117,56 @@ checksub () {
 	done
 }
 
+# Removes a resource instance in the specified namespace.
+removeResourceInstance() {
+	if [ `oc get crds $1 --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
+        # Delete an input Kind objects in a specific namespace.  Print a list of
+        # each Kind instance along with its namespace.  Then delete them one
+        # by one.
+        oc get $2 -n $3 -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace --no-headers --ignore-not-found | while read KAB_NAME KAB_NAMESPACE; do oc delete $2 $KAB_NAME --namespace $KAB_NAMESPACE; done
+
+        # Wait for all of the Kind instances to be deleted.  We don't want to
+        # delete the Kind until instance finalized are processed.
+		echo "Waiting for $2 instances in the $3 namespace to be deleted...."
+    	LOOP_COUNT=0
+   		while [ `oc get $2 -n $3 | wc -l` -gt 0 ]
+    	do
+        	sleep 5
+        	LOOP_COUNT=`expr $LOOP_COUNT + 1`
+        	if [ $LOOP_COUNT -gt 10 ] ; then
+           		echo "Timed out waiting for $2 instances in the $3 namespace to be deleted"
+           		exit 1
+        	fi
+    	done
+    fi
+} 
+
+# Remove subscription and associated resources if found.
+unsubscribe () {
+	# Get CluserServiceVersion
+	CSV=$(oc get subscription $1 -n $2 --ignore-not-found=true --output=jsonpath={.status.installedCSV})
+
+	# Delete Subscription 
+	oc delete subscription $1 -n $2 --ignore-not-found=true
+
+	if [ -n "$CSV" ] ; then
+		# Delete the Installed ClusterServiceVersion
+		oc delete clusterserviceversion $CSV -n $2
+	
+		# Wait for the Copied ClusterServiceVersions to cleanup
+		while [ `oc get clusterserviceversions --all-namespaces --field-selector=metadata.name=$CSV | wc -l` -gt 0 ]
+		do
+			sleep $SLEEP_LONG
+			LOOP_COUNT=`expr $LOOP_COUNT + 1`
+			if [ $LOOP_COUNT -gt 10 ] ; then
+					echo "Timed out waiting for Copied ClusterServiceVersions $CSV to be deleted"
+				break
+			fi
+		done
+	fi
+}
+
+
 ### Upgrade Prep
 
 # ServiceMeshMemberRole
@@ -207,13 +257,23 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=13-subsc
 checksub openshift-pipelines openshift-operators
 checksub appsody-operator-certified openshift-operators
 
-# Install 14-subscription (che, kabanero)
+# Install 14-subscription (codeready-workspaces, kabanero)
+
+# Prior to installing codeready-workspaces, remove all eclipse-che instances and 
+# eclipse-che operator deployments in the kabanero namespace.
+removeResourceInstance checlusters.org.eclipse.che CheCluster kabanero
+unsubscribe eclipse-che kabanero
+
+# Codewind is required to run as privileged and as root because it builds container images
+oc adm policy add-scc-to-user anyuid system:serviceaccount:kabanero:che-workspace
+oc adm policy add-scc-to-user privileged system:serviceaccount:kabanero:che-workspace
+
+# Apply codeready-workspaces and kabanero subscriptions.
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=14-subscription
 
 # Verify Subscriptions
-checksub eclipse-che kabanero
+checksub codeready-workspaces kabanero 
 checksub kabanero-operator kabanero
-
 
 ### CustomResources
 

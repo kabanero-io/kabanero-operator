@@ -313,10 +313,10 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// Reconcile the Che Operator.
-	err = reconcileChe(ctx, instance, r.client, ctrlr)
+	// Reconcile codeready-workspaces.
+	err = reconcileCRW(ctx, instance, r.client, ctrlr)
 	if err != nil {
-		reqLogger.Error(err, "Error reconciling Che.")
+		reqLogger.Error(err, "Error reconciling codeready-workspaces.")
 		return reconcile.Result{}, err
 	}
 
@@ -440,6 +440,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 		return err
 	}
 
+	// Remove resources deployed in support of codeready-workspaces.
+	err = deleteCRWOperatorResources(ctx, k, client)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -472,7 +478,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger, c)
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
-	isCheReady, _ := getCheStatus(ctx, k, c)
+	isCRWReady, _ := getCRWStatus(ctx, k, c)
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
@@ -486,7 +492,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isKabaneroLandingReady &&
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady &&
-		isCheReady &&
+		isCRWReady &&
 		isEventsRouteReady &&
 		isAdmissionControllerWebhookReady &&
 		isSsoReady
@@ -522,6 +528,6 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 
 // Initializes dependencies.
 func initializeDependencies(k *kabanerov1alpha2.Kabanero) {
-	// Che initialization.
-	initializeChe(k)
+	// Codeready-workspaces initialization.
+	initializeCRW(k)
 }

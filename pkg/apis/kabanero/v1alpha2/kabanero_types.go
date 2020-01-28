@@ -33,7 +33,7 @@ type KabaneroSpec struct {
 
 	Landing KabaneroLandingCustomizationSpec `json:"landing,omitempty"`
 
-	Che CheCustomizationSpec `json:"che,omitempty"`
+	CodereadyWorkspaces CRWCustomizationSpec `json:"codeReadyWorkspaces,omitempty"`
 
 	Events EventsCustomizationSpec `json:"events,omitempty"`
 
@@ -110,20 +110,28 @@ type KabaneroLandingCustomizationSpec struct {
 	Version string `json:"version,omitempty"`
 }
 
-// CheCustomizationSpec defines customization entries for Che.
-type CheCustomizationSpec struct {
-	Enable              *bool                   `json:"enable,omitempty"`
-	CheOperatorInstance CheOperatorInstanceSpec `json:"cheOperatorInstance,omitempty"`
-	KabaneroChe         KabaneroCheSpec         `json:"kabaneroChe,omitempty"`
+// CRWCustomizationSpec defines customization entries for codeready-workspaces.
+type CRWCustomizationSpec struct {
+	Enable   *bool           `json:"enable,omitempty"`
+	Operator CRWOperatorSpec `json:"operator,omitempty"`
 }
 
-// CheOperatorInstanceSpec defines customization entries for the Che operator instance.
-type CheOperatorInstanceSpec struct {
-	CheWorkspaceClusterRole string `json:"cheWorkspaceClusterRole,omitempty"`
+// CRWOperatorSpec defines customization entries for the codeready-workspaces operator.
+type CRWOperatorSpec struct {
+	CustomResourceInstance CRWOperatorCRInstanceSpec `json:"customResourceInstance,omitempty"`
 }
 
-// KabaneroCheSpec defines customization entries for Kabanero Che.
-type KabaneroCheSpec struct {
+// CRWOperatorCustomResourceSpec defines custom resource customization entries for the codeready-workspaces operator.
+type CRWOperatorCRInstanceSpec struct {
+	DevFileRegistryImage    CWRCustomResourceDevFileRegImage `json:"devFileRegistryImage,omitempty"`
+	CheWorkspaceClusterRole string                           `json:"cheWorkspaceClusterRole,omitempty"`
+	OpenShiftOAuth          *bool                            `json:"openShiftOAuth,omitempty"`
+	SelfSignedCert          *bool                            `json:"selfSignedCert,omitempty"`
+	TLSSupport              *bool                            `json:"tlsSupport,omitempty"`
+}
+
+// CWRCustomResourceDevFileRegImage defines DevFileRegistryImage custom resource customization for the codeready-workspaces operator.
+type CWRCustomResourceDevFileRegImage struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
@@ -191,8 +199,8 @@ type KabaneroStatus struct {
 	// Kabanero Application Navigator instance readiness status.
 	Kappnav *KappnavStatus `json:"kappnav,omitempty"`
 
-	// Che instance readiness status.
-	Che *CheStatus `json:"che,omitempty"`
+	// Codeready-workspaces instance readiness status.
+	CodereadyWorkspaces *CRWStatus `json:"codereadyWorkspaces,omitempty"`
 
 	// Events instance status
 	Events *EventsStatus `json:"events,omitempty"`
@@ -271,30 +279,26 @@ type KappnavStatus struct {
 	ApiLocations []string `json:"apiLocations,omitempty"`
 }
 
-// CheStatus defines the observed status details of Che.
-type CheStatus struct {
-	Ready               string                    `json:"ready,omitempty"`
-	Message             string                    `json:"message,omitempty"`
-	CheOperator         CheOperatorStatus         `json:"cheOperator,omitempty"`
-	KabaneroChe         KabaneroCheStatus         `json:"kabaneroChe,omitempty"`
-	KabaneroCheInstance KabaneroCheInstanceStatus `json:"kabaneroCheInstance,omitempty"`
+// CRWStatus defines the observed status details of codeready-workspaces.
+type CRWStatus struct {
+	Ready        string            `json:"ready,omitempty"`
+	ErrorMessage string            `json:"errorMessage,omitempty"`
+	Operator     CRWOperatorStatus `json:"operator,omitempty"`
 }
 
-// CheOperatorStatus defines the observed status details of the Che operator.
-type CheOperatorStatus struct {
-	Version string `json:"version,omitempty"`
+// CRWOperatorStatus defines the observed status details of the codeready-workspaces operator.
+type CRWOperatorStatus struct {
+	Version  string            `json:"version,omitempty"`
+	Instance CRWInstanceStatus `json:"instance,omitempty"`
 }
 
-// KabaneroCheStatus defines the observed status details of Kabanero Che.
-type KabaneroCheStatus struct {
-	Version string `json:"version,omitempty"`
-}
-
-// KabaneroCheInstanceStatus defines the observed status details of Che instance.
-type KabaneroCheInstanceStatus struct {
-	CheImage                string `json:"cheImage,omitempty"`
-	CheImageTag             string `json:"cheImageTag,omitempty"`
-	CheWorkspaceClusterRole string `json:"cheWorkspaceClusterRole,omitempty"`
+// CRWInstanceStatus defines the observed status details of the codeready-workspaces operator custom resource.
+type CRWInstanceStatus struct {
+	DevfileRegistryImage    string `json:"devfileRegistryImage"`
+	CheWorkspaceClusterRole string `json:"cheWorkspaceClusterRole"`
+	OpenShiftOAuth          bool   `json:"openShiftOAuth"`
+	SelfSignedCert          bool   `json:"selfSignedCert"`
+	TLSSupport              bool   `json:"tlsSupport"`
 }
 
 // EventsStatus defines the observed status details of the Kabanero events.
