@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 	mf "github.com/kabanero-io/manifestival"
@@ -45,15 +45,15 @@ const (
 	cheOperatorsubscriptionName = "eclipse-che"
 )
 
-func initializeChe(k *kabanerov1alpha1.Kabanero) {
+func initializeChe(k *kabanerov1alpha2.Kabanero) {
 	if k.Spec.Che.Enable == nil {
 		enable := false
 		k.Spec.Che.Enable = &enable
 	}
 }
 
-func reconcileChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, ctrlr controller.Controller) error {
-	// The Che entry was not configured in the spec. Concider Che to be disabled.
+func reconcileChe(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, ctrlr controller.Controller) error {
+	// The Che entry was not configured in the spec. Consider Che to be disabled.
 	if *k.Spec.Che.Enable == false {
 		cleanupChe(ctx, k, c)
 		return nil
@@ -103,7 +103,7 @@ func reconcileChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 
 // Deploys the Che operator CR if one does not exist. If the Che operator CR exists, it validates that the image and tag values
 // are consistent with what was configured.
-func deployCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, ctrlr controller.Controller, logger logr.Logger) error {
+func deployCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, ctrlr controller.Controller, logger logr.Logger) error {
 	deployed, err := isCheInstanceDeployed(ctx, k, c, nameCodewindCheOperatorCR)
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func deployCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c clie
 func watchCheInstance(ctrlr controller.Controller) error {
 	handler := &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &kabanerov1alpha1.Kabanero{},
+		OwnerType:    &kabanerov1alpha2.Kabanero{},
 	}
 
 	predicate := predicate.Funcs{
@@ -178,8 +178,8 @@ func watchCheInstance(ctrlr controller.Controller) error {
 	return err
 }
 
-// Applies or deletes the specfied yaml file.
-func processYaml(ctx context.Context, k *kabanerov1alpha1.Kabanero, rev versioning.SoftwareRevision, templateCtx map[string]interface{}, c client.Client, fileName string, apply bool) error {
+// Applies or deletes the specified yaml file.
+func processYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versioning.SoftwareRevision, templateCtx map[string]interface{}, c client.Client, fileName string, apply bool) error {
 	f, err := rev.OpenOrchestration(fileName)
 	if err != nil {
 		return err
@@ -258,7 +258,7 @@ func isCheCRDActive() (bool, error) {
 }
 
 // Retrieves the Kabanero Che status.
-func getCheStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
+func getCheStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
 	// If disabled. Nothing to do. No need to display status if disabled.
 	if *k.Spec.Che.Enable == false {
 		k.Status.Che = nil
@@ -269,7 +269,7 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 	// in the kabanero instance data if Che is disabled. That is because structures are
 	// never 'empty' for json tagging 'omitempty' to take effect.
 	// We need to create the structure here before we use it.
-	k.Status.Che = &kabanerov1alpha1.CheStatus{}
+	k.Status.Che = &kabanerov1alpha2.CheStatus{}
 
 	k.Status.Che.Ready = "False"
 	k.Status.Che.ErrorMessage = ""
@@ -343,7 +343,7 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Cl
 }
 
 // Performs cleanup processing.
-func cleanupChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func cleanupChe(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	// Delete the CR instance. All other Che operator namespaced resources will be deleted
 	// when the kabanero CR instance is deleted.
 	err := deleteCheInstance(ctx, k, c)
@@ -361,7 +361,7 @@ func cleanupChe(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Clie
 }
 
 // Delete the Kabanero Che instance associated yamls.
-func deleteCheOperatorResources(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func deleteCheOperatorResources(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
 		return err
@@ -376,7 +376,7 @@ func deleteCheOperatorResources(ctx context.Context, k *kabanerov1alpha1.Kabaner
 }
 
 // Delete the Kabanero Che CR instance.
-func deleteCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func deleteCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
 		return err
@@ -411,7 +411,7 @@ func deleteCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c clie
 }
 
 // Get the named Kabanero Che instance object as unstructured data
-func getCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, instanceName string) (*unstructured.Unstructured, error) {
+func getCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, instanceName string) (*unstructured.Unstructured, error) {
 	cheInst := &unstructured.Unstructured{}
 	cheInst.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    "CheCluster",
@@ -426,7 +426,7 @@ func getCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.
 	return cheInst, err
 }
 
-func isCheInstanceDeployed(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client, instanceName string) (bool, error) {
+func isCheInstanceDeployed(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, instanceName string) (bool, error) {
 	_, err := getCheInstance(ctx, k, c, instanceName)
 
 	if err != nil {
@@ -440,7 +440,7 @@ func isCheInstanceDeployed(ctx context.Context, k *kabanerov1alpha1.Kabanero, c 
 }
 
 // Validates image information for the deployed instance. Entries not matching the config are updated.
-func validateCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func validateCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	// Get Kabanero Che instance.
 	cheInst, err := getCheInstance(ctx, k, c, nameCodewindCheOperatorCR)
 
@@ -587,7 +587,7 @@ func validateCheInstance(ctx context.Context, k *kabanerov1alpha1.Kabanero, c cl
 
 // Returns the workspaceClusterRole value to be used when deploying the Che CR instance.
 // Users may choose to override this value by specifying it in the kabanero CR instance yaml.
-func getWorkspaceClusterRole(k *kabanerov1alpha1.Kabanero) string {
+func getWorkspaceClusterRole(k *kabanerov1alpha2.Kabanero) string {
 	wscr := k.Spec.Che.CheOperatorInstance.CheWorkspaceClusterRole
 	if len(wscr) == 0 {
 		wscr = "eclipse-codewind"
@@ -621,8 +621,8 @@ func validateSoftwareImageTag(instance map[string]interface{}, imageInterface in
 	return nil
 }
 
-// Retuns the installed Che operator version.
-func getCheOperatorVersion(k *kabanerov1alpha1.Kabanero, c client.Client) (string, error) {
+// Returns the installed Che operator version.
+func getCheOperatorVersion(k *kabanerov1alpha2.Kabanero, c client.Client) (string, error) {
 	cok := client.ObjectKey{
 		Namespace: k.Namespace,
 		Name:      cheOperatorsubscriptionName}

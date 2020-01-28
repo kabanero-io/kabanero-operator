@@ -10,4 +10,14 @@ type Index struct {
 
 	// Holds version 2 stack's data.
 	Stacks []Stack `yaml:"stacks,omitempty"`
+
+	// Holds version 2 stack's data.
+	Triggers []Trigger `yaml:"triggers,omitempty"`
+}
+
+// Trigger holds Trigger information.
+type Trigger struct {
+	Id     string `yaml:"id,omitempty"`
+	Url    string `yaml:"url,omitempty"`
+	Sha256 string `yaml:"sha256,omitempty"`
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	knsv1alpha1 "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1"
 	olmapiv1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Constansts
+// Constants
 const (
 	serverlessSubscriptionName      = "serverless-operator"
 	serverlessSubscriptionNamespace = "openshift-operators"
@@ -24,7 +24,7 @@ const (
 
 // Returns the OpenShift serverless status. The status is based on the availability of the components
 // that make up OpenShift serverless.
-func getServerlessStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
+func getServerlessStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	// Find the installed CSV name.
 	installedCSVName, err := getInstalledCSVName(k, c, reqLogger)
 	if err != nil {
@@ -35,7 +35,7 @@ func getServerlessStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogge
 		return false, err
 	}
 
-	// Find and set the serveless version.
+	// Find and set the serverless version.
 	csvVersion, err := getServerlessCSVVersion(k, c, installedCSVName, reqLogger)
 	if err != nil {
 		message := "Unable to retrieve the version of installed serverless CSV with the name of " + installedCSVName
@@ -63,7 +63,7 @@ func getServerlessStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogge
 }
 
 // Returns the name of the installed serverless CSV.
-func getInstalledCSVName(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (string, error) {
+func getInstalledCSVName(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (string, error) {
 	sList := &unstructured.UnstructuredList{}
 	sList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   olmapiv1alpha1.GroupName,
@@ -104,7 +104,7 @@ func getInstalledCSVName(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogge
 }
 
 // Returns the version of the serverless CSV associated with the input CSV name.
-func getServerlessCSVVersion(k *kabanerov1alpha1.Kabanero, c client.Client, csvName string, reqLogger logr.Logger) (string, error) {
+func getServerlessCSVVersion(k *kabanerov1alpha2.Kabanero, c client.Client, csvName string, reqLogger logr.Logger) (string, error) {
 	csvInstance := &unstructured.Unstructured{}
 	csvInstance.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   olmapiv1alpha1.GroupName,
@@ -133,7 +133,7 @@ func getServerlessCSVVersion(k *kabanerov1alpha1.Kabanero, c client.Client, csvN
 }
 
 // Retrieves the knative serving instance status.
-func getKnativeServingStatus(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
+func getKnativeServingStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	k.Status.Serverless.KnativeServing.ErrorMessage = ""
 	k.Status.Serverless.KnativeServing.Ready = "False"
 

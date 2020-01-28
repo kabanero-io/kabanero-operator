@@ -5,7 +5,7 @@ import (
 	goerrors "errors"
 	"strings"
 	
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	routev1 "github.com/openshift/api/route/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -22,11 +22,11 @@ var kanlog = rlog.Log.WithName("kabanero-kappnav")
 const currentVersion = "0.1.0"
 
 // Retrieves the Kubernetes Application Navigator deployment status.
-func getKappnavStatus(k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
+func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
 	// KNavApp is optional.  We're basically just reporting if we found it.
 	// If we found the default instance, we'll wait until its components
 	// are ready.
-	status := kabanerov1alpha1.KappnavStatus{}
+	status := kabanerov1alpha2.KappnavStatus{}
 	k.Status.Kappnav = &status
 	k.Status.Kappnav.Ready = "False"
 	

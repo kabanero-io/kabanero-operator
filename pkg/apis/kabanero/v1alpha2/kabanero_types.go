@@ -37,6 +37,8 @@ type KabaneroSpec struct {
 
 	Events EventsCustomizationSpec `json:"events,omitempty"`
 
+	CollectionController CollectionControllerSpec `json:"collectionController,omitempty"`
+
 	StackController StackControllerSpec `json:"stackController,omitempty"`
 
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
@@ -134,6 +136,14 @@ type EventsCustomizationSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
+// CollectionControllerSpec defines customization entried for the Kabanero collection controller.
+type CollectionControllerSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
 // StackControllerSpec defines customization entried for the Kabanero stack controller.
 type StackControllerSpec struct {
 	Version    string `json:"version,omitempty"`
@@ -181,6 +191,9 @@ type KabaneroStatus struct {
 
 	// Events instance status
 	Events *EventsStatus `json:"events,omitempty"`
+
+	// Kabanero collection controller readiness status.
+	CollectionController CollectionControllerStatus `json:"collectionController,omitempty"`
 
 	// Kabanero stack controller readiness status.
 	StackController StackControllerStatus `json:"stackController,omitempty"`
@@ -289,6 +302,13 @@ type EventsStatus struct {
 	ErrorMessage string `json:"errorMessage,omitempty"`
 	// +listType=set
 	Hostnames []string `json:"hostnames,omitempty"`
+}
+
+// CollectionControllerStatus defines the observed status details of the Kabanero collection controller.
+type CollectionControllerStatus struct {
+	Ready        string `json:"ready,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 // StackControllerStatus defines the observed status details of the Kabanero stack controller.
