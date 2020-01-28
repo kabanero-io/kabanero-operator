@@ -4,12 +4,7 @@ metadata:
   name: collections.kabanero.io
 spec:
   group: kabanero.io
-  version: v1alpha1
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
-    schema:
+  validation:
       openAPIV3Schema:
         properties:
           apiVersion:
@@ -49,9 +44,15 @@ spec:
                             type: string
                           assetName:
                             type: string
+                          group:
+                            type: string
+                          kind:
+                            type: string
                           status:
                             type: string
                           statusMessage:
+                            type: string
+                          version:
                             type: string
                         type: object
                       type: array
@@ -87,6 +88,11 @@ spec:
               statusMessage:
                 type: string
             type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
   conversion:
     strategy: None
   names:

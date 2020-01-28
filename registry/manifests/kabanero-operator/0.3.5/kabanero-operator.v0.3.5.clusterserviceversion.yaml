@@ -1,0 +1,261 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: kabanero-operator.v0.3.5
+  namespace: placeholder
+  annotations:
+    capabilities: Basic Install
+    categories: "Integration & Delivery"
+    certified: "false"
+    containerImage: kabanero/kabanero-operator:0.3.5
+    createdAt: 2019-11-19T12:00:00.000-0500
+    description: Bringings together foundational open source technologies into a modern microservices-based framework.
+    repository: https://github.com/kabanero-io/kabanero-operator
+    support: IBM
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "kabanero.io/v1alpha1",
+          "kind": "Kabanero",
+          "metadata": {
+            "name": "kabanero"
+          },
+          "spec": {
+            "version": "0.3.5",
+            "collections": {
+              "repositories": [
+                {
+                  "name": "incubator",
+                  "url": "https://github.com/kabanero-io/collections/releases/download/0.3.5/kabanero-index.yaml",
+                  "activateDefaultCollections": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "apiVersion": "kabanero.io/v1alpha1",
+          "kind": "Collection",
+          "metadata": {
+            "name": "java-microprofile"
+          },
+          "spec": {
+            "version": "0.2.11",
+            "name": "java-microprofile",
+            "desiredState": "inactive"
+          }
+        }
+      ]
+spec:
+  minKubeVersion: 1.14.0
+  apiservicedefinitions: {}
+  maturity: alpha
+  version: 0.3.5
+  replaces: kabanero-operator.v0.3.4
+  displayName: Kabanero Operator
+  description: |
+    The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
+
+    [Kabanero](http://kabanero.io) is an open source project focused on bringing together foundational open source technologies into a modern microservices-based framework.
+
+    Use our application stacks infused with expertise to select proven technologies, languages, and runtimes for building applications for Kubernetes. Apply customizations before sharing the application stack with developers and operations teams, to ensure your business process and governance needs are met. Application stacks reduce the decision-cycle time, enabling developers to focus on delivering line-of-business value without having to become full stack experts.  
+
+    ## Prerequisites
+    The Kabanero operator creates objects that are processed by other
+    operators.  The target environment is OpenShift Container Platform
+    4.2.  The following operators must be installed in the cluster:
+    * [OpenShift Service Mesh](https://docs.openshift.com/container-platform/4.2/service_mesh/service_mesh_install/installing-ossm.html)
+    * [OpenShift Serverless Operator](https://docs.openshift.com/container-platform/4.2/serverless/installing-openshift-serverless.html)
+    * [Knative Eventing Operator](https://github.com/openshift-knative/knative-eventing-operator)
+    * [Openshift Pipelines Operator](https://github.com/openshift/tektoncd-pipeline-operator)
+    * [Appsody Operator](https://github.com/appsody/appsody-operator/)
+
+    We recommend you use the [sample instal script](https://github.com/kabanero-io/kabanero-foundation/blob/master/scripts/README.md) to install the prerequisites from the appropriate operator catalogs.
+  icon:
+  - base64data: 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 
+    mediatype: image/png
+  maintainers:
+  - name: Tim Kaczynski
+    email: kaczynsk@us.ibm.com
+  - name: Ed Mezarina
+    email: mezarina@us.ibm.com
+  - name: Dan Cleyrat
+    email: dacleyra@us.ibm.com
+  links:
+  - name: Kabanero.io
+    url: https://kabanero.io
+  - name: Kabanero Operator
+    url: https://github.com/kabanero-io/kabanero-operator
+  keywords:
+  - 'Microservice'
+  - 'Knative'
+  - 'Istio'
+  - 'Codewind'
+  - 'Appsody'
+  - 'Tekton'
+  customresourcedefinitions:
+    owned:
+    - kind: Collection
+      name: collections.kabanero.io
+      version: v1alpha1
+      group: kabanero.io
+      description: Kabanero Collection
+      displayName: Kabanero Collection
+      resources:
+        - kind: Pipeline
+          name: ''
+          version: v1alpha1
+        - kind: Task
+          name: ''
+          version: v1alpha1
+        - kind: ServiceAccount
+          name: ''
+          version: v1
+      statusDescriptors:
+        - description: Version of the collection
+          displayName: Version
+          path: activeVersion
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: The URL where the collection is located
+          displayName: Location
+          path: activeLocation
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: The status of the collection
+          displayName: Status
+          path: status
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+    - kind: Kabanero
+      name: kabaneros.kabanero.io
+      version: v1alpha1
+      group: kabanero.io
+      description: Kabanero Platform
+      displayName: Kabanero
+      resources:
+      - kind: Collection
+        name: ""
+        version: v1alpha1
+      - kind: ConfigMap
+        name: ""
+        version: v1
+      - kind: Deployment
+        name: ""
+        version: v1
+      - kind: Pod
+        name: ""
+        version: v1
+      - kind: Role
+        name: ""
+        version: v1
+      - kind: RoleBinding
+        name: ""
+        version: v1
+      - kind: ServiceAccount
+        name: ""
+        version: v1
+      statusDescriptors:
+        - description: Kabanero foundation version
+          displayName: Version
+          path: kabaneroInstance.version
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Kabanero operator readiness status.
+          displayName: Kabanero Readiness
+          path: kabaneroInstance.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Kantive eventing readiness status.
+          displayName: Knative Eventing Readiness
+          path: knativeEventing.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Serverless readiness status.
+          displayName: Serverless Readiness
+          path: serverless.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Knative serving readiness status.
+          displayName: Knative Serving Readiness
+          path: serverless.knativeServing.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Tekton readiness status.
+          displayName: Tekton Readiness
+          path: tekton.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Kabanero CLI service readiness status.
+          displayName: Kabanero CLI Readiness
+          path: cli.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+        - description: Appsody readiness status.
+          displayName: Appsody Readiness
+          path: appsody.ready
+          x-descriptors:
+            - 'urn:alm:descriptor:com.tectonic.ui:label'
+    # The required CRDs are not listed due to OLM's random catalog selection,
+    # but the following are required:
+    # Knative Serving, Knative Eventing, Tekton, Appsody
+    required:
+  install:
+    spec:
+      deployments:
+      - name: kabanero-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: kabanero-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: kabanero-operator
+            spec:
+              containers:
+              - command:
+                - kabanero-operator
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: kabanero-operator
+                image: kabanero/kabanero-operator:0.3.5
+                imagePullPolicy: Always
+                name: kabanero-operator
+                resources: {}
+              serviceAccountName: kabanero-operator
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - '*'
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        - nonResourceURLs:
+          - '*'
+          verbs:
+          - '*'
+        serviceAccountName: kabanero-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: false
+    type: AllNamespaces
+  provider:
+    name: IBM
