@@ -107,30 +107,52 @@ checksub () {
 # serverless-operator.v1.2.0+ manages smmr, clean up
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=21-cr-servicemeshmemberrole || true
 
+# ServiceMeshControlPlane
+# serverless-operator.v1.3.0+ manages smmr & smcp, cleanup
+oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=20-cr-servicemeshcontrolplane || true
+
+
 # CatalogSource
 # Delete previous CatalogSource to ensure visibility of updated catalog CSVs
 oc delete -f $KABANERO_SUBSCRIPTIONS_YAML  --ignore-not-found --selector kabanero.io/install=00-catalogsource
+sleep $SLEEP_LONG
 
 
 ### Install
 
 ### CatalogSource
 
+# Install Kabanero CatalogSource
+oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+sleep $SLEEP_LONG
+
+
+# Check the kabanero-catalog CatalogSource pod is Running
+unset STATUSALL
+until [ "$STATUSALL" == "Running" ]
+do
+  echo "Waiting for CatalogSource kabanero-catalog pod to be ready."
+  STATUSES=$(oc -n openshift-marketplace get pod -l olm.catalogSource=kabanero-catalog --output=jsonpath={.items[*].status.phase})
+  for STATUS in ${STATUSES[@]}
+  do
+    if [ "$STATUS" != "Running" ]; then
+      STATUSALL=$STATUS
+      break
+    fi
+    STATUSALL=$STATUS
+  done
+  sleep $SLEEP_SHORT
+done
+
 # Stop the catalog-operator pod to avoid ready state bug
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=0
 sleep $SLEEP_LONG
-
-# Install Kabanero CatalogSource
-oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
 
 # Restart the catalog-operator pod to avoid ready state bug
 sleep $SLEEP_LONG
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=1
 
-
-
-
-# Check the CatalogSource is ready
+# Check the kabanero-catalog CatalogSource is ready
 unset LASTOBSERVEDSTATE
 until [ "$LASTOBSERVEDSTATE" == "READY" ]
 do
@@ -138,6 +160,7 @@ do
 	LASTOBSERVEDSTATE=$(oc get catalogsource kabanero-catalog -n openshift-marketplace --output=jsonpath={.status.connectionState.lastObservedState})
 	sleep $SLEEP_SHORT
 done
+
 
 ### Subscriptions
 
@@ -178,21 +201,6 @@ checksub kabanero-operator kabanero
 
 
 ### CustomResources
-
-# ServiceMeshControlplane
-oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=20-cr-servicemeshcontrolplane
-
-# Check the ServiceMeshControlPlane is ready, last condition should reflect readiness
-unset STATUS
-unset TYPE
-until [ "$STATUS" == "True" ] && [ "$TYPE" == "Ready" ]
-do
-	echo "Waiting for ServiceMeshControlPlane basic-install to be ready."
-	TYPE=$(oc get servicemeshcontrolplane -n istio-system basic-install --output=jsonpath={.status.conditions[-1:].type})
-	STATUS=$(oc get servicemeshcontrolplane -n istio-system basic-install --output=jsonpath={.status.conditions[-1:].status})
-	sleep $SLEEP_SHORT
-done
-
 
 # Serving
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=22-cr-knative-serving
