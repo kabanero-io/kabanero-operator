@@ -4,12 +4,7 @@ metadata:
   name: kabaneros.kabanero.io
 spec:
   group: kabanero.io
-  version: v1alpha1
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
-    schema:
+  validation:
       openAPIV3Schema:
         properties:
           apiVersion:
@@ -28,17 +23,6 @@ spec:
             properties:
               che:
                 properties:
-                  cheOperator:
-                    properties:
-                      image:
-                        type: string
-                      repository:
-                        type: string
-                      tag:
-                        type: string
-                      version:
-                        type: string
-                    type: object
                   cheOperatorInstance:
                     properties:
                       cheWorkspaceClusterRole:
@@ -141,6 +125,8 @@ spec:
                   errorMessage:
                     type: string
                   ready:
+                    type: string
+                  version:
                     type: string
                 type: object
               che:
@@ -271,6 +257,11 @@ spec:
                     type: string
                 type: object
             type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
   conversion:
     strategy: None
   names:
