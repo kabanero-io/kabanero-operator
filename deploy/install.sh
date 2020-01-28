@@ -115,6 +115,7 @@ oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabane
 # CatalogSource
 # Delete previous CatalogSource to ensure visibility of updated catalog CSVs
 oc delete -f $KABANERO_SUBSCRIPTIONS_YAML  --ignore-not-found --selector kabanero.io/install=00-catalogsource
+sleep $SLEEP_LONG
 
 
 ### Install
@@ -123,13 +124,23 @@ oc delete -f $KABANERO_SUBSCRIPTIONS_YAML  --ignore-not-found --selector kabaner
 
 # Install Kabanero CatalogSource
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+sleep $SLEEP_LONG
+
 
 # Check the kabanero-catalog CatalogSource pod is Running
-unset STATUS
-until [ "$STATUS" == "Running" ]
+unset STATUSALL
+until [ "$STATUSALL" == "Running" ]
 do
   echo "Waiting for CatalogSource kabanero-catalog pod to be ready."
-  STATUS=$(oc -n openshift-marketplace get pod -l olm.catalogSource=kabanero-catalog --output=jsonpath={.items[0].status.phase})
+  STATUSES=$(oc -n openshift-marketplace get pod -l olm.catalogSource=kabanero-catalog --output=jsonpath={.items[*].status.phase})
+  for STATUS in ${STATUSES[@]}
+  do
+    if [ "$STATUS" != "Running" ]; then
+      STATUSALL=$STATUS
+      break
+    fi
+    STATUSALL=$STATUS
+  done
   sleep $SLEEP_SHORT
 done
 
