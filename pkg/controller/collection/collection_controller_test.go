@@ -88,14 +88,14 @@ var sInstance *kabanerov1alpha2.Stack = &kabanerov1alpha2.Stack{
 		Version:   "1.2.3",
 				SkipCertVerification: true,
 				DesiredState:         "active",
-				Pipelines:            []kabanerov1alpha2.PipelineSpec{{Id: "commonPipeline", Sha256: "abc121cba", Url: "http://pipelinelink"}},
+				Pipelines:            []kabanerov1alpha2.PipelineSpec{{Id: "commonPipeline", Sha256: "abc121cba", Https: kabanerov1alpha2.HttpsProtocolFile{Url: "http://pipelinelink"}}},
 				Images:               []kabanerov1alpha2.Image{{Id: "a1b22b1a", Image: "some/pipeline:1.2.3"}},
 		},
 			{
 				Version:              "4.5.6",
 				SkipCertVerification: true,
 				DesiredState:         "active",
-				Pipelines:            []kabanerov1alpha2.PipelineSpec{{Id: "commonPipeline", Sha256: "abc121cba", Url: "http://pipelinelink"}},
+				Pipelines:            []kabanerov1alpha2.PipelineSpec{{Id: "commonPipeline", Sha256: "abc121cba", Https: kabanerov1alpha2.HttpsProtocolFile{Url: "http://pipelinelink"}}},
 				Images:               []kabanerov1alpha2.Image{{Id: "a1b22b1a", Image: "some/pipeline:1.2.3"}},
 		},
 		},
@@ -159,7 +159,7 @@ func TestConvertCollectionNoVersionsToStack(t *testing.T) {
 			Version:              "1.2.3",
 			SkipCertVerification: true,
 			DesiredState:         "active",
-			Pipelines:            []kabanerov1alpha2.PipelineSpec{{Id: "commonPipeline", Sha256: "abc121cba", Url: "http://pipelinelink"}},
+			Pipelines:            []kabanerov1alpha2.PipelineSpec{{Id: "commonPipeline", Sha256: "abc121cba", Https: kabanerov1alpha2.HttpsProtocolFile{Url: "http://pipelinelink"}}},
 			Images:               []kabanerov1alpha2.Image{{Id: "a1b22b1a", Image: "some/pipeline:1.2.3"}},
 	}}
 	tc := cInstance.DeepCopy()

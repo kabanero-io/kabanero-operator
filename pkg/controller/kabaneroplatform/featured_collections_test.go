@@ -128,8 +128,8 @@ func createKabanero(repositoryUrl string) *kabanerov1alpha2.Kabanero {
 			Stacks: kabanerov1alpha2.InstanceStackConfig{
 				Repositories: []kabanerov1alpha2.RepositoryConfig{
 					kabanerov1alpha2.RepositoryConfig{
-						Name:                       "default",
-						Url:                        repositoryUrl,
+						Name:  "default",
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: repositoryUrl},
 					},
 				},
 			},
@@ -193,8 +193,8 @@ func TestReconcileFeaturedStacks(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack to have 1 pipeline zip, but had %v: %v", len(nodejsStack.Spec.Versions[0].Pipelines), nodejsStack.Spec.Versions[0].Pipelines))
 	}
 
-	if nodejsStack.Spec.Versions[0].Pipelines[0].Url != defaultIndexPipeline {
-		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipeline, nodejsStack.Spec.Versions[0].Pipelines[0].Url))
+	if nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url != defaultIndexPipeline {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipeline, nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url))
 	}
 }
 
@@ -208,7 +208,7 @@ func TestReconcileFeaturedStacksTwoRepositories(t *testing.T) {
 	stackUrl := server.URL + defaultIndexName
 	stackUrlTwo := server.URL + secondIndexName
 	k := createKabanero(stackUrl)
-	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Url: stackUrlTwo})
+	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stackUrlTwo}})
 
 	err := reconcileFeaturedStacks(ctx, k, cl)
 	if err != nil {
@@ -252,12 +252,12 @@ func TestReconcileFeaturedStacksTwoRepositories(t *testing.T) {
 			t.Fatal(fmt.Sprintf("Expected version %v desiredState to be empty, but was %v", cur.Version, cur.DesiredState))
 		}
 		if cur.Version == "0.2.6" {
-			if cur.Pipelines[0].Url != defaultIndexPipeline {
-				t.Fatal(fmt.Sprintf("Expected version \"0.2.6\" pipeline URL to be %v, but was %v", defaultIndexPipeline, cur.Pipelines[0].Url))
+			if cur.Pipelines[0].Https.Url != defaultIndexPipeline {
+				t.Fatal(fmt.Sprintf("Expected version \"0.2.6\" pipeline URL to be %v, but was %v", defaultIndexPipeline, cur.Pipelines[0].Https.Url))
 			}
 		} else if cur.Version == "0.4.1" {
-			if cur.Pipelines[0].Url != secondIndexPipeline {
-				t.Fatal(fmt.Sprintf("Expected version \"0.4.1\" pipeline URL to be %v, but was %v", secondIndexPipeline, cur.Pipelines[0].Url))
+			if cur.Pipelines[0].Https.Url != secondIndexPipeline {
+				t.Fatal(fmt.Sprintf("Expected version \"0.4.1\" pipeline URL to be %v, but was %v", secondIndexPipeline, cur.Pipelines[0].Https.Url))
 			}
 		} else {
 			t.Fatal(fmt.Sprintf("Found unexpected version %v", cur.Version))
@@ -321,7 +321,7 @@ func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 	stack_index_url := server.URL + defaultIndexName
 	stack_index_url_two := server.URL + secondIndexName
 	k := createKabanero(stack_index_url)
-	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Url: stack_index_url_two})
+	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stack_index_url_two}})
 
 	stacks, err := featuredStacks(k)
 	if err != nil {
