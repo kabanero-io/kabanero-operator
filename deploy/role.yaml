@@ -61,13 +61,6 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - eventing.knative.dev
-  resources:
-  - knativeeventings
-  verbs:
-  - get
-  - create
-- apiGroups:
   - serving.knative.dev
   resources:
   - knativeservings

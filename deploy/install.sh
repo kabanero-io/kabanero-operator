@@ -2,7 +2,7 @@
 
 set -Eeox pipefail
 
-RELEASE="${RELEASE:-0.5.0}"
+RELEASE="${RELEASE:-0.6.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
 SLEEP_LONG="${SLEEP_LONG:-5}"
@@ -49,7 +49,7 @@ fi
 # Check to see if we're upgrading, and if so, that we're at N-1 or N.
 if [ `oc get subscription kabanero-operator -n kabanero --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then
 		CSV=$(oc get subscription kabanero-operator -n kabanero --output=jsonpath={.status.installedCSV})
-    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[45]\..* ]]; then
+    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[56]\..* ]]; then
         printf "Cannot upgrade kabanero-operator CSV version $CSV to $RELEASE.  Upgrade is supported from the previous minor release."
         exit 1
     fi
@@ -178,11 +178,10 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=11-subsc
 # Verify Subscriptions
 checksub servicemeshoperator openshift-operators
 
-# Install 12-subscription (eventing, serving)
+# Install 12-subscription (serving)
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=12-subscription
 
 # Verify Subscriptions
-checksub knative-eventing-operator openshift-operators
 checksub serverless-operator openshift-operators
 
 # Install 13-subscription (pipelines, appsody)
@@ -216,8 +215,6 @@ do
 	sleep $SLEEP_SHORT
 done
 
-# Github Sources
-oc apply -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
 # Need to wait for knative serving CRDs before installing tekton webhook extension
 until oc get crd services.serving.knative.dev 

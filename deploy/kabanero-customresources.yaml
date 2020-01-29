@@ -249,18 +249,6 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - sources.eventing.knative.dev
-  resources:
-  - githubsources
-  verbs:
-  - get
-  - list
-  - create
-  - update
-  - delete
-  - patch
-  - watch
-- apiGroups:
   - kabanero.io
   resources:
   - collections

@@ -241,9 +241,9 @@ int-config:
 # Update config to correct image
 # Update config to correct image
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-stack-controller:.*!image: ${STACK_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl apply -f -
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-stack-controller:.*!image: ${STACK_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 else
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE}!; s!image: kabanero/kabanero-operator-stack-controller:.*!image: ${STACK_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl apply -f -
+	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE}!; s!image: kabanero/kabanero-operator-stack-controller:.*!image: ${STACK_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 endif
 
 # Uninstall Test

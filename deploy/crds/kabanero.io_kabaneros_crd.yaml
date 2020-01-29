@@ -702,16 +702,6 @@ spec:
                       type: string
                     type: array
                 type: object
-              knativeEventing:
-                description: Knative eventing instance readiness status.
-                properties:
-                  errorMessage:
-                    type: string
-                  ready:
-                    type: string
-                  version:
-                    type: string
-                type: object
               landing:
                 description: Kabanero Landing page readiness status.
                 properties:
