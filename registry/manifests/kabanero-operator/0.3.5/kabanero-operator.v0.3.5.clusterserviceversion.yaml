@@ -7,7 +7,7 @@ metadata:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator:0.3.5
+    containerImage: kabanero/kabanero-operator:latest
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
     repository: https://github.com/kabanero-io/kabanero-operator
@@ -229,7 +229,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator:0.3.5
+                image: kabanero/kabanero-operator:latest
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
