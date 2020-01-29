@@ -4,8 +4,8 @@ import (
 	"context"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller/stack"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/stack"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,7 +49,7 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 						},
 					},
 					Spec: kabanerov1alpha2.StackSpec{
-						Name:         key,
+						Name: key,
 					},
 				}
 			} else {
@@ -61,11 +61,12 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 		// update the repository URL, don't touch the desired state.
 		for _, stack := range value {
 			foundVersion := false
-			for _, stackVersion := range stackResource.Spec.Versions {
+			for j, stackVersion := range stackResource.Spec.Versions {
 				if stackVersion.Version == stack.Version {
 					foundVersion = true
 					stackVersion.Pipelines = stack.Pipelines
 					stackVersion.SkipCertVerification = stack.SkipCertVerification
+					stackResource.Spec.Versions[j] = stackVersion
 				}
 			}
 
@@ -100,7 +101,7 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2
 		for _, pipeline := range pipelines {
 			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Https.Url, SkipCertVerification: pipeline.Https.SkipCertVerification})
 		}
-		
+
 		index, err := stack.ResolveIndex(r, indexPipelines, []stack.Trigger{}, "")
 		if err != nil {
 			return nil, err
@@ -113,9 +114,9 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2
 				pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: pipeline.Url, SkipCertVerification: pipeline.SkipCertVerification}
 				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl})
 			}
-			
+
 			stackMap[c.Id] = append(stackMap[c.Id], kabanerov1alpha2.StackVersion{Pipelines: pipelines, Version: c.Version})
-		}		
+		}
 	}
 
 	return stackMap, nil
