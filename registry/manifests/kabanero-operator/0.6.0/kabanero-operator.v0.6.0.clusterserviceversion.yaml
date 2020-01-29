@@ -27,7 +27,9 @@ metadata:
               "repositories": [
                 {
                   "name": "incubator",
-                  "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml"
+                  "https": {
+                    "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml"
+                  }
                 }
               ]
             }

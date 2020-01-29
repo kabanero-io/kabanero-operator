@@ -2,7 +2,7 @@
 #
 # Note that some of the attributes may not make sense in combination with other attributes
 # and that this sample might not be runable as-is
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero
@@ -89,21 +89,22 @@ spec:
       # The default workspaceClusterRole name is eclipse-codewind.
       cheWorkspaceClusterRole: eclipse-codewind
 
-  collections:
+  stacks:
     # A list of those repositories which are searched for collections
     repositories: 
     - name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml
+      https:
+        url: https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml
 
-      # Sets the collection resource's initial desiredState value to active or inactive when 
-      # the CR instance is initially deployed. Post CR instance deployment, updates to 
-      # a collection's desired state can be done by editing each collection resource manually.
-      # A collection's desiredState value of active or inactive is what determines whether the 
-      # assets associated with a collection object are activated or deactived.
-      # Setting activateDefaultCollections to true sets the collection's initial desiredState to "active". 
-      # Setting activateDefaultCollections to false sets the collection's initial desiredState to "inactive".
-      # ActivateDefaultCollections' default value is false.
-      activateDefaultCollections: true
+        # Sets the collection resource's initial desiredState value to active or inactive when 
+        # the CR instance is initially deployed. Post CR instance deployment, updates to 
+        # a collection's desired state can be done by editing each collection resource manually.
+        # A collection's desiredState value of active or inactive is what determines whether the 
+        # assets associated with a collection object are activated or deactived.
+        # Setting activateDefaultCollections to true sets the collection's initial desiredState to "active". 
+        # Setting activateDefaultCollections to false sets the collection's initial desiredState to "inactive".
+        # ActivateDefaultCollections' default value is false.
+        activateDefaultCollections: true
 
   # The information in the Github section is used by the Kabanero CLI to
   # perform user to role mapping when accessing the collection.
