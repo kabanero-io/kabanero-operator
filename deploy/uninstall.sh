@@ -15,7 +15,7 @@ SLEEP_SHORT="${SLEEP_SHORT:-2}"
 
 
 # CRD spec.group suffixes of interest
-CRDS=(appsody.dev kabanero.io tekton.dev knative.dev istio.io maistra.io kiali.io jaegertracing.io)
+CRDS=(appsody.dev kabanero.io tekton.dev knative.dev istio.io maistra.io kiali.io jaegertracing.io certmanager.k8s.io)
 
 
 ### Check prereqs
@@ -203,6 +203,8 @@ unsubscribe elasticsearch-operator openshift-operators
 
 unsubscribe eclipse-che kabanero
 
+unsubscribe amq7-cert-manager openshift-operators
+
 # Delete OperatorGroup
 oc delete -n kabanero operatorgroup kabanero
 
@@ -211,7 +213,7 @@ oc delete -n openshift-marketplace catalogsource kabanero-catalog
 
 
 # Ensure CSV Cleanup in all namespaces in case OLM GC failed to delete Copies
-OPERATORS=(appsody-operator jaeger-operator kiali-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator)
+OPERATORS=(appsody-operator jaeger-operator kiali-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator amq7-cert-manager)
 for OPERATOR in "${OPERATORS[@]}"
 do
   CSV=$(oc --all-namespaces=true get csv --output=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep ${OPERATOR} | head -1)

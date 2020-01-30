@@ -14,6 +14,20 @@ spec:
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
+  name: amq7-cert-manager
+  namespace: openshift-operators
+  labels:
+    kabanero.io/install: 10-subscription
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: amq7-cert-manager
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
   name: elasticsearch-operator
   namespace: openshift-operators
   labels:

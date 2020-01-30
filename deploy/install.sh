@@ -168,6 +168,7 @@ done
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=10-subscription
 
 # Verify Subscriptions
+checksub amq7-cert-manager openshift-operators
 checksub elasticsearch-operator openshift-operators
 checksub jaeger-product openshift-operators
 checksub kiali-ossm openshift-operators
