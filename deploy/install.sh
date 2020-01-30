@@ -81,6 +81,14 @@ checksub () {
 	until [ "$PHASE" == "Complete" ]
 	do
 		PHASE=$(oc get installplan $INSTALL_PLAN -n $2 --output=jsonpath={.status.phase})
+    if [ "$PHASE" == "Failed" ]; then
+      set +x
+      sleep 3
+      echo "InstallPlan $INSTALL_PLAN for subscription $1 failed."
+      echo "To investigate the reason of the InstallPlan failure run:"
+      echo "oc describe installplan $INSTALL_PLAN -n $2"
+      exit 1
+    fi
 		sleep $SLEEP_SHORT
 	done
 	
@@ -97,6 +105,14 @@ checksub () {
 	until [ "$PHASE" == "Succeeded" ]
 	do
 		PHASE=$(oc get clusterserviceversion $CSV -n $2 --output=jsonpath={.status.phase})
+    if [ "$PHASE" == "Failed" ]; then
+      set +x
+      sleep 3
+      echo "ClusterServiceVersion $CSV for subscription $1 failed."
+      echo "To investigate the reason of the ClusterServiceVersion failure run:"
+      echo "oc describe clusterserviceversion $CSV -n $2"
+      exit 1
+    fi
 		sleep $SLEEP_SHORT
 	done
 }
