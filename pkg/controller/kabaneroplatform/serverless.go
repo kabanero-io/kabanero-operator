@@ -52,7 +52,6 @@ func getServerlessStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogge
 
 	if !ready {
 		k.Status.Serverless.Ready = "False"
-		k.Status.Serverless.KnativeServing.ErrorMessage = "Knative serving not ready."
 		return ready, nil
 	}
 
