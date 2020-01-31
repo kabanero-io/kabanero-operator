@@ -125,11 +125,20 @@ spec:
         - name: JGROUPS_CLUSTER_PASSWORD
           value: eADYLYToDw5EMFYPiYp4V23mDA4quBAJ
         - name: SSO_ADMIN_USERNAME
-          value: oQTfAVni
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoAdminSecretName }}
+              key: username
         - name: SSO_ADMIN_PASSWORD
-          value: VDNAHojVhR2isBJhK0aqxBGCjX5Tkp76
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoAdminSecretName }}
+              key: password
         - name: SSO_REALM
-          value: ""
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoAdminSecretName }}
+              key: realm
         - name: SSO_SERVICE_USERNAME
           value: ""
         - name: SSO_SERVICE_PASSWORD
