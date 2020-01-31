@@ -327,6 +327,7 @@ type AdmissionControllerWebhookStatus struct {
 
 // Status of the SSO server
 type SsoStatus struct {
+	Configured   string `json:"configured,omitempty"`
 	Ready        string `json:"ready,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 }

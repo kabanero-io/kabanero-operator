@@ -10,10 +10,16 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 
 	mf "github.com/kabanero-io/manifestival"
+	appsv1 "github.com/openshift/api/apps/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	sso_true string = "True"
+	sso_false string = "False"
 )
 
 func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
@@ -144,7 +150,77 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 }
 
 func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
-	// TODO: Implement status
+	// If SSO is not enabled, then there is no status to report.
+	if k.Spec.Sso.Enable == false {
+		k.Status.Sso.Configured = sso_false
+		k.Status.Sso.Ready = sso_false
+		k.Status.Sso.ErrorMessage = ""
+		return true, nil
+	}
+
+	// Determine if the SSO components are available.
+	k.Status.Sso.Configured = sso_true
+	k.Status.Sso.Ready = sso_false
+	k.Status.Sso.ErrorMessage = ""
+
+	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      "sso",
+		Namespace: k.ObjectMeta.Namespace}, ssoDeploymentConfigInstance)
+
+	if err != nil {
+		k.Status.Sso.ErrorMessage = err.Error()
+		return false, err
+	}
+
+	foundAvailableCondition := false
+	for _, condition := range ssoDeploymentConfigInstance.Status.Conditions {
+		if condition.Type == appsv1.DeploymentAvailable {
+			if condition.Status != corev1.ConditionTrue {
+				err = fmt.Errorf("The SSO DeploymentConfig reported that it is not available: %v", condition.Message)
+				k.Status.Sso.ErrorMessage = err.Error()
+				return false, err
+			}
+			foundAvailableCondition = true
+		}
+	}
+
+	if foundAvailableCondition == false {
+		err = errors.New("The SSO DeploymentConfig did not contain an 'Available' condition")
+		k.Status.Sso.ErrorMessage = err.Error()
+		return false, err
+	}
+
+	// Now check the postgresql DeploymentConfig in the same way.
+	postgreDeploymentConfigInstance := &appsv1.DeploymentConfig{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "sso-postgresql",
+		Namespace: k.ObjectMeta.Namespace}, postgreDeploymentConfigInstance)
+
+	if err != nil {
+		k.Status.Sso.ErrorMessage = err.Error()
+		return false, err
+	}
+
+	foundAvailableCondition = false
+	for _, condition := range postgreDeploymentConfigInstance.Status.Conditions {
+		if condition.Type == appsv1.DeploymentAvailable {
+			if condition.Status != corev1.ConditionTrue {
+				err = fmt.Errorf("The SSO-Postgre DeploymentConfig reported that it is not available: %v", condition.Message)
+				k.Status.Sso.ErrorMessage = err.Error()
+				return false, err
+			}
+			foundAvailableCondition = true
+		}
+	}
+
+	if foundAvailableCondition == false {
+		err = errors.New("The SSO-Postgre DeploymentConfig did not contain an 'Available' condition")
+		k.Status.Sso.ErrorMessage = err.Error()
+		return false, err
+	}
+
+	k.Status.Sso.Ready = sso_true
 	return true, nil
 }
 

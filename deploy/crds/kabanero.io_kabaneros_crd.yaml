@@ -745,6 +745,8 @@ spec:
               sso:
                 description: SSO server status
                 properties:
+                  configured:
+                    type: string
                   errorMessage:
                     type: string
                   ready:
