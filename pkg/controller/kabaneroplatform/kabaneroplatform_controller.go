@@ -326,6 +326,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		reqLogger.Error(err, "Error reconciling kabanero-events")
 		return reconcile.Result{}, err
 	}
+
+	// Reconcile the SSO server
+	err = reconcileSso(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling SSO")
+		return reconcile.Result{}, err
+	}
 	
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, request, instance, r.client, reqLogger)
@@ -468,6 +475,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isCheReady, _ := getCheStatus(ctx, k, c)
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
+	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
 	
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
@@ -480,7 +488,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isKubernetesAppNavigatorReady &&
 		isCheReady &&
 		isEventsRouteReady &&
-		isAdmissionControllerWebhookReady
+		isAdmissionControllerWebhookReady &&
+		isSsoReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.ErrorMessage = ""

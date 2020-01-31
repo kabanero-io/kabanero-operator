@@ -483,6 +483,15 @@ spec:
                   version:
                     type: string
                 type: object
+              sso:
+                properties:
+                  adminSecretName:
+                    type: string
+                  enable:
+                    type: boolean
+                  provider:
+                    type: string
+                type: object
               stackController:
                 description: StackControllerSpec defines customization entried for
                   the Kabanero stack controller.
@@ -731,6 +740,14 @@ spec:
                   ready:
                     type: string
                   version:
+                    type: string
+                type: object
+              sso:
+                description: SSO server status
+                properties:
+                  errorMessage:
+                    type: string
+                  ready:
                     type: string
                 type: object
               stackController:
