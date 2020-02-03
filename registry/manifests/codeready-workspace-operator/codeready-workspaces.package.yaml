@@ -1,5 +1,0 @@
-packageName: codeready-workspaces
-channels:
-- name: kabanero-0.6
-  currentCSV: crwoperator.v2.0.0
-defaultChannel: kabanero-0.6
