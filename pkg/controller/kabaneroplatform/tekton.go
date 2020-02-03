@@ -12,7 +12,7 @@ import (
 
 // Retrieves the Tekton instance status.
 func getTektonStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
-	k.Status.Tekton.ErrorMessage = ""
+	k.Status.Tekton.Message = ""
 	k.Status.Tekton.Ready = "False"
 
 	// Get the tekton instance.
@@ -24,7 +24,7 @@ func getTektonStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error
 
 	if err != nil {
 		message := "Tekton instance with the name of " + tektonInstName + " could not be found."
-		k.Status.Tekton.ErrorMessage = message
+		k.Status.Tekton.Message = message
 		fmt.Println("Error while assessing Tekton readiness. Unable to add tekton scheme.", err)
 		return false, err
 	}
@@ -36,7 +36,7 @@ func getTektonStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error
 	k.Status.Tekton.Version = readyCondition.Version
 	code := strings.ToLower(string(readyCondition.Code))
 	if code == "error" {
-		k.Status.Tekton.ErrorMessage = readyCondition.Details
+		k.Status.Tekton.Message = readyCondition.Details
 	} else if code == "installed" {
 		ready = true
 		k.Status.Tekton.Ready = "True"

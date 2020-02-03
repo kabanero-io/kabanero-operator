@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
+	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
-	routev1 "github.com/openshift/api/route/v1"
 	consolev1 "github.com/openshift/api/console/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,13 +133,13 @@ func deployLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 			transforms = append(transforms, kabTransforms.AddEnvVariable("TOKEN_ENDPOINT", "https://github.com/login/oauth/access_token"))
 			transforms = append(transforms, kabTransforms.AddEnvVariable("WEBSITE", "https://github.com"))
 		} else {
-			transforms = append(transforms, kabTransforms.AddEnvVariable("USER_API", "https://" + hostname + "/api/v3/user"))
-			transforms = append(transforms, kabTransforms.AddEnvVariable("AUTHORIZATION_ENDPOINT", "https://" + hostname + "/login/oauth/authorize"))
-			transforms = append(transforms, kabTransforms.AddEnvVariable("TOKEN_ENDPOINT", "https://" + hostname + "/login/oauth/access_token"))
-			transforms = append(transforms, kabTransforms.AddEnvVariable("WEBSITE", "https://" + hostname))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("USER_API", "https://"+hostname+"/api/v3/user"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("AUTHORIZATION_ENDPOINT", "https://"+hostname+"/login/oauth/authorize"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("TOKEN_ENDPOINT", "https://"+hostname+"/login/oauth/access_token"))
+			transforms = append(transforms, kabTransforms.AddEnvVariable("WEBSITE", "https://"+hostname))
 		}
 	}
-	
+
 	err = m.Transform(transforms...)
 	if err != nil {
 		return err
@@ -360,7 +360,7 @@ func removeWebConsoleCustomization(k *kabanerov1alpha2.Kabanero, c client.Client
 			kllog.Error(err, "Unable to delete ConsoleLink")
 		}
 	}
-	
+
 	consoleLink, err = getConsoleLink(c, "kabanero-help-menu-docs")
 	if err == nil {
 		err = c.Delete(context.TODO(), consoleLink)
@@ -389,21 +389,21 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha2.Kabanero, c client.Client)
 	}
 
 	k.Status.Landing = &kabanerov1alpha2.KabaneroLandingPageStatus{}
-	k.Status.Landing.ErrorMessage = ""
+	k.Status.Landing.Message = ""
 	k.Status.Landing.Ready = "False"
 
 	// Create a clientset to drive API operations on resources.
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		k.Status.Landing.Ready = "False"
-		k.Status.Landing.ErrorMessage = "Failed to build configuration to retrieve status."
+		k.Status.Landing.Message = "Failed to build configuration to retrieve status."
 		return false, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		k.Status.Landing.Ready = "False"
-		k.Status.Landing.ErrorMessage = "Failed to create clientset to retrieve status."
+		k.Status.Landing.Message = "Failed to create clientset to retrieve status."
 		return false, err
 	}
 
@@ -421,7 +421,7 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha2.Kabanero, c client.Client)
 	pods, err := clientset.CoreV1().Pods(k.ObjectMeta.Namespace).List(options)
 	if err != nil {
 		k.Status.Landing.Ready = "False"
-		k.Status.Landing.ErrorMessage = "Pod instance(s) with label kabanero-landing under the namespace of " + k.ObjectMeta.Namespace + " could not be retrieved."
+		k.Status.Landing.Message = "Pod instance(s) with label kabanero-landing under the namespace of " + k.ObjectMeta.Namespace + " could not be retrieved."
 		return false, err
 	}
 
@@ -444,7 +444,7 @@ func getKabaneroLandingPageStatus(k *kabanerov1alpha2.Kabanero, c client.Client)
 		k.Status.Landing.Ready = "False"
 	}
 
-	k.Status.Landing.ErrorMessage = finalErrorMessage
+	k.Status.Landing.Message = finalErrorMessage
 
 	return ready, err
 }

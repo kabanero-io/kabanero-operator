@@ -10,7 +10,7 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	
+
 	mf "github.com/kabanero-io/manifestival"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,18 +53,18 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 			secretInstance.ObjectMeta.Name = "kabanero-operator-admission-webhook"
 			secretInstance.ObjectMeta.Namespace = k.ObjectMeta.Namespace
 			secretInstance.ObjectMeta.OwnerReferences = append(secretInstance.ObjectMeta.OwnerReferences, ownerRef)
-			
+
 			reqLogger.Info("Attempting to create the admission controller webhook secret")
 			err = c.Create(context.TODO(), secretInstance)
-			
+
 			if err != nil {
 				return err
 			}
 		}
 	}
-	
+
 	// Deploy the Kabanero admission controller webhook components - service acct, role, etc
-	
+
 	//The context which will be used to render any templates
 	templateContext := rev.Identifiers
 
@@ -114,7 +114,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 	if rev.Version != "0.4.0" {
 		cmInstance := &corev1.ConfigMap{}
 		err = c.Get(context.Background(), types.NamespacedName{
-			Name:      "kabanero-operator-admission-webhook-ca-cert", 
+			Name:      "kabanero-operator-admission-webhook-ca-cert",
 			Namespace: k.GetNamespace()}, cmInstance)
 		if err != nil {
 			message := "The webhook configuration could not be created"
@@ -133,12 +133,12 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 		// Create the mutating webhook and validating webhook configuration
 		encoded := base64.StdEncoding.EncodeToString([]byte(caCert))
 		templateContext["caBundle"] = encoded
-	
+
 		f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook-config.yaml")
 		if err != nil {
 			return err
 		}
-		
+
 		s, err := renderOrchestration(f, templateContext)
 		if err != nil {
 			return err
@@ -154,7 +154,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -175,7 +175,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 	templateContext["image"] = image
-  templateContext["caBundle"] = ""
+	templateContext["caBundle"] = ""
 
 	f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook.yaml")
 	if err != nil {
@@ -221,7 +221,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 		if err != nil {
 			return err
 		}
-		
+
 		err = m.DeleteAll()
 		if err != nil {
 			if !errors.IsNotFound(err) {
@@ -229,7 +229,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 			}
 		}
 	}
-	
+
 	// Now, clean up the things that the controller-runtime created on
 	// our behalf.
 	secretInstance := &corev1.Secret{}
@@ -268,7 +268,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 			return err
 		}
 	}
-		
+
 	return nil
 }
 
@@ -276,44 +276,43 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 
 func getAdmissionControllerWebhookStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
 	k.Status.AdmissionControllerWebhook.Ready = "False"
-	k.Status.AdmissionControllerWebhook.ErrorMessage = ""
+	k.Status.AdmissionControllerWebhook.Message = ""
 
 	// Check to see if the webhook pod has started and is available
 	_, err := getDeploymentStatus(c, "kabanero-operator-admission-webhook", k.GetNamespace())
 	if err != nil {
 		message := "The admission webhook deployment was not ready: " + err.Error()
 		reqLogger.Error(err, message)
-		k.Status.AdmissionControllerWebhook.ErrorMessage = message
+		k.Status.AdmissionControllerWebhook.Message = message
 		return false, err
 	}
 
 	// Check to see if the mutating webhook was registered.
 	mutatingWebhookConfigInstance := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      "webhook.operator.kabanero.io", 
+		Name:      "webhook.operator.kabanero.io",
 		Namespace: ""}, mutatingWebhookConfigInstance)
 
 	if err != nil {
 		message := "The admission webhook deployment was not ready: " + err.Error()
 		reqLogger.Error(err, message)
-		k.Status.AdmissionControllerWebhook.ErrorMessage = message
+		k.Status.AdmissionControllerWebhook.Message = message
 		return false, err
 	}
 
 	// Check to see if the validating webhook was registered.
 	validatingWebhookConfigInstance := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      "webhook.operator.kabanero.io", 
+		Name:      "webhook.operator.kabanero.io",
 		Namespace: ""}, validatingWebhookConfigInstance)
 
 	if err != nil {
 		message := "The admission webhook deployment was not ready: " + err.Error()
 		reqLogger.Error(err, message)
-		k.Status.AdmissionControllerWebhook.ErrorMessage = message
+		k.Status.AdmissionControllerWebhook.Message = message
 		return false, err
 	}
 
 	k.Status.AdmissionControllerWebhook.Ready = "True"
 	return true, nil
 }
-	

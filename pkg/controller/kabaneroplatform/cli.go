@@ -157,10 +157,10 @@ func getCliRouteStatus(k *kabanerov1alpha2.Kabanero, reqLogger logr.Logger, c cl
 		// If we found a hostname from an admitted route, we're done.
 		if len(k.Status.Cli.Hostnames) > 0 {
 			k.Status.Cli.Ready = "True"
-			k.Status.Cli.ErrorMessage = ""
+			k.Status.Cli.Message = ""
 		} else {
 			k.Status.Cli.Ready = "False"
-			k.Status.Cli.ErrorMessage = "There were no accepted ingress objects in the Route"
+			k.Status.Cli.Message = "There were no accepted ingress objects in the Route"
 			return false, err
 		}
 	} else {
@@ -172,7 +172,7 @@ func getCliRouteStatus(k *kabanerov1alpha2.Kabanero, reqLogger logr.Logger, c cl
 		}
 		reqLogger.Error(err, message)
 		k.Status.Cli.Ready = "False"
-		k.Status.Cli.ErrorMessage = message + ": " + err.Error()
+		k.Status.Cli.Message = message + ": " + err.Error()
 		k.Status.Cli.Hostnames = nil
 		return false, err
 	}

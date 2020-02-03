@@ -4,7 +4,7 @@ import (
 	"context"
 	goerrors "errors"
 	"strings"
-	
+
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	routev1 "github.com/openshift/api/route/v1"
 
@@ -29,7 +29,7 @@ func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, erro
 	status := kabanerov1alpha2.KappnavStatus{}
 	k.Status.Kappnav = &status
 	k.Status.Kappnav.Ready = "False"
-	
+
 	// We're looking in the default location for KAppNav.
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.GroupVersionKind{
@@ -52,7 +52,7 @@ func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, erro
 	}
 
 	// The default instance is there, see if the UI pod is available.
-	
+
 	listOptions := []client.ListOption{
 		client.InNamespace("kappnav"),
 		client.MatchingLabels(map[string]string{"app.kubernetes.io/component": "kappnav-ui"}),
@@ -61,11 +61,11 @@ func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, erro
 	err = c.List(context.Background(), podList, listOptions...)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			k.Status.Kappnav.ErrorMessage = "The KAppNav UI pod could not be located."
+			k.Status.Kappnav.Message = "The KAppNav UI pod could not be located."
 			return false, err // We should wait for it to start
 		}
 
-		k.Status.Kappnav.ErrorMessage = "Could not detect the status of KAppNav: " + err.Error()
+		k.Status.Kappnav.Message = "Could not detect the status of KAppNav: " + err.Error()
 		return false, err // We should wait for it to start
 	}
 
@@ -91,15 +91,15 @@ func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, erro
 
 	// If we could not find a pod that was ready, report the condition.
 	if ready == false {
-		k.Status.Kappnav.ErrorMessage = finalErrorMessage
+		k.Status.Kappnav.Message = finalErrorMessage
 		return false, nil // We should retry to see if the pod is available
-	} 
+	}
 
 	// Check that the UI route is accepted
 	var uiLocations []string = nil
 	uiLocations, err = getRouteLocations("kappnav-ui-service", "kappnav", c)
 	if err != nil {
-		k.Status.Kappnav.ErrorMessage = err.Error()
+		k.Status.Kappnav.Message = err.Error()
 		return false, err // We should wait until the route is ready.
 	}
 
@@ -109,7 +109,7 @@ func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, erro
 	var apiLocations []string = nil
 	apiLocations, err = getRouteLocations("kappnav-api-service", "kappnav", c)
 	if err != nil {
-		k.Status.Kappnav.ErrorMessage = err.Error()
+		k.Status.Kappnav.Message = err.Error()
 		return false, err // We should wait until the route is ready
 	}
 
@@ -124,7 +124,7 @@ func getKappnavStatus(k *kabanerov1alpha2.Kabanero, c client.Client) (bool, erro
 func getRouteLocations(routeName string, namespace string, c client.Client) ([]string, error) {
 	route := &routev1.Route{}
 	err := c.Get(context.Background(), types.NamespacedName{
-		Name: routeName,
+		Name:      routeName,
 		Namespace: namespace}, route)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -133,7 +133,7 @@ func getRouteLocations(routeName string, namespace string, c client.Client) ([]s
 
 		return nil, goerrors.New("Could not get the route for " + routeName + ": " + err.Error())
 	}
-	
+
 	// Looking for an ingress that has an admitted status and a hostname
 	var locations []string = nil
 	for _, ingress := range route.Status.Ingress {
@@ -144,14 +144,14 @@ func getRouteLocations(routeName string, namespace string, c client.Client) ([]s
 			}
 		}
 		if routeAdmitted == true && len(ingress.Host) > 0 {
-			locations = append(locations, ingress.Host + route.Spec.Path)
+			locations = append(locations, ingress.Host+route.Spec.Path)
 		}
 	}
-		
+
 	// Make sure we got something back.
 	if len(locations) == 0 {
 		return nil, goerrors.New("There were no accepted ingress objects in the " + routeName + " Route")
 	}
-			
+
 	return locations, nil
 }
