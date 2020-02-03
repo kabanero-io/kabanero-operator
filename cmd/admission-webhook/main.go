@@ -11,6 +11,7 @@ import (
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
 	collectionwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/collection"
 	kabanerowebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero"
+	stackwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/stack"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -100,6 +101,7 @@ func main() {
 	hookServer.Register("/mutate-collections", collectionwebhook.BuildMutatingWebhook(&mgr))
 	hookServer.Register("/validate-kabaneros", kabanerowebhook.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/mutate-kabaneros", kabanerowebhook.BuildMutatingWebhook(&mgr))
+	hookServer.Register("/validate-stacks", stackwebhook.BuildValidatingWebhook(&mgr))
 
 	log.Info("Starting the Cmd.")
 
