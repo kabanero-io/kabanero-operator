@@ -12,7 +12,7 @@ spec:
 ```
 
 Creation of a Kabanero Instance has multiple impacts: 
-* May cause cluster level configuration, such as KNative Eventing being enabled on the cluster
+* May cause cluster level configuration, such as KNative Serving being enabled on the cluster
 * May cause deployment of instance specific resources, such as dashboard user interfaces, API endpoints, etc. 
 
 ## Collections

@@ -14,8 +14,8 @@ DOCKER_IMAGE="${DOCKER_IMAGE:-image-registry.openshift-image-registry.svc:5000/k
 APP_REPO="${APP_REPO:-https://github.com/kabanero-io/sample-java-microprofile/}"
 
 APP="${APP:-sample-java-microprofile}"
-PIPELINE_RUN="${PIPELINE_RUN:-java-microprofile-build-deploy-pipeline-run-kabanero}"
-PIPELINE_REF="${PIPELINE_REF:-java-microprofile-build-push-deploy-pipeline}"
+PIPELINE_RUN="${PIPELINE_RUN:-java-microprofile-build-deploy-pl-run-kabanero}"
+PIPELINE_REF="${PIPELINE_REF:-java-microprofile-build-deploy-pl}"
 DOCKER_IMAGE_REF="${DOCKER_IMAGE_REF:-java-microprofile-docker-image}"
 GITHUB_SOURCE_REF="${GITHUB_SOURCE_REF:-java-microprofile-git-source}"
 
@@ -71,7 +71,7 @@ spec:
   - name: docker-image
     resourceRef:
       name: ${DOCKER_IMAGE_REF}
-  serviceAccount: kabanero-operator
+  serviceAccountName: kabanero-pipeline
   timeout: 60m
 EOF
 

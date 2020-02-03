@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/assets/config"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 )
@@ -130,8 +130,8 @@ func TestResolveSoftwareRevision(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s", tc.name), func(t *testing.T) {
-			k := &kabanerov1alpha1.Kabanero{
-				Spec: kabanerov1alpha1.KabaneroSpec{},
+			k := &kabanerov1alpha2.Kabanero{
+				Spec: kabanerov1alpha2.KabaneroSpec{},
 			}
 			rev, err := resolveSoftwareRevision(k, "cli-services", "")
 			_ = rev

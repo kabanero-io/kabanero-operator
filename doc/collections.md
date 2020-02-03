@@ -6,7 +6,7 @@ Collection contents are maintained in a Kabanero repository. A Kabanero instance
 
 ## Collection Activation
 
-Collections are said to be *activated* based upon the presence of a Collection resource kind which references a collection by name and version. When searching for a collection by name, the repository ordering found in the Kabanero instance will be respected. 
+Collections are said to be *activated* based upon the presence of a Collection resource kind which references a collection by name and version. When searching for a collection by name, the repository ordering found in the Kabanero instance will be respected.
 
 ## Collection Upgrade
 
@@ -25,8 +25,8 @@ A collection repository can be removed from a Kabanero instance by updating the 
     repositories: 
     - name: experimental
       url: https://github.com/kabanero-io/kabanero-collection/blob/master/experimental
-    - name: my-expiremental
-      url: https://myrepo.com/expiremental
+    - name: my-experimental
+      url: https://myrepo.com/experimental
 ```
 
 could be changed to:
@@ -37,4 +37,4 @@ could be changed to:
       url: https://myrepo.com/experimental
 ```
 
-When a collection repository is removed from the list, no action is taken unless all of the referenced collection resources have also been removed. 
+When a collection repository is removed from the list, no action is taken unless all of the referenced collection resources have also been removed.

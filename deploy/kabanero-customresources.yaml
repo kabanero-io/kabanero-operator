@@ -16,44 +16,16 @@ metadata:
 spec:
   istio:
     global:
-      multitenant: true
-      proxy:
-        autoInject: disabled
-      omitSidecarInjectorConfigMap: true
       disablePolicyChecks: false
-      defaultPodDisruptionBudget:
-        enabled: false
-    istio_cni:
-      enabled: true
     gateways:
       istio-ingressgateway:
         autoscaleEnabled: false
-        type: LoadBalancer
       istio-egressgateway:
         enabled: false
-      cluster-local-gateway:
-        autoscaleEnabled: false
-        enabled: true
-        labels:
-          app: cluster-local-gateway
-          istio: cluster-local-gateway
-        ports:
-          - name: status-port
-            port: 15020
-          - name: http2
-            port: 80
-            targetPort: 8080
-          - name: https
-            port: 443
     mixer:
       enabled: false
-      policy:
-        enabled: false
-      telemetry:
-        enabled: false
     pilot:
       autoscaleEnabled: false
-      sidecar: false
     kiali:
       enabled: false
     tracing:
@@ -61,8 +33,6 @@ spec:
     prometheus:
       enabled: false
     grafana:
-      enabled: false
-    sidecarInjectorWebhook:
       enabled: false
 ---
 apiVersion: maistra.io/v1
@@ -240,18 +210,6 @@ rules:
   - taskruns/status
   - pipelines/status
   - pipelineruns/status
-  verbs:
-  - get
-  - list
-  - create
-  - update
-  - delete
-  - patch
-  - watch
-- apiGroups:
-  - sources.eventing.knative.dev
-  resources:
-  - githubsources
   verbs:
   - get
   - list

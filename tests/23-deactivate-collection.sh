@@ -43,8 +43,8 @@ do
 done
 
 
-if oc -n ${namespace} get pipeline java-microprofile-build-pipeline; then
-  echo "inactive collection java-microprofile should not have active pipeline java-microprofile-build-pipeline"
+if oc -n ${namespace} get pipeline java-microprofile-build-pl; then
+  echo "inactive collection java-microprofile should not have active pipeline java-microprofile-build-pl"
   exit 1
 fi
 

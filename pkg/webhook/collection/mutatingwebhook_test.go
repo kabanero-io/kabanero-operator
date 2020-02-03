@@ -271,7 +271,7 @@ func Test8(t *testing.T) {
 
 // New collection.Spec.Versions[0] == New collection.Spec.
 // New collection.Spec.Versions[0] has all values cleared == New collection.Spec has all values cleared.
-// Expectation: This is an invalis case.
+// Expectation: This is an invalid case.
 func Test9(t *testing.T) {
 	newCollection := mutatingBaseCollectionVersions.DeepCopy()
 	newCollection.Spec.RepositoryUrl = ""
@@ -385,7 +385,7 @@ func Test12(t *testing.T) {
 // Current colleciton.Spec != new collection.Spec.
 // Current collection.Spec != new collection.Spec.Versions[0].
 // Current collection.Spec.Versions[0] = new collection.Spec.Versions[0].
-// Expectation: This is an invalis case and is unrecoverable. New and current version values are different.
+// Expectation: This is an invalid case and is unrecoverable. New and current version values are different.
 // The instance may need to be re-deployed.
 func Test13(t *testing.T) {
 	custommutatingBaseCollection := mutatingBaseCollectionVersions.DeepCopy()

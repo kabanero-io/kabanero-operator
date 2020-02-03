@@ -24,7 +24,7 @@ stacks:
   pipelines:
   - id: default
     sha256: b8bc0ea8890285733346c77b1c47fd3391d468af7d4b6557557be17ec91e696f
-    url: https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz
+    url: https://github.com/kabanero-io/collections/releases/download/0.6.0/incubator.common.pipeline.default.tar.gz
   templates:
   - id: default
     url: https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.java-microprofile.v0.2.19.templates.default.tar.gz
@@ -50,7 +50,7 @@ stacks:
   pipelines:
   - id: default
     sha256: b8bc0ea8890285733346c77b1c47fd3391d468af7d4b6557557be17ec91e696f
-    url: https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz
+    url: https://github.com/kabanero-io/collections/releases/download/0.6.0/incubator.common.pipeline.default.tar.gz
   templates:
   - id: simple
     url: https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.nodejs.v0.2.6.templates.simple.tar.gz

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	mf "github.com/kabanero-io/manifestival"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,21 +23,21 @@ const (
 )
 
 // Installs the Kabanero collection controller.
-func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	logger := cclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling Kabanero collection controller installation.")
 
 	// Deploy the Kabanero collection operator.
 	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
 	if err != nil {
-		logger.Error(err, "Kabanero collection controller deloyment failed. Unable to resolve software revision.")
+		logger.Error(err, "Kabanero collection controller deployment failed. Unable to resolve software revision.")
 		return err
 	}
 
 	templateCtx := rev.Identifiers
 	image, err := imageUriWithOverrides(k.Spec.CollectionController.Repository, k.Spec.CollectionController.Tag, k.Spec.CollectionController.Image, rev)
 	if err != nil {
-		logger.Error(err, "Kabanero collection controller deloyment failed. Unable to process image overrides.")
+		logger.Error(err, "Kabanero collection controller deployment failed. Unable to process image overrides.")
 		return err
 	}
 	templateCtx["image"] = image
@@ -102,7 +103,7 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha1.Kaba
 
 // Removes the cross-namespace objects created during the collection controller
 // deployment.
-func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) error {
+func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	logger := cclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Removing Kabanero collection controller installation.")
 
@@ -136,44 +137,13 @@ func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha1.Kabane
 		return fmt.Errorf("Deletion blocked waiting for %v owned Collections to be deleted", collectionCount)
 	}
 
-	// Now that the collections have all been deleted, proceed with the cross-namespace objects.
-	// Objects in this namespace will be deleted implicitly when the Kabanero CR instance is
-	// deleted, because of the OwnerReference in those objects.
-	rev, err := resolveSoftwareRevision(k, ccVersionSoftCompName, k.Spec.CollectionController.Version)
-	if err != nil {
-		logger.Error(err, "Unable to resolve software revision.")
-		return err
-	}
-
-	templateCtx := rev.Identifiers
-	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
-	templateCtx["kabaneroNamespace"] = k.GetNamespace()
-
-	f, err := rev.OpenOrchestration("collection-controller-tekton.yaml")
-	if err != nil {
-		return err
-	}
-
-	s, err := renderOrchestration(f, templateCtx)
-	if err != nil {
-		return err
-	}
-
-	m, err := mf.FromReader(strings.NewReader(s), c)
-	if err != nil {
-		return err
-	}
-
-	err = m.DeleteAll()
-	if err != nil {
-		return err
-	}
-
+	// There used to be delete logic here for cross-namespace objects (the role binding for
+	// triggers).  This is owned by the stack controler now, and so has been deleted from here.
 	return nil
 }
 
 // Returns the readiness status of the Kabanero collection controller installation.
-func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha1.Kabanero, c client.Client) (bool, error) {
+func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
 	k.Status.CollectionController.ErrorMessage = ""
 	k.Status.CollectionController.Ready = "False"
 

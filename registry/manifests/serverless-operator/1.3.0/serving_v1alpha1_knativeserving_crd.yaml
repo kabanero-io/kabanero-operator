@@ -1,21 +1,32 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: knativeeventings.eventing.knative.dev
+  name: knativeservings.serving.knative.dev
 spec:
-  group: eventing.knative.dev
+  additionalPrinterColumns:
+  - JSONPath: .status.version
+    name: Version
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Ready")].status
+    name: Ready
+    type: string
+  - JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    name: Reason
+    type: string
+  group: serving.knative.dev
   names:
-    kind: KnativeEventing
-    listKind: KnativeEventingList
-    plural: knativeeventings
+    kind: KnativeServing
+    listKind: KnativeServingList
+    plural: knativeservings
+    singular: knativeserving
     shortNames:
-    - ke
-    singular: knativeeventing
+    - ks
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
+      description: Schema for the knativeservings API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -30,12 +41,23 @@ spec:
         metadata:
           type: object
         spec:
+          description: Spec defines the desired state of KnativeServing
+          properties:
+            config:
+              additionalProperties:
+                additionalProperties:
+                  type: string
+                type: object
+              description: A means to override the corresponding entries in the upstream
+                configmaps
+              type: object
           type: object
         status:
+          description: Status defines the observed state of KnativeServing
           properties:
             conditions:
               description: The latest available observations of a resource's current
-                state. +patchMergeKey=type +patchStrategy=merge
+                state.
               items:
                 properties:
                   lastTransitionTime:
@@ -57,10 +79,9 @@ spec:
                     type: string
                   status:
                     description: Status of the condition, one of True, False, Unknown.
-                      +required
                     type: string
                   type:
-                    description: Type of condition. +required
+                    description: Type of condition.
                     type: string
                 required:
                 - type

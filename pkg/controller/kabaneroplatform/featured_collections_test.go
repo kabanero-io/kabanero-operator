@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,39 +20,39 @@ import (
 )
 
 // -----------------------------------------------------------------------------------------------
-// Client that creates/deletes collections.
+// Client that creates/deletes stacks.
 // -----------------------------------------------------------------------------------------------
 type unitTestClient struct {
-	objs map[string]*kabanerov1alpha1.Collection
+	objs map[string]*kabanerov1alpha2.Stack
 }
 
 func (c unitTestClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 	fmt.Printf("Received Get() for %v\n", key.Name)
-	u, ok := obj.(*kabanerov1alpha1.Collection)
+	u, ok := obj.(*kabanerov1alpha2.Stack)
 	if !ok {
 		fmt.Printf("Received invalid target object for get: %v\n", obj)
-		return errors.New("Get only supports Collections")
+		return errors.New("Get only supports stacks")
 	}
-	collection := c.objs[key.Name]
-	if collection == nil {
+	stack := c.objs[key.Name]
+	if stack == nil {
 		return apierrors.NewNotFound(schema.GroupResource{}, key.Name)
 	}
-	collection.DeepCopyInto(u)
+	stack.DeepCopyInto(u)
 	return nil
 }
 func (c unitTestClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 	return errors.New("List is not supported")
 }
 func (c unitTestClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-	u, ok := obj.(*kabanerov1alpha1.Collection)
+	u, ok := obj.(*kabanerov1alpha2.Stack)
 	if !ok {
 		fmt.Printf("Received invalid create: %v\n", obj)
-		return errors.New("Create only supports Collections")
+		return errors.New("Create only supports Stacks")
 	}
 
 	fmt.Printf("Received Create() for %v\n", u.Name)
-	collection := c.objs[u.Name]
-	if collection != nil {
+	stack := c.objs[u.Name]
+	if stack != nil {
 		fmt.Printf("Receive create object already exists: %v\n", u.Name)
 		return apierrors.NewAlreadyExists(schema.GroupResource{}, u.Name)
 	}
@@ -67,15 +67,15 @@ func (c unitTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opt
 	return errors.New("DeleteAllOf is not supported")
 }
 func (c unitTestClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-	u, ok := obj.(*kabanerov1alpha1.Collection)
+	u, ok := obj.(*kabanerov1alpha2.Stack)
 	if !ok {
 		fmt.Printf("Received invalid update: %v\n", obj)
-		return errors.New("Update only supports Collections")
+		return errors.New("Update only supports Stack")
 	}
 
 	fmt.Printf("Received Update() for %v\n", u.Name)
-	collection := c.objs[u.Name]
-	if collection == nil {
+	stack := c.objs[u.Name]
+	if stack == nil {
 		fmt.Printf("Received update for object that does not exist: %v\n", obj)
 		return apierrors.NewNotFound(schema.GroupResource{}, u.Name)
 	}
@@ -90,10 +90,10 @@ func (c unitTestClient) Patch(ctx context.Context, obj runtime.Object, patch cli
 // -----------------------------------------------------------------------------------------------
 // HTTP handler that serves pipeline zips
 // -----------------------------------------------------------------------------------------------
-type collectionIndexHandler struct {
+type stackIndexHandler struct {
 }
 
-func (ch collectionIndexHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (ch stackIndexHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	filename := fmt.Sprintf("testdata/%v", req.URL.String())
 	fmt.Printf("Serving %v\n", filename)
 	d, err := ioutil.ReadFile(filename)
@@ -107,13 +107,16 @@ func (ch collectionIndexHandler) ServeHTTP(rw http.ResponseWriter, req *http.Req
 var defaultIndexName = "/kabanero-index.yaml"
 var secondIndexName = "/kabanero-index-two.yaml"
 
+var defaultIndexPipeline = "https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz"
+var secondIndexPipeline = "https://github.com/kabanero-io/collections/releases/download/0.6.0/incubator.common.pipeline.default.tar.gz"
+
 // -----------------------------------------------------------------------------------------------
 // Test cases
 // -----------------------------------------------------------------------------------------------
-func createKabanero(repositoryUrl string, activateDefaultCollections bool) *kabanerov1alpha1.Kabanero {
-	return &kabanerov1alpha1.Kabanero{
+func createKabanero(repositoryUrl string) *kabanerov1alpha2.Kabanero {
+	return &kabanerov1alpha2.Kabanero{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "kabanero.io/v1alpha1",
+			APIVersion: "kabanero.io/v1alpha2",
 			Kind:       "Kabanero",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -121,13 +124,12 @@ func createKabanero(repositoryUrl string, activateDefaultCollections bool) *kaba
 			Name:      "kabanero",
 			UID:       "12345",
 		},
-		Spec: kabanerov1alpha1.KabaneroSpec{
-			Collections: kabanerov1alpha1.InstanceCollectionConfig{
-				Repositories: []kabanerov1alpha1.RepositoryConfig{
-					kabanerov1alpha1.RepositoryConfig{
-						Name:                       "default",
-						Url:                        repositoryUrl,
-						ActivateDefaultCollections: activateDefaultCollections,
+		Spec: kabanerov1alpha2.KabaneroSpec{
+			Stacks: kabanerov1alpha2.InstanceStackConfig{
+				Repositories: []kabanerov1alpha2.RepositoryConfig{
+					kabanerov1alpha2.RepositoryConfig{
+						Name:  "default",
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: repositoryUrl},
 					},
 				},
 			},
@@ -135,177 +137,127 @@ func createKabanero(repositoryUrl string, activateDefaultCollections bool) *kaba
 	}
 }
 
-func TestReconcileFeaturedCollections(t *testing.T) {
+// Test that we can read a legacy CollectionHub that contains embedded
+// pipeline data.
+func TestReconcileFeaturedStacks(t *testing.T) {
 	// The server that will host the pipeline zip
-	server := httptest.NewServer(collectionIndexHandler{})
+	server := httptest.NewServer(stackIndexHandler{})
 	defer server.Close()
 
 	ctx := context.Background()
-	cl := unitTestClient{make(map[string]*kabanerov1alpha1.Collection)}
-	collectionUrl := server.URL + defaultIndexName
-	k := createKabanero(collectionUrl, true)
+	cl := unitTestClient{make(map[string]*kabanerov1alpha2.Stack)}
+	stackUrl := server.URL + defaultIndexName
+	k := createKabanero(stackUrl)
 
-	err := reconcileFeaturedCollections(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Should have been two collections created
-	javaMicroprofileCollection := &kabanerov1alpha1.Collection{}
-	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileCollection)
+	// Should have been two stacks created
+	javaMicroprofileStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileStack)
 	if err != nil {
-		t.Fatal("Could not resolve the java-microprofile collection", err)
+		t.Fatal("Could not resolve the java-microprofile stack", err)
 	}
 
-	nodejsCollection := &kabanerov1alpha1.Collection{}
-	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsCollection)
+	nodejsStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsStack)
 	if err != nil {
-		t.Fatal("Could not resolve the nodejs collection", err)
+		t.Fatal("Could not resolve the nodejs stack", err)
 	}
 
-	// Make sure the collection has an owner set
-	if len(nodejsCollection.OwnerReferences) != 1 {
-		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsCollection.OwnerReferences), nodejsCollection))
+	// Make sure the stack has an owner set
+	if len(nodejsStack.OwnerReferences) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsStack.OwnerReferences), nodejsStack))
 	}
 
-	if nodejsCollection.OwnerReferences[0].UID != k.UID {
-		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsCollection.OwnerReferences[0].UID))
+	if nodejsStack.OwnerReferences[0].UID != k.UID {
+		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsStack.OwnerReferences[0].UID))
 	}
 
-	// Make sure the collection is active
-	if len(nodejsCollection.Spec.Versions) != 1 {
-		t.Fatal(fmt.Sprintf("Expected 1 collection version, but found %v: %v", len(nodejsCollection.Spec.Versions), nodejsCollection.Spec.Versions))
+	// Make sure the stack is active
+	if len(nodejsStack.Spec.Versions) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 stack version, but found %v: %v", len(nodejsStack.Spec.Versions), nodejsStack.Spec.Versions))
 	}
 
-	if nodejsCollection.Spec.Versions[0].Version != "0.2.6" {
-		t.Fatal(fmt.Sprintf("Expected nodejs collection version \"0.2.6\", but found %v", nodejsCollection.Spec.Versions[0].Version))
+	if nodejsStack.Spec.Versions[0].Version != "0.2.6" {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack version \"0.2.6\", but found %v", nodejsStack.Spec.Versions[0].Version))
 	}
 
-	if nodejsCollection.Spec.Versions[0].DesiredState != kabanerov1alpha1.CollectionDesiredStateActive {
-		t.Fatal(fmt.Sprintf("Expected nodejs collection to be active, but was %v", nodejsCollection.Spec.Versions[0].DesiredState))
+	if len(nodejsStack.Spec.Versions[0].DesiredState) != 0 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack desiredState to be empty, but was %v", nodejsStack.Spec.Versions[0].DesiredState))
 	}
 
-	if nodejsCollection.Spec.Versions[0].RepositoryUrl != collectionUrl {
-		t.Fatal(fmt.Sprintf("Expected nodejs URL to be %v, but was %v", collectionUrl, nodejsCollection.Spec.Versions[0].RepositoryUrl))
+	if len(nodejsStack.Spec.Versions[0].Pipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack to have 1 pipeline zip, but had %v: %v", len(nodejsStack.Spec.Versions[0].Pipelines), nodejsStack.Spec.Versions[0].Pipelines))
+	}
+
+	if nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url != defaultIndexPipeline {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipeline, nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url))
 	}
 }
 
-// specify ActivateDefaultCollections: false
-func TestReconcileFeaturedCollectionsActivateDefaultCollectionsFalse(t *testing.T) {
+func TestReconcileFeaturedStacksTwoRepositories(t *testing.T) {
 	// The server that will host the pipeline zip
-	server := httptest.NewServer(collectionIndexHandler{})
+	server := httptest.NewServer(stackIndexHandler{})
 	defer server.Close()
 
 	ctx := context.Background()
-	cl := unitTestClient{make(map[string]*kabanerov1alpha1.Collection)}
-	collectionUrl := server.URL + defaultIndexName
-	k := createKabanero(collectionUrl, false)
+	cl := unitTestClient{make(map[string]*kabanerov1alpha2.Stack)}
+	stackUrl := server.URL + defaultIndexName
+	stackUrlTwo := server.URL + secondIndexName
+	k := createKabanero(stackUrl)
+	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stackUrlTwo}})
 
-	err := reconcileFeaturedCollections(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Should have been two collections created
-	javaMicroprofileCollection := &kabanerov1alpha1.Collection{}
-	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileCollection)
+	// Should have been two stacks created
+	javaMicroprofileStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileStack)
 	if err != nil {
-		t.Fatal("Could not resolve the java-microprofile collection", err)
+		t.Fatal("Could not resolve the java-microprofile stack", err)
 	}
 
-	nodejsCollection := &kabanerov1alpha1.Collection{}
-	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsCollection)
+	nodejsStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsStack)
 	if err != nil {
-		t.Fatal("Could not resolve the nodejs collection", err)
+		t.Fatal("Could not resolve the nodejs stack", err)
 	}
 
-	// Make sure the collection has an owner set
-	if len(nodejsCollection.OwnerReferences) != 1 {
-		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsCollection.OwnerReferences), nodejsCollection))
+	// Make sure the stack has an owner set
+	if len(nodejsStack.OwnerReferences) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsStack.OwnerReferences), nodejsStack))
 	}
 
-	if nodejsCollection.OwnerReferences[0].UID != k.UID {
-		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsCollection.OwnerReferences[0].UID))
+	if nodejsStack.OwnerReferences[0].UID != k.UID {
+		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsStack.OwnerReferences[0].UID))
 	}
 
-	// Make sure the collection is active
-	if len(nodejsCollection.Spec.Versions) != 1 {
-		t.Fatal(fmt.Sprintf("Expected 1 collection version, but found %v: %v", len(nodejsCollection.Spec.Versions), nodejsCollection.Spec.Versions))
-	}
-
-	if nodejsCollection.Spec.Versions[0].Version != "0.2.6" {
-		t.Fatal(fmt.Sprintf("Expected nodejs collection version \"0.2.6\", but found %v", nodejsCollection.Spec.Versions[0].Version))
-	}
-
-	if nodejsCollection.Spec.Versions[0].DesiredState != kabanerov1alpha1.CollectionDesiredStateInactive {
-		t.Fatal(fmt.Sprintf("Expected nodejs collection to be inactive, but was %v", nodejsCollection.Spec.Versions[0].DesiredState))
-	}
-
-	if nodejsCollection.Spec.Versions[0].RepositoryUrl != collectionUrl {
-		t.Fatal(fmt.Sprintf("Expected nodejs URL to be %v, but was %v", collectionUrl, nodejsCollection.Spec.Versions[0].RepositoryUrl))
-	}
-}
-
-func TestReconcileFeaturedCollectionsTwoRepositories(t *testing.T) {
-	// The server that will host the pipeline zip
-	server := httptest.NewServer(collectionIndexHandler{})
-	defer server.Close()
-
-	ctx := context.Background()
-	cl := unitTestClient{make(map[string]*kabanerov1alpha1.Collection)}
-	collectionUrl := server.URL + defaultIndexName
-	collectionUrlTwo := server.URL + secondIndexName
-	k := createKabanero(collectionUrl, true)
-	k.Spec.Collections.Repositories = append(k.Spec.Collections.Repositories, kabanerov1alpha1.RepositoryConfig{Name: "two", Url: collectionUrlTwo, ActivateDefaultCollections: false})
-
-	err := reconcileFeaturedCollections(ctx, k, cl)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Should have been two collections created
-	javaMicroprofileCollection := &kabanerov1alpha1.Collection{}
-	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileCollection)
-	if err != nil {
-		t.Fatal("Could not resolve the java-microprofile collection", err)
-	}
-
-	nodejsCollection := &kabanerov1alpha1.Collection{}
-	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsCollection)
-	if err != nil {
-		t.Fatal("Could not resolve the nodejs collection", err)
-	}
-
-	// Make sure the collection has an owner set
-	if len(nodejsCollection.OwnerReferences) != 1 {
-		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsCollection.OwnerReferences), nodejsCollection))
-	}
-
-	if nodejsCollection.OwnerReferences[0].UID != k.UID {
-		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsCollection.OwnerReferences[0].UID))
-	}
-
-	// Make sure the collection is in the correct state
-	if len(nodejsCollection.Spec.Versions) != 2 {
-		t.Fatal(fmt.Sprintf("Expected 2 collection versions, but found %v: %v", len(nodejsCollection.Spec.Versions), nodejsCollection.Spec.Versions))
+	// Make sure the stack is in the correct state
+	if len(nodejsStack.Spec.Versions) != 2 {
+		t.Fatal(fmt.Sprintf("Expected 2 stack versions, but found %v: %v", len(nodejsStack.Spec.Versions), nodejsStack.Spec.Versions))
 	}
 
 	foundVersions := make(map[string]bool)
-	for _, cur := range nodejsCollection.Spec.Versions {
+	for _, cur := range nodejsStack.Spec.Versions {
 		foundVersions[cur.Version] = true
+		if len(cur.Pipelines) != 1 {
+			t.Fatal(fmt.Sprintf("Expected version %v to have 1 pipeline zip, but has %v: %v", cur.Version, len(cur.Pipelines), cur.Pipelines))
+		}
+		if len(cur.DesiredState) != 0 {
+			t.Fatal(fmt.Sprintf("Expected version %v desiredState to be empty, but was %v", cur.Version, cur.DesiredState))
+		}
 		if cur.Version == "0.2.6" {
-			if cur.DesiredState != kabanerov1alpha1.CollectionDesiredStateActive {
-				t.Fatal(fmt.Sprintf("Expected version \"0.2.6\" to be active, but was %v", cur.DesiredState))
-			}
-			if cur.RepositoryUrl != collectionUrl {
-				t.Fatal(fmt.Sprintf("Expected version \"0.2.6\" URL to be %v, but was %v", collectionUrl, cur.RepositoryUrl))
+			if cur.Pipelines[0].Https.Url != defaultIndexPipeline {
+				t.Fatal(fmt.Sprintf("Expected version \"0.2.6\" pipeline URL to be %v, but was %v", defaultIndexPipeline, cur.Pipelines[0].Https.Url))
 			}
 		} else if cur.Version == "0.4.1" {
-			if cur.DesiredState != kabanerov1alpha1.CollectionDesiredStateInactive {
-				t.Fatal(fmt.Sprintf("Expected version \"0.4.1\" to be inactive, but was %v", cur.DesiredState))
-			}
-			if cur.RepositoryUrl != collectionUrlTwo {
-				t.Fatal(fmt.Sprintf("Expected version \"0.4.1\" URL to be %v, but was %v", collectionUrlTwo, cur.RepositoryUrl))
+			if cur.Pipelines[0].Https.Url != secondIndexPipeline {
+				t.Fatal(fmt.Sprintf("Expected version \"0.4.1\" pipeline URL to be %v, but was %v", secondIndexPipeline, cur.Pipelines[0].Https.Url))
 			}
 		} else {
 			t.Fatal(fmt.Sprintf("Found unexpected version %v", cur.Version))
@@ -313,90 +265,90 @@ func TestReconcileFeaturedCollectionsTwoRepositories(t *testing.T) {
 	}
 
 	if foundVersions["0.2.6"] != true {
-		t.Fatal("Did not find collection version \"0.2.6\"")
+		t.Fatal("Did not find stack version \"0.2.6\"")
 	}
 
 	if foundVersions["0.4.1"] != true {
-		t.Fatal("Did not find collection version \"0.4.1\"")
+		t.Fatal("Did not find stack version \"0.4.1\"")
 	}
 }
 
-// Attempts to resolve the featured collections from the default repository
-func TestResolveFeaturedCollections(t *testing.T) {
+// Attempts to resolve the featured stacks from the default repository
+func TestResolveFeaturedStacks(t *testing.T) {
 	// The server that will host the pipeline zip
-	server := httptest.NewServer(collectionIndexHandler{})
+	server := httptest.NewServer(stackIndexHandler{})
 	defer server.Close()
 
-	collection_index_url := server.URL + defaultIndexName
-	k := createKabanero(collection_index_url, true)
+	stack_index_url := server.URL + defaultIndexName
+	k := createKabanero(stack_index_url)
 
-	collections, err := featuredCollections(k)
+	stacks, err := featuredStacks(k)
 	if err != nil {
-		t.Fatal("Could not resolve the featured collections from the default index", err)
+		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}
 
-	// Should be two collections
-	if len(collections) != 2 {
-		t.Fatal(fmt.Sprintf("Was expecting 2 collections to be found, but found %v: %v", len(collections), collections))
+	// Should be two stacks
+	if len(stacks) != 2 {
+		t.Fatal(fmt.Sprintf("Was expecting 2 stacks to be found, but found %v: %v", len(stacks), stacks))
 	}
 
-	javaMicroprofileCollectionVersions, ok := collections["java-microprofile"]
+	javaMicroprofileStackVersions, ok := stacks["java-microprofile"]
 	if !ok {
-		t.Fatal(fmt.Sprintf("Could not find java-microprofile collection: %v", collections))
+		t.Fatal(fmt.Sprintf("Could not find java-microprofile stack: %v", stacks))
 	}
 
-	nodejsCollectionVersions, ok := collections["nodejs"]
+	nodejsStackVersions, ok := stacks["nodejs"]
 	if !ok {
-		t.Fatal(fmt.Sprintf("Could not find nodejs collection: %v", collections))
+		t.Fatal(fmt.Sprintf("Could not find nodejs stack: %v", stacks))
 	}
 
-	// Make sure each collection has one version
-	if len(javaMicroprofileCollectionVersions) != 1 {
-		t.Fatal(fmt.Sprintf("Expected one version of java-microprofile collection, but found %v: %v", len(javaMicroprofileCollectionVersions), javaMicroprofileCollectionVersions))
+	// Make sure each stack has one version
+	if len(javaMicroprofileStackVersions) != 1 {
+		t.Fatal(fmt.Sprintf("Expected one version of java-microprofile stack, but found %v: %v", len(javaMicroprofileStackVersions), javaMicroprofileStackVersions))
 	}
 
-	if len(nodejsCollectionVersions) != 1 {
-		t.Fatal(fmt.Sprintf("Expected one version of nodejs collection, but found %v: %v", len(nodejsCollectionVersions), nodejsCollectionVersions))
+	if len(nodejsStackVersions) != 1 {
+		t.Fatal(fmt.Sprintf("Expected one version of nodejs stack, but found %v: %v", len(nodejsStackVersions), nodejsStackVersions))
 	}
 }
 
-// Attempts to resolve the featured collections from two repositories
-func TestResolveFeaturedCollectionsTwoRepositories(t *testing.T) {
+// Attempts to resolve the featured stacks from two repositories
+func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 	// The server that will host the pipeline zip
-	server := httptest.NewServer(collectionIndexHandler{})
+	server := httptest.NewServer(stackIndexHandler{})
 	defer server.Close()
 
-	collection_index_url := server.URL + defaultIndexName
-	collection_index_url_two := server.URL + secondIndexName
-	k := createKabanero(collection_index_url, true)
-	k.Spec.Collections.Repositories = append(k.Spec.Collections.Repositories, kabanerov1alpha1.RepositoryConfig{Name: "two", Url: collection_index_url_two})
+	stack_index_url := server.URL + defaultIndexName
+	stack_index_url_two := server.URL + secondIndexName
+	k := createKabanero(stack_index_url)
+	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stack_index_url_two}})
 
-	collections, err := featuredCollections(k)
+	stacks, err := featuredStacks(k)
 	if err != nil {
-		t.Fatal("Could not resolve the featured collections from the default index", err)
+		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}
 
-	// Should be two collections
-	if len(collections) != 2 {
-		t.Fatal(fmt.Sprintf("Was expecting 2 collections to be found, but found %v: %v", len(collections), collections))
+	// Should be two stacks
+	if len(stacks) != 2 {
+		t.Fatal(fmt.Sprintf("Was expecting 2 stacks to be found, but found %v: %v", len(stacks), stacks))
 	}
 
-	javaMicroprofileCollectionVersions, ok := collections["java-microprofile"]
+	javaMicroprofileStackVersions, ok := stacks["java-microprofile"]
 	if !ok {
-		t.Fatal(fmt.Sprintf("Could not find java-microprofile collection: %v", collections))
+		t.Fatal(fmt.Sprintf("Could not find java-microprofile stack: %v", stacks))
 	}
 
-	nodejsCollectionVersions, ok := collections["nodejs"]
+	nodejsStackVersions, ok := stacks["nodejs"]
 	if !ok {
-		t.Fatal(fmt.Sprintf("Could not find nodejs collection: %v", collections))
+		t.Fatal(fmt.Sprintf("Could not find nodejs stack: %v", stacks))
 	}
 
-	// Make sure each collection has two versions
-	if len(javaMicroprofileCollectionVersions) != 2 {
-		t.Fatal(fmt.Sprintf("Expected two versions of java-microprofile collection, but found %v: %v", len(javaMicroprofileCollectionVersions), javaMicroprofileCollectionVersions))
+	// Make sure each stack has two versions
+	if len(javaMicroprofileStackVersions) != 2 {
+		t.Fatal(fmt.Sprintf("Expected two versions of java-microprofile stack, but found %v: %v", len(javaMicroprofileStackVersions), javaMicroprofileStackVersions))
 	}
 
-	if len(nodejsCollectionVersions) != 2 {
-		t.Fatal(fmt.Sprintf("Expected two versions of nodejs collection, but found %v: %v", len(nodejsCollectionVersions), nodejsCollectionVersions))
+	if len(nodejsStackVersions) != 2 {
+		t.Fatal(fmt.Sprintf("Expected two versions of nodejs stack, but found %v: %v", len(nodejsStackVersions), nodejsStackVersions))
 	}
 }

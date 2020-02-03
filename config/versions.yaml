@@ -9,111 +9,34 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.5.0"
+default: "0.6.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
-- version: "0.5.0"
+- version: "0.6.0"
   related-versions: 
-    cli-services: "0.5.0-rc.1"
-    landing: "0.5.0-rc.1"
+    cli-services: "0.5.0"
+    landing: "0.5.0"
     kabanero-che: "0.6.0"
     events: "0.1.0"
-    collection-controller: "0.5.0-rc.1"
-    admission-webhook: "0.5.0-rc.1"
-- version: "0.4.0"
-  related-versions: 
-    cli-services: "0.4.0"
-    landing: "0.4.0"
-    kabanero-che: "0.6.0"
-    events: "0.1.0"
-    collection-controller: "0.4.0"
-    admission-webhook: "0.4.0"
-- version: "0.3.4"
-  related-versions: 
-    cli-services: "0.3.0"
-    landing: "0.3.0"
-    kabanero-che: "0.6.0"
-    events: "0.1.0"
-    collection-controller: "0.4.0"
-    admission-webhook: "0.4.0"
-- version: "0.3.3"
-  related-versions: 
-    cli-services: "0.3.0"
-    landing: "0.3.0"
-    kabanero-che: "0.6.0"
-    events: "0.1.0"
-    collection-controller: "0.4.0"
-    admission-webhook: "0.4.0"
-- version: "0.3.2"
-  related-versions: 
-    cli-services: "0.3.0"
-    landing: "0.3.0"
-    kabanero-che: "0.6.0"
-    events: "0.1.0"
-    collection-controller: "0.4.0"
-    admission-webhook: "0.4.0"
-- version: "0.3.1"
-  related-versions: 
-    cli-services: "0.3.0"
-    landing: "0.3.0"
-    kabanero-che: "0.6.0"
-    events: "0.1.0"
-    collection-controller: "0.4.0"
-    admission-webhook: "0.4.0"
-- version: "0.3.0"
-  related-versions: 
-    cli-services: "0.3.0"
-    landing: "0.3.0"
-    kabanero-che: "0.6.0"
-    events: "0.1.0"
-    collection-controller: "0.4.0"
-    admission-webhook: "0.4.0"
+    collection-controller: "0.6.0-alpha.1"
+    stack-controller: "0.6.0-alpha.1"
+    admission-webhook: "0.6.0-alpha.1"
 
 related-software:
   landing:
-  - version: "0.5.0-rc.1"
+  - version: "0.5.0"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
       repository: "kabanero/landing"
-      tag: "0.5.0-rc.1"
-  - version: "0.4.0"
-    orchestrations: "orchestrations/landing/0.1"
-    identifiers:
-      repository: "kabanero/landing"
-      tag: "0.4.0"
-  - version: "0.4.0-rc.1"
-    orchestrations: "orchestrations/landing/0.1"
-    identifiers:
-      repository: "kabanero/landing"
-      tag: "0.4.0-rc.1"
-  - version: "0.3.0"
-    orchestrations: "orchestrations/landing/0.1"
-    identifiers:
-      repository: "kabanero/landing"
-      tag: "0.3.0"
+      tag: "0.5.0"
 
   cli-services: 
-  - version: "0.5.0-rc.1"
+  - version: "0.5.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.5.0-rc.1"
-  - version: "0.4.0"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-command-line-services"
-      tag: "0.4.0"
-  - version: "0.4.0-rc.1"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-command-line-services"
-      tag: "0.4.0-rc.1"
-  - version: "0.3.0"
-    orchestrations: "orchestrations/cli-services/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-command-line-services"
-      tag: "0.3.0"
+      tag: "0.5.0"
 
   kabanero-che:
   - version: "0.6.0"
@@ -131,25 +54,22 @@ related-software:
       tag: "0.1"
 
   collection-controller: 
-  - version: "0.5.0-rc.1"
+  - version: "0.6.0-alpha.1"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
       repository: "kabanero/kabanero-operator-collection-controller"
-      tag: "0.5.0-rc.1"
-  - version: "0.4.0"
-    orchestrations: "orchestrations/collection-controller/0.1"
+      tag: "0.6.0-alpha.1"
+
+  stack-controller: 
+  - version: "0.6.0-alpha.1"
+    orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
-      repository: "kabanero/kabanero-operator-collection-controller"
-      tag: "0.4.0"
+      repository: "kabanero/kabanero-operator-stack-controller"
+      tag: "0.6.0-alpha.1"
 
   admission-webhook:
-  - version: "0.5.0-rc.1"
+  - version: "0.6.0-alpha.1"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
       repository: "kabanero/kabanero-operator-admission-webhook"
-      tag: "0.5.0-rc.1"
-  - version: "0.4.0"
-    orchestrations: "orchestrations/admission-webhook/0.1"
-    identifiers:
-      repository: "kabanero/kabanero-operator-admission-webhook"
-      tag: "0.4.0"
+      tag: "0.6.0-alpha.1"

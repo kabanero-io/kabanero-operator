@@ -61,25 +61,9 @@ metadata:
   labels:
     kabanero.io/install: 11-subscription
 spec:
-  channel: kabanero-0.4
+  channel: kabanero-0.6
   installPlanApproval: Automatic
   name: servicemeshoperator
-  source: kabanero-catalog
-  sourceNamespace: openshift-marketplace
----
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: knative-eventing-operator
-  namespace: openshift-operators
-  labels:
-    kabanero.io/install: 12-subscription
-spec:
-  channel: kabanero-0.4
-  config:
-    resources: {}
-  installPlanApproval: Automatic
-  name: knative-eventing-operator
   source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
@@ -91,7 +75,7 @@ metadata:
   labels:
     kabanero.io/install: 12-subscription
 spec:
-  channel: kabanero-0.5
+  channel: kabanero-0.6
   installPlanApproval: Automatic
   name: serverless-operator
   source: kabanero-catalog
@@ -169,7 +153,7 @@ metadata:
   labels:
     kabanero.io/install: 14-subscription
 spec:
-  channel: release-0.5
+  channel: release-0.6
   installPlanApproval: Automatic
   name: kabanero-operator
   source: kabanero-catalog

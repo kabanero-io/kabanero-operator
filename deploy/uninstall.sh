@@ -98,27 +98,13 @@ oc delete serviceaccounts,deployments --selector=kabanero.io/component=kappnav -
 oc delete clusterroles,clusterrolebindings,crds --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 
-# Github Sources
-oc delete --all-namespaces=true githubsources.sources.eventing.knative.dev --all
-echo "Waiting for githubsources instances to be deleted...."
-LOOP_COUNT=0
-while [ `oc get githubsources.sources.eventing.knative.dev --all-namespaces | wc -l` -gt 0 ]
-do
-  sleep $SLEEP_LONG
-  LOOP_COUNT=`expr $LOOP_COUNT + 1`
-  if [ $LOOP_COUNT -gt 10 ] ; then
-    echo "Timed out waiting for githubsources.sources.eventing.knative.dev instances to be deleted"
-    exit 1
-  fi
-done
-oc delete -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
 # Delete the Role used by the collection controller to manipulate triggers
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Tekton Dashboard
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-openshift-tekton-dashboard-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/openshift-tekton-webhooks-extension-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
 
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
@@ -205,8 +191,6 @@ unsubscribe serverless-operator openshift-operators
 
 unsubscribe openshift-pipelines openshift-operators
 
-unsubscribe knative-eventing-operator openshift-operators
-
 unsubscribe appsody-operator-certified openshift-operators
 
 unsubscribe servicemeshoperator openshift-operators
@@ -227,7 +211,7 @@ oc delete -n openshift-marketplace catalogsource kabanero-catalog
 
 
 # Ensure CSV Cleanup in all namespaces in case OLM GC failed to delete Copies
-OPERATORS=(appsody-operator jaeger-operator kiali-operator knative-eventing-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator)
+OPERATORS=(appsody-operator jaeger-operator kiali-operator openshift-pipelines-operator serverless-operator servicemeshoperator elasticsearch-operator)
 for OPERATOR in "${OPERATORS[@]}"
 do
   CSV=$(oc --all-namespaces=true get csv --output=jsonpath='{range .items[*]}{"\n"}{@.metadata.name}{end}' | grep ${OPERATOR} | head -1)
@@ -251,3 +235,6 @@ do
   fi
 done
 
+
+# Delete tekton-pipelines namespace to clean up loose artifacts from dashboard that cause problems on reinstall
+oc delete namespace tekton-pipelines --ignore-not-found

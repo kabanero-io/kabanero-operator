@@ -15,7 +15,6 @@ import (
 	"github.com/kabanero-io/kabanero-operator/pkg/controller"
 
 	knsapis "github.com/knative/serving-operator/pkg/apis"
-	kneapis "github.com/openshift-knative/knative-eventing-operator/pkg/apis"
 	consolev1 "github.com/openshift/api/console/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -139,11 +138,6 @@ func main() {
 	}
 
 	if err := routev1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := kneapis.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

@@ -6,11 +6,12 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"net/url"
 	"regexp"
 	"strings"
 
 	"github.com/go-logr/logr"
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
@@ -21,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl client.Client, reqLogger logr.Logger) error {
+func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 	// Create the AES encryption key secret, if we don't already have one
 	err := createEncryptionKeySecret(k, cl, reqLogger)
 	if err != nil {
@@ -83,7 +84,16 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 
 	// Export the github API URL, if it's set.  This is used by the security portion of the microservice.
 	if len(k.Spec.Github.ApiUrl) > 0 {
-		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", k.Spec.Github.ApiUrl))
+		apiUrlString := k.Spec.Github.ApiUrl
+		apiUrl, err := url.Parse(apiUrlString)
+
+		if err != nil {
+			reqLogger.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
+			apiUrl, _ = url.Parse("https://api.github.com")
+		} else if len(apiUrl.Scheme) == 0 {
+			apiUrl.Scheme = "https"
+		}
+		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrl.String()))
 	}
 
 	// Set JwtExpiration for login duration/timeout
@@ -124,7 +134,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha1.Kabanero, cl 
 }
 
 // Tries to see if the CLI route has been assigned a hostname.
-func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger, c client.Client) (bool, error) {
+func getCliRouteStatus(k *kabanerov1alpha2.Kabanero, reqLogger logr.Logger, c client.Client) (bool, error) {
 
 	// Check that the route is accepted
 	cliRoute := &routev1.Route{}
@@ -171,7 +181,7 @@ func getCliRouteStatus(k *kabanerov1alpha1.Kabanero, reqLogger logr.Logger, c cl
 }
 
 // Deletes the role binding config map which may have existed in a prior version
-func destroyRoleBindingConfigMap(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+func destroyRoleBindingConfigMap(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 
 	// Check if the ConfigMap resource already exists.
 	cmInstance := &corev1.ConfigMap{}
@@ -196,7 +206,7 @@ func destroyRoleBindingConfigMap(k *kabanerov1alpha1.Kabanero, c client.Client, 
 }
 
 // Creates the secret containing the AES encryption key used by the CLI.
-func createEncryptionKeySecret(k *kabanerov1alpha1.Kabanero, c client.Client, reqLogger logr.Logger) error {
+func createEncryptionKeySecret(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 	secretName := "kabanero-cli-aes-encryption-key-secret"
 
 	// Check if the Secret already exists.

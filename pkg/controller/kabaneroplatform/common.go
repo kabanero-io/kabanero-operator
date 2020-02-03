@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 )
 
@@ -74,7 +74,7 @@ func renderOrchestration(r io.Reader, context map[string]interface{}) (string, e
 }
 
 // Resolve the SoftwareRevision object for a named software component.
-func resolveSoftwareRevision(k *kabanerov1alpha1.Kabanero, softwareComponent string, softwareVersionOverride string) (versioning.SoftwareRevision, error) {
+func resolveSoftwareRevision(k *kabanerov1alpha2.Kabanero, softwareComponent string, softwareVersionOverride string) (versioning.SoftwareRevision, error) {
 	v, kabaneroVersion := resolveKabaneroVersion(k)
 
 	kabaneroRevision := v.KabaneroRevision(kabaneroVersion)
@@ -102,7 +102,7 @@ func resolveSoftwareRevision(k *kabanerov1alpha1.Kabanero, softwareComponent str
 }
 
 // Resolves the version of the Kabanero instance.
-func resolveKabaneroVersion(k *kabanerov1alpha1.Kabanero) (versioning.VersionDocument, string) {
+func resolveKabaneroVersion(k *kabanerov1alpha2.Kabanero) (versioning.VersionDocument, string) {
 	v := versioning.Data
 	kabaneroVersion := k.Spec.Version
 	if kabaneroVersion == "" {

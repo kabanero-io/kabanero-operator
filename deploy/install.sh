@@ -2,7 +2,7 @@
 
 set -Eeox pipefail
 
-RELEASE="${RELEASE:-0.5.0}"
+RELEASE="${RELEASE:-0.6.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
 SLEEP_LONG="${SLEEP_LONG:-5}"
@@ -49,7 +49,7 @@ fi
 # Check to see if we're upgrading, and if so, that we're at N-1 or N.
 if [ `oc get subscription kabanero-operator -n kabanero --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then
 		CSV=$(oc get subscription kabanero-operator -n kabanero --output=jsonpath={.status.installedCSV})
-    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[45]\..* ]]; then
+    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[56]\..* ]]; then
         printf "Cannot upgrade kabanero-operator CSV version $CSV to $RELEASE.  Upgrade is supported from the previous minor release."
         exit 1
     fi
@@ -81,6 +81,14 @@ checksub () {
 	until [ "$PHASE" == "Complete" ]
 	do
 		PHASE=$(oc get installplan $INSTALL_PLAN -n $2 --output=jsonpath={.status.phase})
+    if [ "$PHASE" == "Failed" ]; then
+      set +x
+      sleep 3
+      echo "InstallPlan $INSTALL_PLAN for subscription $1 failed."
+      echo "To investigate the reason of the InstallPlan failure run:"
+      echo "oc describe installplan $INSTALL_PLAN -n $2"
+      exit 1
+    fi
 		sleep $SLEEP_SHORT
 	done
 	
@@ -97,6 +105,14 @@ checksub () {
 	until [ "$PHASE" == "Succeeded" ]
 	do
 		PHASE=$(oc get clusterserviceversion $CSV -n $2 --output=jsonpath={.status.phase})
+    if [ "$PHASE" == "Failed" ]; then
+      set +x
+      sleep 3
+      echo "ClusterServiceVersion $CSV for subscription $1 failed."
+      echo "To investigate the reason of the ClusterServiceVersion failure run:"
+      echo "oc describe clusterserviceversion $CSV -n $2"
+      exit 1
+    fi
 		sleep $SLEEP_SHORT
 	done
 }
@@ -107,30 +123,52 @@ checksub () {
 # serverless-operator.v1.2.0+ manages smmr, clean up
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=21-cr-servicemeshmemberrole || true
 
+# ServiceMeshControlPlane
+# serverless-operator.v1.3.0+ manages smmr & smcp, cleanup
+oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=20-cr-servicemeshcontrolplane || true
+
+
 # CatalogSource
 # Delete previous CatalogSource to ensure visibility of updated catalog CSVs
 oc delete -f $KABANERO_SUBSCRIPTIONS_YAML  --ignore-not-found --selector kabanero.io/install=00-catalogsource
+sleep $SLEEP_LONG
 
 
 ### Install
 
 ### CatalogSource
 
+# Install Kabanero CatalogSource
+oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+sleep $SLEEP_LONG
+
+
+# Check the kabanero-catalog CatalogSource pod is Running
+unset STATUSALL
+until [ "$STATUSALL" == "Running" ]
+do
+  echo "Waiting for CatalogSource kabanero-catalog pod to be ready."
+  STATUSES=$(oc -n openshift-marketplace get pod -l olm.catalogSource=kabanero-catalog --output=jsonpath={.items[*].status.phase})
+  for STATUS in ${STATUSES[@]}
+  do
+    if [ "$STATUS" != "Running" ]; then
+      STATUSALL=$STATUS
+      break
+    fi
+    STATUSALL=$STATUS
+  done
+  sleep $SLEEP_SHORT
+done
+
 # Stop the catalog-operator pod to avoid ready state bug
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=0
 sleep $SLEEP_LONG
-
-# Install Kabanero CatalogSource
-oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
 
 # Restart the catalog-operator pod to avoid ready state bug
 sleep $SLEEP_LONG
 oc -n openshift-operator-lifecycle-manager scale deploy catalog-operator --replicas=1
 
-
-
-
-# Check the CatalogSource is ready
+# Check the kabanero-catalog CatalogSource is ready
 unset LASTOBSERVEDSTATE
 until [ "$LASTOBSERVEDSTATE" == "READY" ]
 do
@@ -138,6 +176,7 @@ do
 	LASTOBSERVEDSTATE=$(oc get catalogsource kabanero-catalog -n openshift-marketplace --output=jsonpath={.status.connectionState.lastObservedState})
 	sleep $SLEEP_SHORT
 done
+
 
 ### Subscriptions
 
@@ -155,11 +194,10 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=11-subsc
 # Verify Subscriptions
 checksub servicemeshoperator openshift-operators
 
-# Install 12-subscription (eventing, serving)
+# Install 12-subscription (serving)
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=12-subscription
 
 # Verify Subscriptions
-checksub knative-eventing-operator openshift-operators
 checksub serverless-operator openshift-operators
 
 # Install 13-subscription (pipelines, appsody)
@@ -179,21 +217,6 @@ checksub kabanero-operator kabanero
 
 ### CustomResources
 
-# ServiceMeshControlplane
-oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=20-cr-servicemeshcontrolplane
-
-# Check the ServiceMeshControlPlane is ready, last condition should reflect readiness
-unset STATUS
-unset TYPE
-until [ "$STATUS" == "True" ] && [ "$TYPE" == "Ready" ]
-do
-	echo "Waiting for ServiceMeshControlPlane basic-install to be ready."
-	TYPE=$(oc get servicemeshcontrolplane -n istio-system basic-install --output=jsonpath={.status.conditions[-1:].type})
-	STATUS=$(oc get servicemeshcontrolplane -n istio-system basic-install --output=jsonpath={.status.conditions[-1:].status})
-	sleep $SLEEP_SHORT
-done
-
-
 # Serving
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=22-cr-knative-serving
 
@@ -208,8 +231,6 @@ do
 	sleep $SLEEP_SHORT
 done
 
-# Github Sources
-oc apply -f https://github.com/knative/eventing-contrib/releases/download/v0.9.0/github.yaml
 
 # Need to wait for knative serving CRDs before installing tekton webhook extension
 until oc get crd services.serving.knative.dev 
@@ -223,8 +244,8 @@ oc new-project tekton-pipelines || true
 
 openshift_master_default_subdomain=$(oc get ingresses.config.openshift.io cluster --output=jsonpath={.spec.domain})
 
-curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.3.0/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
-oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-openshift-tekton-dashboard-release.yaml
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.4.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
+oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
 
 # Network policy for kabanero and tekton pipelines namespaces
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-network-policy

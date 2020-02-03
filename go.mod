@@ -9,6 +9,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.3
+	github.com/google/go-cmp v0.3.1
 	github.com/google/go-containerregistry v0.0.0-20191218175032-34fb8ff33bed // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/kabanero-io/manifestival v0.0.0-20191230200607-194733cd27d9
