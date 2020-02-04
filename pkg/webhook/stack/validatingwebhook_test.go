@@ -229,3 +229,25 @@ func TestValidatingWebhook9(t *testing.T) {
 		t.Fatal("Validation failed. An error was expected: ", err)
 	}
 }
+
+
+// Spec.Versions not semver
+func TestValidatingWebhook10(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Version = "1.0"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}

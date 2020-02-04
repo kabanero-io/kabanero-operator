@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	
+	"github.com/blang/semver"
 )
 
 // BuildValidatingWebhook builds the webhook for the manager to register
@@ -68,6 +70,13 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 	
 		if len(version.Version) == 0 {
 			reason = fmt.Sprintf("Stack %v must set spec.Versions[].Version. stack: %v", stack.Spec.Name, stack)
+			err = fmt.Errorf(reason)
+			return false, reason, err
+		}
+
+		_, err := semver.Parse(version.Version)
+		if err != nil {
+			reason = fmt.Sprintf("Stack %v %v spec.Versions[].Version must be semver. %v. stack: %v", stack.Spec.Name, version.Version, err, stack)
 			err = fmt.Errorf(reason)
 			return false, reason, err
 		}
