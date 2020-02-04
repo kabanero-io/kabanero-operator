@@ -22,8 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -272,12 +272,12 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	k.Status.Che = &kabanerov1alpha2.CheStatus{}
 
 	k.Status.Che.Ready = "False"
-	k.Status.Che.ErrorMessage = ""
+	k.Status.Che.Message = ""
 
 	// Retrieve the version of the Che operator.
 	cheOperatorVersion, err := getCheOperatorVersion(k, c)
 	if err != nil {
-		k.Status.Che.ErrorMessage = "Unable to retrieve the version of installed Che operator. Error: " + err.Error()
+		k.Status.Che.Message = "Unable to retrieve the version of installed Che operator. Error: " + err.Error()
 		return false, err
 	}
 
@@ -286,20 +286,20 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	// Retrieve the kabanero Che version being used.
 	rev, err := resolveSoftwareRevision(k, versionSoftwareNameKabaneroChe, k.Spec.Che.KabaneroChe.Version)
 	if err != nil {
-		k.Status.Che.ErrorMessage = "Unable to retrieve the Kabanero Che version. Error: " + err.Error()
+		k.Status.Che.Message = "Unable to retrieve the Kabanero Che version. Error: " + err.Error()
 		return false, err
 	}
 
 	image, err := imageUriWithOverrides(k.Spec.Che.KabaneroChe.Repository, k.Spec.Che.KabaneroChe.Tag, k.Spec.Che.KabaneroChe.Image, rev)
 	if err != nil {
-		k.Status.Che.ErrorMessage = "Unable to establish the Kabanero Che image name. Error: " + err.Error()
+		k.Status.Che.Message = "Unable to establish the Kabanero Che image name. Error: " + err.Error()
 		return false, err
 	}
 
 	imageParts := strings.Split(image, ":")
 	if len(imageParts) != 2 {
 		err = fmt.Errorf("Image %v is not valid", image)
-		k.Status.Che.ErrorMessage = err.Error()
+		k.Status.Che.Message = err.Error()
 		return false, err
 	}
 
@@ -313,7 +313,7 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 
 	if err != nil {
 		custErr := fmt.Errorf("Unable to retrieve the Che instance object. Error: %v", err)
-		k.Status.Che.ErrorMessage = custErr.Error()
+		k.Status.Che.Message = custErr.Error()
 		return false, custErr
 	}
 
@@ -321,13 +321,13 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	cheClusterRunning, found, err := unstructured.NestedString(cheInst.Object, "status", "cheClusterRunning")
 	if err != nil {
 		custErr := fmt.Errorf("Unable to retrieve status.cheClusterRunning from the Che instance, Error: %v", err)
-		k.Status.Che.ErrorMessage = custErr.Error()
+		k.Status.Che.Message = custErr.Error()
 		return false, custErr
 	}
 
 	if !found {
 		custErr := fmt.Errorf("The value of Che instance entry status.cheClusterRunning was not found")
-		k.Status.Che.ErrorMessage = custErr.Error()
+		k.Status.Che.Message = custErr.Error()
 		return false, custErr
 	}
 
@@ -336,7 +336,7 @@ func getCheStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		ready = true
 		k.Status.Che.Ready = "True"
 	} else {
-		k.Status.Che.ErrorMessage = cheClusterRunning
+		k.Status.Che.Message = cheClusterRunning
 	}
 
 	return ready, nil

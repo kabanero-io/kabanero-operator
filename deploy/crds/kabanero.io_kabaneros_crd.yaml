@@ -602,7 +602,7 @@ spec:
               admissionControllerWebhook:
                 description: Admission webhook instance status
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -610,7 +610,7 @@ spec:
               appsody:
                 description: Appsody instance readiness status.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -627,8 +627,6 @@ spec:
                       version:
                         type: string
                     type: object
-                  errorMessage:
-                    type: string
                   kabaneroChe:
                     description: KabaneroCheStatus defines the observed status details
                       of Kabanero Che.
@@ -647,25 +645,27 @@ spec:
                       cheWorkspaceClusterRole:
                         type: string
                     type: object
+                  message:
+                    type: string
                   ready:
                     type: string
                 type: object
               cli:
                 description: CLI readiness status.
                 properties:
-                  errorMessage:
-                    type: string
                   hostnames:
                     items:
                       type: string
                     type: array
+                  message:
+                    type: string
                   ready:
                     type: string
                 type: object
               collectionController:
                 description: Kabanero collection controller readiness status.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -675,12 +675,12 @@ spec:
               events:
                 description: Events instance status
                 properties:
-                  errorMessage:
-                    type: string
                   hostnames:
                     items:
                       type: string
                     type: array
+                  message:
+                    type: string
                   ready:
                     type: string
                 type: object
@@ -688,7 +688,7 @@ spec:
                 description: Kabanero operator instance readiness status. The status
                   is directly correlated to the availability of resources dependencies.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -702,7 +702,7 @@ spec:
                     items:
                       type: string
                     type: array
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -714,7 +714,7 @@ spec:
               landing:
                 description: Kabanero Landing page readiness status.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -724,19 +724,19 @@ spec:
               serverless:
                 description: OpenShift serverless operator status.
                 properties:
-                  errorMessage:
-                    type: string
                   knativeServing:
                     description: KnativeServingStatus defines the observed status
                       details of Knative Serving.
                     properties:
-                      errorMessage:
+                      message:
                         type: string
                       ready:
                         type: string
                       version:
                         type: string
                     type: object
+                  message:
+                    type: string
                   ready:
                     type: string
                   version:
@@ -747,7 +747,7 @@ spec:
                 properties:
                   configured:
                     type: string
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -755,7 +755,7 @@ spec:
               stackController:
                 description: Kabanero stack controller readiness status.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string
@@ -765,7 +765,7 @@ spec:
               tekton:
                 description: Tekton instance readiness status.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   ready:
                     type: string

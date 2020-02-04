@@ -226,8 +226,8 @@ unset TYPE
 until [ "$STATUS" == "True" ] && [ "$TYPE" == "Ready" ]
 do
 	echo "Waiting for KnativeServing knative-serving to be ready."
-	TYPE=$(oc get knativeserving knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].type})
-	STATUS=$(oc get knativeserving knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].status})
+	TYPE=$(oc get knativeserving.serving.knative.dev knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].type})
+	STATUS=$(oc get knativeserving.serving.knative.dev knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].status})
 	sleep $SLEEP_SHORT
 done
 

@@ -1,0 +1,114 @@
+package stack
+
+// The controller-runtime example webhook (v0.10) was used to build this
+// webhook implementation.
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strings"
+
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+// BuildValidatingWebhook builds the webhook for the manager to register
+func BuildValidatingWebhook(mgr *manager.Manager) *admission.Webhook {
+	return &admission.Webhook{Handler: &stackValidator{}}
+}
+
+// stackValidator validates Stacks
+type stackValidator struct {
+	client  client.Client
+	decoder *admission.Decoder
+}
+
+// Implement admission.Handler so the controller can handle admission request.
+// This no-op assignment ensures that the struct implements the interface.
+var _ admission.Handler = &stackValidator{}
+
+// stackValidator admits a stack if it passes validity checks
+func (v *stackValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	stack := &kabanerov1alpha2.Stack{}
+
+	err := v.decoder.Decode(req, stack)
+	if err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	allowed, reason, err := v.validateStackFn(ctx, stack)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	return admission.ValidationResponse(allowed, reason)
+}
+
+func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1alpha2.Stack) (bool, string, error) {
+
+	reason := fmt.Sprintf("")
+	err := fmt.Errorf(reason)
+
+	if len(stack.Spec.Name) == 0 {
+		reason = fmt.Sprintf("Stack Spec.Name is not set. stack: %v", stack)
+		err = fmt.Errorf(reason)
+		return false, reason, err
+	}
+	
+	if len(stack.Spec.Versions) == 0 {
+		reason = fmt.Sprintf("Stack %v Spec.Versions[] list is empty. stack: %v", stack.Spec.Name, stack)
+		err = fmt.Errorf(reason)
+		return false, reason, err
+	}
+	
+	for _, version := range stack.Spec.Versions {
+	
+		if len(version.Version) == 0 {
+			reason = fmt.Sprintf("Stack %v must set spec.Versions[].Version. stack: %v", stack.Spec.Name, stack)
+			err = fmt.Errorf(reason)
+			return false, reason, err
+		}
+	
+		if (len(version.DesiredState) != 0) && !((strings.ToLower(version.DesiredState) == "active") || (strings.ToLower(version.DesiredState) == "inactive")) {
+			reason = fmt.Sprintf("Stack %v %v Spec.Versions[].DesiredState may only be set to active or inactive. stack: %v", stack.Spec.Name, version.Version, stack)
+			err = fmt.Errorf(reason)
+			return false, reason, err
+		}
+		
+		if len(version.Images) == 0 {
+			reason = fmt.Sprintf("Stack %v %v must contain at least one entry for spec.Versions[].Images. stack: %v", stack.Spec.Name, version.Version, stack)
+			err = fmt.Errorf(reason)
+			return false, reason, err
+		}
+	
+		for _, pipeline := range version.Pipelines {
+			if len(pipeline.Https.Url) == 0 {
+				reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Https.Url is not set. stack: %v", stack.Spec.Name, version.Version, stack)
+				err = fmt.Errorf(reason)
+				return false, reason, err
+			}
+			if len(pipeline.Sha256) == 0 {
+				reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Sha256 is not set. stack: %v", stack.Spec.Name, version.Version, stack)
+				err = fmt.Errorf(reason)
+				return false, reason, err
+			}
+		}
+	}
+
+	return true, reason, nil
+}
+
+// InjectClient injects the client.
+func (v *stackValidator) InjectClient(c client.Client) error {
+	v.client = c
+	return nil
+}
+
+// InjectDecoder injects the decoder.
+func (v *stackValidator) InjectDecoder(d *admission.Decoder) error {
+	v.decoder = d
+	return nil
+}

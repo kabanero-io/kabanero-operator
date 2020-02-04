@@ -30,7 +30,7 @@ func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger l
 	if err != nil {
 		message := "Unable to retrieve the version of installed Appsody operator"
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		k.Status.Appsody.Message = message + ". Error: " + err.Error()
 		reqLogger.Error(err, message)
 		return false, err
 	}
@@ -52,7 +52,7 @@ func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger l
 	if err != nil {
 		message := "Unable to retrieve Appsody deployment object"
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		k.Status.Appsody.Message = message + ". Error: " + err.Error()
 		reqLogger.Error(err, message+". Name: "+appsodyDeploymentName+". Namespace: "+appsodyDeploymentNamespace)
 		return false, err
 	}
@@ -62,14 +62,14 @@ func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger l
 	if err != nil {
 		message := "Unable to retrieve Appsody deployment status.condition field"
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		k.Status.Appsody.Message = message + ". Error: " + err.Error()
 		reqLogger.Error(err, message)
 		return false, err
 	}
 	if !found {
 		message := "The Appsody deployment entry of status.condition was not found."
 		err = fmt.Errorf(message)
-		k.Status.Appsody.ErrorMessage = err.Error()
+		k.Status.Appsody.Message = err.Error()
 		reqLogger.Error(err, "")
 		return false, err
 	}
@@ -90,7 +90,7 @@ func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger l
 			if statusValue == "True" {
 				ready = true
 				k.Status.Appsody.Ready = "True"
-				k.Status.Appsody.ErrorMessage = ""
+				k.Status.Appsody.Message = ""
 			} else {
 				k.Status.Appsody.Ready = "False"
 				message, err := getNestedString(condition, "message")
@@ -98,7 +98,7 @@ func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger l
 					break
 				}
 
-				k.Status.Appsody.ErrorMessage = message
+				k.Status.Appsody.Message = message
 			}
 
 			break
@@ -108,7 +108,7 @@ func getAppsodyStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger l
 	if err != nil {
 		message := "Unable to retrieve Appsody operator deployment status"
 		k.Status.Appsody.Ready = "False"
-		k.Status.Appsody.ErrorMessage = message + ". Error: " + err.Error()
+		k.Status.Appsody.Message = message + ". Error: " + err.Error()
 		reqLogger.Error(err, message)
 		return false, err
 	}

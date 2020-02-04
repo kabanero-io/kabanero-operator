@@ -154,14 +154,14 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 	if k.Spec.Sso.Enable == false {
 		k.Status.Sso.Configured = sso_false
 		k.Status.Sso.Ready = sso_false
-		k.Status.Sso.ErrorMessage = ""
+		k.Status.Sso.Message = ""
 		return true, nil
 	}
 
 	// Determine if the SSO components are available.
 	k.Status.Sso.Configured = sso_true
 	k.Status.Sso.Ready = sso_false
-	k.Status.Sso.ErrorMessage = ""
+	k.Status.Sso.Message = ""
 
 	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
 	err := c.Get(context.Background(), types.NamespacedName{
@@ -169,7 +169,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		Namespace: k.ObjectMeta.Namespace}, ssoDeploymentConfigInstance)
 
 	if err != nil {
-		k.Status.Sso.ErrorMessage = err.Error()
+		k.Status.Sso.Message = err.Error()
 		return false, err
 	}
 
@@ -178,7 +178,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		if condition.Type == appsv1.DeploymentAvailable {
 			if condition.Status != corev1.ConditionTrue {
 				err = fmt.Errorf("The SSO DeploymentConfig reported that it is not available: %v", condition.Message)
-				k.Status.Sso.ErrorMessage = err.Error()
+				k.Status.Sso.Message = err.Error()
 				return false, err
 			}
 			foundAvailableCondition = true
@@ -187,7 +187,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 
 	if foundAvailableCondition == false {
 		err = errors.New("The SSO DeploymentConfig did not contain an 'Available' condition")
-		k.Status.Sso.ErrorMessage = err.Error()
+		k.Status.Sso.Message = err.Error()
 		return false, err
 	}
 
@@ -198,7 +198,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		Namespace: k.ObjectMeta.Namespace}, postgreDeploymentConfigInstance)
 
 	if err != nil {
-		k.Status.Sso.ErrorMessage = err.Error()
+		k.Status.Sso.Message = err.Error()
 		return false, err
 	}
 
@@ -207,7 +207,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		if condition.Type == appsv1.DeploymentAvailable {
 			if condition.Status != corev1.ConditionTrue {
 				err = fmt.Errorf("The SSO-Postgre DeploymentConfig reported that it is not available: %v", condition.Message)
-				k.Status.Sso.ErrorMessage = err.Error()
+				k.Status.Sso.Message = err.Error()
 				return false, err
 			}
 			foundAvailableCondition = true
@@ -216,7 +216,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 
 	if foundAvailableCondition == false {
 		err = errors.New("The SSO-Postgre DeploymentConfig did not contain an 'Available' condition")
-		k.Status.Sso.ErrorMessage = err.Error()
+		k.Status.Sso.Message = err.Error()
 		return false, err
 	}
 

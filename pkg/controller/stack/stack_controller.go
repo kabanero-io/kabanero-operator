@@ -226,40 +226,8 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 
 	r_log = r_log.WithValues("Stack.Name", stackName)
 
-	var matchingStacks []resolvedStack
-	
-	// 388 - Copy the kabanerov1alpha2.Stack info needed into local Stack singleton
-	for _, version := range c.Spec.Versions {
-		var stack Stack
-		stack.Name = c.Spec.Name
-		stack.Id = c.Spec.Name
-		stack.Version = version.Version
-		
-		var pipelines []Pipelines 
-		for _, kpipeline := range version.Pipelines {
-			var pipeline Pipelines
-			pipeline.Id = kpipeline.Id
-			pipeline.Sha256 = kpipeline.Sha256
-			pipeline.Url = kpipeline.Https.Url
-			pipelines = append(pipelines, pipeline)
-		}
-		stack.Pipelines = pipelines
-		
-		var images []Images
-		for _, kimage := range version.Images {
-			var image Images
-			image.Id = kimage.Id
-			image.Image = kimage.Image
-			images = append(images, image)
-		}
-		stack.Images = images
-		
-		matchingStacks = append(matchingStacks, resolvedStack{stack: stack, repositoryURL: ""})
-	}
-
-
 	// Process the versions array and activate (or deactivate) the desired versions.
-	err := reconcileActiveVersions(c, matchingStacks, r.client)
+	err := reconcileActiveVersions(c, r.client)
 	if err != nil {
 		// TODO - what is useful to print?
 		log.Error(err, fmt.Sprintf("Error during reconcileActiveVersions"))
@@ -301,31 +269,26 @@ func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string
 	return defaultNamespace
 }
 
-func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, stacks []resolvedStack, c client.Client) error {
+func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Client) error {
 
 	// Gather the known stack asset (*-tasks, *-pipeline) substitution data.
 	renderingContext := make(map[string]interface{})
-	if len(stacks) > 0 {
-		// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
-		// Appsody stack creation namimg constrains the length to 68 characters:
-		// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
-		// and cannot end in a dash."
-		cID := stacks[0].stack.Id
-		if len(cID) > 68 {
-			return fmt.Errorf("Failed to reconcile stack because an invalid stack id of %v was found. The stack id must must be 68 characters or less. For more details see the Appsody stack create command documentation", cID)
-		}
-
-		if !cIDRegex.MatchString(cID) {
-			return fmt.Errorf("Failed to reconcile stack because an invalid stack id of %v was found. The stack id value must follow stack creation name rules. For more details see the Appsody stack create command documentation", cID)
-		}
-
-		renderingContext["CollectionId"] = cID
-		renderingContext["StackId"] = cID
-
-		// From a stack point of view, the (stack) name is a "title or short name for the stack (used on the website)"
-		// No need to check for restrictions.
-		renderingContext["StackName"] = stacks[0].stack.Name
+	
+	// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
+	// Appsody stack creation namimg constrains the length to 68 characters:
+	// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
+	// and cannot end in a dash."
+	cID := stackResource.Spec.Name
+	if len(cID) > 68 {
+		return fmt.Errorf("Failed to reconcile stack because an invalid stack id of %v was found. The stack id must must be 68 characters or less. For more details see the Appsody stack create command documentation", cID)
 	}
+
+	if !cIDRegex.MatchString(cID) {
+		return fmt.Errorf("Failed to reconcile stack because an invalid stack id of %v was found. The stack id value must follow stack creation name rules. For more details see the Appsody stack create command documentation", cID)
+	}
+
+	renderingContext["CollectionId"] = cID
+	renderingContext["StackId"] = cID
 
 	ownerIsController := false
 	assetOwner := metav1.OwnerReference{
@@ -365,33 +328,12 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, stacks []res
 
 	for _, curSpec := range stackResource.Spec.Versions {
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
-			stack := getStackForSpecVersion(curSpec, stacks)
-			if stack == nil {
-				// This version of the stack was not found in the stack hub.  See if it's currently active.
-				// If it is, we should continue to use what is active.
-				//activeMatch := false
-				for _, curStatus := range stackResource.Status.Versions {
-					if curStatus.Version == curSpec.Version {
-						//activeMatch = true
-						for _, pipeline := range curStatus.Pipelines {
-							cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.Version}
-							if assetsToDecrement[cur] == true {
-								delete(assetsToDecrement, cur)
-							} else {
-								assetsToIncrement[cur] = true
-							}
-						}
-						break
-					}
-				}
-			} else {
-				for _, pipeline := range stack.stack.Pipelines {
-					cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Sha256}, version: curSpec.Version}
-					if assetsToDecrement[cur] == true {
-						delete(assetsToDecrement, cur)
-					} else {
-						assetsToIncrement[cur] = true
-					}
+			for _, pipeline := range curSpec.Pipelines {
+				cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Https.Url, digest: pipeline.Sha256}, version: curSpec.Version}
+				if assetsToDecrement[cur] == true {
+					delete(assetsToDecrement, cur)
+				} else {
+					assetsToIncrement[cur] = true
 				}
 			}
 		}
@@ -590,67 +532,26 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, stacks []res
 				newStackVersionStatus.StatusMessage = "An invalid desiredState value of " + curSpec.DesiredState + " was specified. The stack is activated by default."
 			}
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive
-			stack := getStackForSpecVersion(curSpec, stacks)
-			if stack != nil {
-				for _, pipeline := range stack.stack.Pipelines {
-					key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Sha256}
-					value := assetUseMap[key]
-					if value == nil {
-						// TODO: ???
-					} else {
-						newStatus := kabanerov1alpha2.PipelineStatus{}
-						value.DeepCopyInto(&newStatus)
-						newStatus.Name = pipeline.Id // This may vary by stack version
-						newStackVersionStatus.Pipelines = append(newStackVersionStatus.Pipelines, newStatus)
-						// If we had a problem loading the pipeline manifests, say so.
-						if value.manifestError != nil {
-							newStackVersionStatus.StatusMessage = value.manifestError.Error()
-						}
+			
+			for _, pipeline := range curSpec.Pipelines {
+				key := pipelineUseMapKey{url: pipeline.Https.Url, digest: pipeline.Sha256}
+				value := assetUseMap[key]
+				if value == nil {
+					// TODO: ???
+				} else {
+					newStatus := kabanerov1alpha2.PipelineStatus{}
+					value.DeepCopyInto(&newStatus)
+					newStatus.Name = pipeline.Id // This may vary by stack version
+					newStackVersionStatus.Pipelines = append(newStackVersionStatus.Pipelines, newStatus)
+					// If we had a problem loading the pipeline manifests, say so.
+					if value.manifestError != nil {
+						newStackVersionStatus.StatusMessage = value.manifestError.Error()
 					}
-				}
-
-				// Update the status of the Stack object to reflect the images used
-				for _, image := range stack.stack.Images {
-					newStackVersionStatus.Images = append(newStackVersionStatus.Images,
-						kabanerov1alpha2.Image{Id: image.Id, Image: image.Image})
-				}
-			} else {
-				// Stack was not available, need to get pipeline information from previous status.
-				foundPrevStatus := false
-				for _, curStatus := range stackResource.Status.Versions {
-					if curStatus.Version == curSpec.Version {
-						foundPrevStatus = true
-						for _, pipeline := range curStatus.Pipelines {
-							key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}
-							value := assetUseMap[key]
-							if value == nil {
-								// TODO: ???
-							} else {
-								newStatus := kabanerov1alpha2.PipelineStatus{}
-								value.DeepCopyInto(&newStatus)
-								newStatus.Name = pipeline.Name
-								newStackVersionStatus.Pipelines = append(newStackVersionStatus.Pipelines, newStatus)
-								// If we had a problem loading the pipeline manifests, say so.
-								if value.manifestError != nil {
-									newStackVersionStatus.StatusMessage = value.manifestError.Error()
-								}
-							}
-						}
-						newStackVersionStatus.Status = curStatus.Status
-						newStackVersionStatus.Images = curStatus.Images
-					}
-				}
-
-				// If there was no previous status, then the stack is inactive.
-				if foundPrevStatus == false {
-					newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateInactive
-				}
-
-				// Tell the user that the stack was not in the hub, if no other errors
-				if newStackVersionStatus.StatusMessage == "" {
-					newStackVersionStatus.StatusMessage = fmt.Sprintf("The requested version of the stack (%v) is not available", curSpec.Version)
 				}
 			}
+			
+			// Update the status of the Stack object to reflect the images used
+			newStackVersionStatus.Images = curSpec.Images
 		} else {
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateInactive
 			newStackVersionStatus.StatusMessage = "The stack has been deactivated."

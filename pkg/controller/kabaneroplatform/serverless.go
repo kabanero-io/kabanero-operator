@@ -30,7 +30,7 @@ func getServerlessStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogge
 	if err != nil {
 		message := "Unable to retrieve the name of the installed CSV from the serverless subscription"
 		k.Status.Serverless.Ready = "False"
-		k.Status.Serverless.ErrorMessage = message + ". Error: " + err.Error()
+		k.Status.Serverless.Message = message + ". Error: " + err.Error()
 		reqLogger.Error(err, message)
 		return false, err
 	}
@@ -40,7 +40,7 @@ func getServerlessStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogge
 	if err != nil {
 		message := "Unable to retrieve the version of installed serverless CSV with the name of " + installedCSVName
 		k.Status.Serverless.Ready = "False"
-		k.Status.Serverless.ErrorMessage = message + ". Error: " + err.Error()
+		k.Status.Serverless.Message = message + ". Error: " + err.Error()
 		reqLogger.Error(err, message)
 		return false, err
 	}
@@ -56,7 +56,7 @@ func getServerlessStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogge
 	}
 
 	k.Status.Serverless.Ready = "True"
-	k.Status.Serverless.ErrorMessage = ""
+	k.Status.Serverless.Message = ""
 
 	return ready, err
 }
@@ -71,8 +71,8 @@ func getInstalledCSVName(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogge
 	})
 
 	listOptions := []client.ListOption{client.InNamespace(serverlessSubscriptionNamespace)}
-	
-  err := c.List(context.TODO(), sList, listOptions...)
+
+	err := c.List(context.TODO(), sList, listOptions...)
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +133,7 @@ func getServerlessCSVVersion(k *kabanerov1alpha2.Kabanero, c client.Client, csvN
 
 // Retrieves the knative serving instance status.
 func getKnativeServingStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) (bool, error) {
-	k.Status.Serverless.KnativeServing.ErrorMessage = ""
+	k.Status.Serverless.KnativeServing.Message = ""
 	k.Status.Serverless.KnativeServing.Ready = "False"
 
 	// Hack get unstructured and then feed it into the knative-serving object as JSON.
@@ -154,18 +154,18 @@ func getKnativeServingStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqL
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			k.Status.Serverless.KnativeServing.ErrorMessage = "Knative serving instance with the name of " + knsInstName + " under the namespace of " + knsInstNamespace + " could not be found."
+			k.Status.Serverless.KnativeServing.Message = "Knative serving instance with the name of " + knsInstName + " under the namespace of " + knsInstNamespace + " could not be found."
 		} else {
-			k.Status.Serverless.KnativeServing.ErrorMessage = "Error retrieving KnativeServing instance: " + err.Error()
+			k.Status.Serverless.KnativeServing.Message = "Error retrieving KnativeServing instance: " + err.Error()
 		}
 
-		reqLogger.Error(err, k.Status.Serverless.KnativeServing.ErrorMessage)
+		reqLogger.Error(err, k.Status.Serverless.KnativeServing.Message)
 		return false, err
 	}
 
 	data, err := knsInstance.MarshalJSON()
 	if err != nil {
-		k.Status.Serverless.KnativeServing.ErrorMessage = err.Error()
+		k.Status.Serverless.KnativeServing.Message = err.Error()
 		reqLogger.Error(err, "Error marshalling unstructured KnativeServing data")
 		return false, err
 	}
@@ -173,7 +173,7 @@ func getKnativeServingStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqL
 	kns := &knsv1alpha1.KnativeServing{}
 	err = json.Unmarshal(data, kns)
 	if err != nil {
-		k.Status.Serverless.KnativeServing.ErrorMessage = err.Error()
+		k.Status.Serverless.KnativeServing.Message = err.Error()
 		reqLogger.Error(err, "Error unmarshalling unstructured KnativeServing data")
 		return false, err
 	}
@@ -193,7 +193,7 @@ func getKnativeServingStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqL
 			if strings.ToLower(status) == "true" {
 				ready = true
 			} else {
-				k.Status.Serverless.KnativeServing.ErrorMessage = condition.Message
+				k.Status.Serverless.KnativeServing.Message = condition.Message
 			}
 
 			break

@@ -297,20 +297,11 @@ func TestStackIDValidation(t *testing.T) {
 		Status: kabanerov1alpha2.StackStatus{},
 	}
 
-	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
-
 	// Test invalid Id ending in "-"
 	invalidID := "java-microprofile-"
-	desiredStack := Stack{
-		Name:      "Java Microprofile For Cloud Application Development!",
-		Id:        invalidID,
-		Version:   "1.2.3",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: "http://some/pipe/line/url"}},
-		Images:    []Images{defaultImage},
-	}
-
+	stackResource.Spec.Name = invalidID
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -322,8 +313,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test invalid id containing an upper case char.
 	invalidID = "java-Microprofile"
-	desiredStack.Id = invalidID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -335,8 +326,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test invalid id staritng with a number.
 	invalidID = "0-java-microprofile"
-	desiredStack.Id = invalidID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -348,8 +339,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test invalid id staritng with a dot char.
 	invalidID = "java-microprofile.1-0"
-	desiredStack.Id = invalidID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -361,8 +352,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test invalid id starting with invalid chars.
 	invalidID = "java#-microprofile@1-0"
-	desiredStack.Id = invalidID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -374,8 +365,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test invalid id containing a single '-'.
 	invalidID = "-"
-	desiredStack.Id = invalidID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -387,8 +378,8 @@ func TestStackIDValidation(t *testing.T) {
 
 		// Test invalid id containing a single number.
 		invalidID = "9"
-		desiredStack.Id = invalidID
-		err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+  	stackResource.Spec.Name = invalidID
+		err = reconcileActiveVersions(&stackResource, client)
 	
 		if err == nil {
 			t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -400,8 +391,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test invalid id with a length greater than 68 characters.
 	invalidID = "abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-69c"
-	desiredStack.Id = invalidID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -413,8 +404,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test a valid id containing multiple [a-z0-9-] chars.
 	validID := "j-m-1-2-3"
-	desiredStack.Id = validID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = validID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
@@ -422,8 +413,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test a valid id containing several '-' chars.
 	validID = "n---0"
-	desiredStack.Id = validID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = validID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
@@ -431,8 +422,8 @@ func TestStackIDValidation(t *testing.T) {
 
 	// Test a valid id containing only one valid char.
 	validID = "x"
-	desiredStack.Id = validID
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"http://repo/url", desiredStack}}, client)
+	stackResource.Spec.Name = validID
+	err = reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
@@ -447,28 +438,32 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
+	pipelineZipUrl := server.URL + basicPipeline.name
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: "default",
+					Sha256: basicPipeline.sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
+				}},
+				Images: []kabanerov1alpha2.Image{{
+					Id: "default",
+					Image: "kabanero/kabanero-image:latest",
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{},
-	}
-
-	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
-
-	pipelineZipUrl := server.URL + basicPipeline.name
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.5",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
-		Images:    []Images{defaultImage},
 	}
 
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -498,8 +493,8 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		}
 	}
 
-	if pipeline.Name != desiredStack.Pipelines[0].Id {
-		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", desiredStack.Pipelines[0].Id, pipeline.Name))
+	if pipeline.Name != stackResource.Spec.Versions[0].Pipelines[0].Id {
+		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", stackResource.Spec.Versions[0].Pipelines[0].Id, pipeline.Name))
 	}
 
 	// Make sure the status versions array was created in the stack status
@@ -529,8 +524,8 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		}
 	}
 
-	if pipeline.Name != desiredStack.Pipelines[0].Id {
-		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", desiredStack.Pipelines[0].Id, pipeline.Name))
+	if pipeline.Name != stackResource.Spec.Versions[0].Pipelines[0].Id {
+		t.Fatal(fmt.Sprintf("Pipeline name should be %v, but is %v", stackResource.Spec.Versions[0].Pipelines[0].Id, pipeline.Name))
 	}
 
 	// Make sure the client has the correct objects.
@@ -553,8 +548,8 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Status should contain one image, but contains %v: %#v", len(stackResource.Status.Versions[0].Images), stackResource.Status))
 	}
 
-	if stackResource.Status.Versions[0].Images[0].Image != defaultImage.Image {
-		t.Fatal(fmt.Sprintf("Image should be %v, but is %v", defaultImage.Image, stackResource.Status.Versions[0].Images[0].Image))
+	if stackResource.Status.Versions[0].Images[0].Image != stackResource.Spec.Versions[0].Images[0].Image {
+		t.Fatal(fmt.Sprintf("Image should be %v, but is %v", stackResource.Spec.Versions[0].Images[0].Image, stackResource.Status.Versions[0].Images[0].Image))
 	}
 }
 
@@ -566,11 +561,28 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
+	pipelineZipUrl := server.URL + basicPipeline.name
+	desiredStack := Stack{
+		Name:      "java-microprofile",
+		Id:        "java-microprofile",
+		Version:   "0.2.5",
+		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+	}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.4",
@@ -593,21 +605,13 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 		},
 	}
 
-	pipelineZipUrl := server.URL + basicPipeline.name
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.5",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
-	}
-
 	// Tell the client what should currently be there.
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-old-asset", Namespace: "kabanero"}:      []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -706,11 +710,27 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 	defer server.Close()
 
 	pipelineZipUrl := server.URL + basicPipeline.name
+	desiredStack := Stack{
+		Name:      "java-microprofile",
+		Id:        "java-microprofile",
+		Version:   "0.2.5",
+		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+	}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "inactive"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "inactive",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.5",
@@ -730,19 +750,12 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 		},
 	}
 
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.5",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
-	}
-
 	// Tell the client what should currently be there.
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -794,14 +807,6 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{},
-	}
-
 	pipelineZipUrl := server.URL + basicPipeline.name
 	desiredStack := Stack{
 		Name:      "java-microprofile",
@@ -810,12 +815,29 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
 	}
 
+	stackResource := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name:     "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
+		Status: kabanerov1alpha2.StackStatus{},
+	}
+
 	// Tell the client what should currently be there.
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: otheruid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid}}}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -887,11 +909,27 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 	defer server.Close()
 
 	pipelineZipUrl := server.URL + basicPipeline.name
+	desiredStack := Stack{
+		Name:      "java-microprofile",
+		Id:        "java-microprofile",
+		Version:   "0.2.5",
+		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+	}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "inactive"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "inactive",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.5",
@@ -911,19 +949,12 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 		},
 	}
 
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.5",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
-	}
-
 	// Tell the client what should currently be there.
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: otheruid}, {UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid}, {UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -969,11 +1000,27 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 	defer server.Close()
 
 	pipelineZipUrl := server.URL + basicPipeline.name
+	desiredStack := Stack{
+		Name:      "java-microprofile",
+		Id:        "java-microprofile",
+		Version:   "0.2.5",
+		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
+	}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.5",
@@ -993,18 +1040,11 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 		},
 	}
 
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.5",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
-	}
-
 	// Tell the client what should currently be there.
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1072,11 +1112,27 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 		sha256: "aaaabbbbccccdddd"}
 
 	pipelineZipUrl := server.URL + deletedPipeline.name
+	desiredStack := Stack{
+		Name:      "java-microprofile",
+		Id:        "java-microprofile",
+		Version:   "0.2.5",
+		Pipelines: []Pipelines{{Id: "default", Sha256: deletedPipeline.sha256, Url: pipelineZipUrl}},
+	}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.5",
@@ -1096,18 +1152,11 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 		},
 	}
 
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.5",
-		Pipelines: []Pipelines{{Id: "default", Sha256: deletedPipeline.sha256, Url: pipelineZipUrl}},
-	}
-
 	// Tell the client what should currently be there.
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1186,14 +1235,6 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{},
-	}
-
 	pipelineZipUrl := server.URL + badPipeline.name
 	desiredStack := Stack{
 		Name:      "java-microprofile",
@@ -1202,9 +1243,26 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 		Pipelines: []Pipelines{{Id: "default", Sha256: badPipeline.sha256, Url: pipelineZipUrl}},
 	}
 
+	stackResource := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name:     "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+			}},
+		},
+		Status: kabanerov1alpha2.StackStatus{},
+	}
+
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1268,218 +1326,12 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 }
 
 // --------------------------------------------------------------------------------------------------
-// Test that we can't activate a stack that's not in the hub.
-// --------------------------------------------------------------------------------------------------
-func TestReconcileActiveVersionsActivateNotInHub(t *testing.T) {
-	// The server that will host the pipeline zip
-	server := httptest.NewServer(stackHandler{})
-	defer server.Close()
-
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{
-			Versions: []kabanerov1alpha2.StackVersionStatus{{
-				Version: "0.2.4",
-				Pipelines: []kabanerov1alpha2.PipelineStatus{{
-					Url:    "https://somewhere.com/v1/pipeline.tar.gz",
-					Digest: "1234567",
-					Name:   "default",
-					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
-						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
-					}, {
-						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
-					}, {
-						Name:   "java-microprofile-old-asset",
-						Status: assetStatusActive,
-					}},
-				}},
-			}},
-		},
-	}
-
-	// Note the "desired" stack version doesn't match the one that we want to activate.
-	pipelineZipUrl := server.URL + basicPipeline.name
-	desiredStack := Stack{
-		Name:      "java-microprofile",
-		Id:        "java-microprofile",
-		Version:   "0.2.6",
-		Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}},
-	}
-
-	// Tell the client what should currently be there.
-	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
-		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
-		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
-		client.ObjectKey{Name: "java-microprofile-old-asset", Namespace: "kabanero"}:      []metav1.OwnerReference{{UID: myuid}}}}
-
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
-
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
-	}
-
-	// Make sure the stack resource was updated with asset information
-	if len(stackResource.Status.Versions[0].Pipelines) != 0 {
-		t.Fatal(fmt.Sprintf("Stack status should have 0 pipelines, but has %v", len(stackResource.Status.Versions[0].Pipelines)))
-	}
-
-	// Stack retains original Version on failure to activate new stack
-	if stackResource.Status.Versions[0].Version != stackResource.Spec.Versions[0].Version {
-		t.Fatal(fmt.Sprintf("Stack status version should be %v, but is %v", stackResource.Spec.Versions[0].Version, stackResource.Status.Versions[0].Version))
-	}
-
-	if stackResource.Status.Versions[0].StatusMessage == "" {
-		t.Fatal(fmt.Sprintf("There should be an error status set, but there is none: %#v", stackResource.Status))
-	}
-
-	if strings.Contains(stackResource.Status.Versions[0].StatusMessage, "is not available") == false {
-		t.Fatal(fmt.Sprintf("The status message should say not available, but it says %v", stackResource.Status.Versions[0].StatusMessage))
-	}
-
-	if stackResource.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive {
-		t.Fatal(fmt.Sprintf("The status should be inactive, but is %v", stackResource.Status.Versions[0].Status))
-	}
-
-	// Make sure the stack version array status was updated with asset information
-	if len(stackResource.Status.Versions) != 1 {
-		t.Fatal(fmt.Sprintf("There should be 1 version in the versions array, but there are %v: %v", len(stackResource.Status.Versions), stackResource.Status.Versions))
-	}
-
-	if stackResource.Status.Versions[0].Version != "0.2.5" {
-		t.Fatal(fmt.Sprintf("Version \"0.2.5\" should be present in the versions array, but it is %v", stackResource.Status.Versions[0].Version))
-	}
-
-	if strings.Contains(stackResource.Status.Versions[0].StatusMessage, "is not available") == false {
-		t.Fatal(fmt.Sprintf("The status message in the versions array should say not available, but it says %v", stackResource.Status.Versions[0].StatusMessage))
-	}
-
-	if stackResource.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive {
-		t.Fatal(fmt.Sprintf("The status should be inactive, but is %v", stackResource.Status.Versions[0].Status))
-	}
-
-	// Make sure the client has the correct objects.
-	if len(client.objs) != 0 {
-		t.Fatal(fmt.Sprintf("Client map should have 0 entries, but has %v: %v", len(client.objs), client.objs))
-	}
-
-	// Reconcile it again and make sure we retain the information.
-	err = reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
-
-	if len(stackResource.Status.Versions[0].Pipelines) != 0 {
-		t.Fatal(fmt.Sprintf("Stack status should have 0 pipelines, but has %v", len(stackResource.Status.Versions[0].Pipelines)))
-	}
-
-	// Stack retains previous Version
-	if stackResource.Status.Versions[0].Version != stackResource.Spec.Versions[0].Version {
-		t.Fatal(fmt.Sprintf("Stack deactive version should be %v, but is %v", stackResource.Spec.Versions[0].Version, stackResource.Status.Versions[0].Version))
-	}
-
-	if stackResource.Status.Versions[0].StatusMessage == "" {
-		t.Fatal(fmt.Sprintf("There should be an error status set, but there is none: %#v", stackResource.Status))
-	}
-
-	if strings.Contains(stackResource.Status.Versions[0].StatusMessage, "is not available") == false {
-		t.Fatal(fmt.Sprintf("The status message should say not available, but it says %v", stackResource.Status.Versions[0].StatusMessage))
-	}
-
-	if stackResource.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive {
-		t.Fatal(fmt.Sprintf("The status should be inactive, but is %v", stackResource.Status.Versions[0].Status))
-	}
-
-	// Make sure the client has the correct objects.
-	if len(client.objs) != 0 {
-		t.Fatal(fmt.Sprintf("Client map should have 0 entries, but has %v: %v", len(client.objs), client.objs))
-	}
-}
-
-// --------------------------------------------------------------------------------------------------
-// Test that a stack can be deactivated when the stack is no longer in the stack hub.
-// --------------------------------------------------------------------------------------------------
-func TestReconcileActiveVersionsDeactivateNotInHub(t *testing.T) {
-	// The server that will host the pipeline zip
-	server := httptest.NewServer(stackHandler{})
-	defer server.Close()
-
-	deletedPipeline := fileInfo{
-		name:   "/deleted.pipeline.tar.gz",
-		sha256: "aaaabbbbccccdddd"}
-
-	pipelineZipUrl := server.URL + deletedPipeline.name
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "inactive"}}},
-		Status: kabanerov1alpha2.StackStatus{
-			Versions: []kabanerov1alpha2.StackVersionStatus{{
-				Version: "0.2.5",
-				Pipelines: []kabanerov1alpha2.PipelineStatus{{
-					Url:    pipelineZipUrl,
-					Digest: deletedPipeline.sha256,
-					Name:   "default",
-					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
-						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
-					}, {
-						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
-					}},
-				}},
-			}},
-		},
-	}
-
-	// Tell the client what should currently be there.
-	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
-		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
-		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
-
-	err := reconcileActiveVersions(&stackResource, nil, client)
-
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
-	}
-
-	// Make sure the stack resource was updated with asset information
-	if len(stackResource.Status.Versions[0].Pipelines) != 0 {
-		t.Fatal(fmt.Sprintf("Stack status should have 0 pipelines, but has %v", len(stackResource.Status.Versions[0].Pipelines)))
-	}
-
-	// Stack retains previous Version
-	if stackResource.Status.Versions[0].Version != stackResource.Spec.Versions[0].Version {
-		t.Fatal(fmt.Sprintf("Stack active version should be %v, but is %v", stackResource.Spec.Versions[0].Version, stackResource.Status.Versions[0].Version))
-	}
-
-	if stackResource.Status.Versions[0].StatusMessage == "" {
-		t.Fatal("Stack status message should not be empty for an inactive stack")
-	}
-
-	// Make sure the client has the correct objects.
-	if len(client.objs) != 0 {
-		t.Fatal(fmt.Sprintf("Client map should have 0 entries, but has %v: %v", len(client.objs), client.objs))
-	}
-}
-
-// --------------------------------------------------------------------------------------------------
 // Test that tekton triggers are created in the tekton-pipelines namespace
 // --------------------------------------------------------------------------------------------------
 func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 	// The server that will host the pipeline zip
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
-
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.5", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{},
-	}
 
 	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
 
@@ -1492,9 +1344,30 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 		Images:    []Images{defaultImage},
 	}
 
+	stackResource := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name:     "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: desiredStack.Pipelines[0].Id,
+					Sha256: desiredStack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+				}},
+				Images: []kabanerov1alpha2.Image{{
+					Id: desiredStack.Images[0].Id,
+					Image: desiredStack.Images[0].Image,
+				}},
+			}},
+		},
+		Status: kabanerov1alpha2.StackStatus{},
+	}
+
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, []resolvedStack{{"", desiredStack}}, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1630,16 +1503,6 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name: "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{
-				{Version: "0.2.5", DesiredState: "active"},
-				{Version: "0.2.6", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{},
-	}
-
 	pipelineZipUrl := server.URL + basicPipeline.name
 	stacks := []resolvedStack{{
 		repositoryURL: "",
@@ -1657,9 +1520,37 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 			Pipelines: []Pipelines{{Id: "default", Sha256: basicPipeline.sha256, Url: pipelineZipUrl}}},
 	}}
 
+	stackResource := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name: "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{
+				kabanerov1alpha2.StackVersion{
+					Version: "0.2.5",
+					DesiredState: "active",
+					Pipelines: []kabanerov1alpha2.PipelineSpec{{
+						Id: stacks[0].stack.Pipelines[0].Id,
+						Sha256: stacks[0].stack.Pipelines[0].Sha256,
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+					}},
+				},
+				kabanerov1alpha2.StackVersion{
+					Version: "0.2.6",
+					DesiredState: "active",
+					Pipelines: []kabanerov1alpha2.PipelineSpec{{
+						Id: stacks[1].stack.Pipelines[0].Id,
+						Sha256: stacks[1].stack.Pipelines[0].Sha256,
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+					}},
+				},
+			},
+		},
+		Status: kabanerov1alpha2.StackStatus{},
+	}
+
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, stacks, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1740,16 +1631,6 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 	server := httptest.NewServer(stackHandler{})
 	defer server.Close()
 
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name: "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{
-				{Version: "0.2.5", DesiredState: "active"},
-				{Version: "0.2.6", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{},
-	}
-
 	pipeline1ZipUrl := server.URL + digest1Pipeline.name
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
 	stacks := []resolvedStack{{
@@ -1768,9 +1649,37 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}}},
 	}}
 
+	stackResource := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name: "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{
+				kabanerov1alpha2.StackVersion{
+					Version: "0.2.5",
+					DesiredState: "active",
+					Pipelines: []kabanerov1alpha2.PipelineSpec{{
+						Id: stacks[0].stack.Pipelines[0].Id,
+						Sha256: stacks[0].stack.Pipelines[0].Sha256,
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+					}},
+				},
+				kabanerov1alpha2.StackVersion{
+					Version: "0.2.6",
+					DesiredState: "active",
+					Pipelines: []kabanerov1alpha2.PipelineSpec{{
+						Id: stacks[1].stack.Pipelines[0].Id,
+						Sha256: stacks[1].stack.Pipelines[0].Sha256,
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+					}},
+				},
+			},
+		},
+		Status: kabanerov1alpha2.StackStatus{},
+	}
+
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, stacks, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1831,130 +1740,6 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 }
 
 // --------------------------------------------------------------------------------------------------
-// Test that two versions of the same stack using different pipelines can be activated.  One of
-// the versions is currently active but no longer available in the stack hub.  The operator
-// should continue to use the last-available version of that stack, along with an error message
-// saying that it's not there anymore.
-// --------------------------------------------------------------------------------------------------
-func TestReconcileActiveVersionsInternalTwoInitialDiffPipelinesOneDeletedFromHub(t *testing.T) {
-	// The server that will host the pipeline zip
-	server := httptest.NewServer(stackHandler{})
-	defer server.Close()
-
-	// badRepositoryUrl := "https://bogus.com/kabanero_index.yaml"
-	pipeline1ZipUrl := server.URL + digest1Pipeline.name
-	pipeline2ZipUrl := server.URL + digest2Pipeline.name
-	stackResource := kabanerov1alpha2.Stack{
-		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec: kabanerov1alpha2.StackSpec{
-			Name: "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{
-				{Version: "0.2.5", DesiredState: "active"},
-				{Version: "0.2.6", DesiredState: "active"}}},
-		Status: kabanerov1alpha2.StackStatus{
-			Versions: []kabanerov1alpha2.StackVersionStatus{{
-				Version: "0.2.5",
-				Pipelines: []kabanerov1alpha2.PipelineStatus{{
-					Url:    pipeline1ZipUrl,
-					Digest: digest1Pipeline.sha256,
-					Name:   "default",
-					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
-						Name:   "build-task-0238ff31",
-						Status: assetStatusActive,
-					}, {
-						Name:   "build-pipeline-0238ff31",
-						Status: assetStatusActive,
-					}},
-				}},
-			}},
-		},
-	}
-
-	// Only one of the two stack versions will be found in the stack hub.  Only put the 0.2.6 version here.
-	stacks := []resolvedStack{{
-		repositoryURL: "",
-		stack: Stack{
-			Name:      "java-microprofile",
-			Id:        "java-microprofile",
-			Version:   "0.2.6",
-			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
-		}}}
-
-	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
-		client.ObjectKey{Name: "build-task-0238ff31", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
-		client.ObjectKey{Name: "build-pipeline-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
-
-	err := reconcileActiveVersions(&stackResource, stacks, client)
-
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
-	}
-
-	// Make sure we got two status structs back
-	if len(stackResource.Status.Versions) != 2 {
-		t.Fatal(fmt.Sprintf("Expected two statuses, but got %v: %#v", len(stackResource.Status.Versions), stackResource.Status))
-	}
-
-	// Make sure the stack resource was updated with asset information
-	versionsFound := make(map[string]bool)
-	for _, curStatus := range stackResource.Status.Versions {
-		versionsFound[curStatus.Version] = true
-
-		if len(curStatus.Pipelines) != 1 {
-			t.Fatal(fmt.Sprintf("Stack status should have 1 pipeline, but has %v: %v", len(curStatus.Pipelines), curStatus))
-		}
-
-		// Make sure the assets were created in the stack status
-		pipeline := curStatus.Pipelines[0]
-		if len(pipeline.ActiveAssets) != 2 {
-			t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
-		}
-
-		for _, asset := range pipeline.ActiveAssets {
-			if asset.Status != assetStatusActive {
-				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
-			}
-			if asset.StatusMessage != "" {
-				t.Fatal(fmt.Sprintf("Asset %v should have no status message, but has %v", asset.Name, asset.StatusMessage))
-			}
-		}
-
-		// Version 0.2.5 was deleted from the stack hub.  Make sure there is an error set.
-		if (curStatus.Version == "0.2.5") && (strings.Contains(curStatus.StatusMessage, "(0.2.5) is not available") == false) {
-			t.Fatal(fmt.Sprintf("Stack version 0.2.5 should have an error message due to stack not being in hub, but has: %v", curStatus.StatusMessage))
-		}
-
-		// Make sure both statuses contain a pipeline name
-		if curStatus.Pipelines[0].Name != "default" {
-			t.Fatal(fmt.Sprintf("Stack version %v should contain a pipeline named \"default\", but is %v", curStatus.Version, curStatus.Pipelines[0].Name))
-		}
-	}
-
-	if versionsFound["0.2.5"] == false {
-		t.Fatal(fmt.Sprintf("Did not find version 0.2.5 in the status: %v", stackResource.Status.Versions))
-	}
-
-	if versionsFound["0.2.6"] == false {
-		t.Fatal(fmt.Sprintf("Did not find version 0.2.6 in the status: %v", stackResource.Status.Versions))
-	}
-
-	// Make sure the client has the correct objects.
-	if len(client.objs) != 4 {
-		t.Fatal(fmt.Sprintf("Client map should have 4 entries, but has %v: %v", len(client.objs), client.objs))
-	}
-
-	// Make sure the client's objects have an owner set.
-	for key, obj := range client.objs {
-		if len(obj) != 1 {
-			t.Fatal(fmt.Sprintf("Client object %v should have 1 owner, but has %v: %v", key, len(obj), obj))
-		}
-		if obj[0].UID != stackResource.UID {
-			t.Fatal(fmt.Sprintf("Client object %v should have owner UID %v but has %v", key, stackResource.UID, obj[0].UID))
-		}
-	}
-}
-
-// --------------------------------------------------------------------------------------------------
 // Test that one version of a stack can be deleted but the other remains active.
 // --------------------------------------------------------------------------------------------------
 func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
@@ -1965,11 +1750,37 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 	pipeline1ZipUrl := server.URL + digest1Pipeline.name
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
 
+	stacks := []resolvedStack{{
+		repositoryURL: "",
+		stack: Stack{
+			Name:      "java-microprofile",
+			Id:        "java-microprofile",
+			Version:   "0.2.5",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}}},
+	}, {
+		repositoryURL: "",
+		stack: Stack{
+			Name:      "java-microprofile",
+			Id:        "java-microprofile",
+			Version:   "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
+		}},
+	}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name:     "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{Version: "0.2.6", DesiredState: "active"}}},
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version: "0.2.6",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id: stacks[1].stack.Pipelines[0].Id,
+					Sha256: stacks[1].stack.Pipelines[0].Sha256,
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.5",
@@ -2003,30 +1814,13 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 		},
 	}
 
-	stacks := []resolvedStack{{
-		repositoryURL: "",
-		stack: Stack{
-			Name:      "java-microprofile",
-			Id:        "java-microprofile",
-			Version:   "0.2.5",
-			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}}},
-	}, {
-		repositoryURL: "",
-		stack: Stack{
-			Name:      "java-microprofile",
-			Id:        "java-microprofile",
-			Version:   "0.2.6",
-			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
-		}},
-	}
-
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "build-task-0238ff31", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-pipeline-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-task-c3f28ffc", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-pipeline-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, stacks, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -2089,13 +1883,49 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 
 	pipeline1ZipUrl := server.URL + digest1Pipeline.name
 	pipeline2ZipUrl := server.URL + digest2Pipeline.name
+	stacks := []resolvedStack{{
+		repositoryURL: "",
+		stack: Stack{
+			Name:      "java-microprofile",
+			Id:        "java-microprofile",
+			Version:   "0.2.5",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}},
+		},
+	}, {
+		repositoryURL: "",
+		stack: Stack{
+			Name:      "java-microprofile",
+			Id:        "java-microprofile",
+			Version:   "0.2.6",
+			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
+		},
+	}}
+
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{
-				{Version: "0.2.5", DesiredState: "inactive"},
-				{Version: "0.2.6", DesiredState: "active"}}},
+				kabanerov1alpha2.StackVersion{
+					Version: "0.2.5",
+					DesiredState: "inactive",
+					Pipelines: []kabanerov1alpha2.PipelineSpec{{
+						Id: stacks[0].stack.Pipelines[0].Id,
+						Sha256: stacks[0].stack.Pipelines[0].Sha256,
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+					}},
+				},
+				kabanerov1alpha2.StackVersion{
+					Version: "0.2.6",
+					DesiredState: "active",
+					Pipelines: []kabanerov1alpha2.PipelineSpec{{
+						Id: stacks[1].stack.Pipelines[0].Id,
+						Sha256: stacks[1].stack.Pipelines[0].Sha256,
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+					}},
+				},
+			},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
 				Version: "0.2.5",
@@ -2129,31 +1959,13 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 		},
 	}
 
-	stacks := []resolvedStack{{
-		repositoryURL: "",
-		stack: Stack{
-			Name:      "java-microprofile",
-			Id:        "java-microprofile",
-			Version:   "0.2.5",
-			Pipelines: []Pipelines{{Id: "default", Sha256: digest1Pipeline.sha256, Url: pipeline1ZipUrl}},
-		},
-	}, {
-		repositoryURL: "",
-		stack: Stack{
-			Name:      "java-microprofile",
-			Id:        "java-microprofile",
-			Version:   "0.2.6",
-			Pipelines: []Pipelines{{Id: "default", Sha256: digest2Pipeline.sha256, Url: pipeline2ZipUrl}},
-		},
-	}}
-
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "build-task-0238ff31", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-pipeline-0238ff31", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-task-c3f28ffc", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-pipeline-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, stacks, client)
+	err := reconcileActiveVersions(&stackResource, client)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())

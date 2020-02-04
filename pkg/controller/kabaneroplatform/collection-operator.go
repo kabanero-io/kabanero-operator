@@ -144,7 +144,7 @@ func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha2.Kabane
 
 // Returns the readiness status of the Kabanero collection controller installation.
 func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
-	k.Status.CollectionController.ErrorMessage = ""
+	k.Status.CollectionController.Message = ""
 	k.Status.CollectionController.Ready = "False"
 
 	// Retrieve the Kabanero collection controller version.
@@ -152,7 +152,7 @@ func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kaba
 	if err != nil {
 		message := "Unable to retrieve the collection controller version."
 		cclog.Error(err, message)
-		k.Status.CollectionController.ErrorMessage = message + ": " + err.Error()
+		k.Status.CollectionController.Message = message + ": " + err.Error()
 		return false, err
 	}
 	k.Status.CollectionController.Version = rev.Version
@@ -166,7 +166,7 @@ func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kaba
 	if err != nil {
 		message := "Unable to retrieve the Kabanero collection controller deployment object."
 		cclog.Error(err, message)
-		k.Status.CollectionController.ErrorMessage = message + ": " + err.Error()
+		k.Status.CollectionController.Message = message + ": " + err.Error()
 		return false, err
 	}
 
@@ -178,7 +178,7 @@ func getCollectionControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kaba
 				ready = true
 				k.Status.CollectionController.Ready = "True"
 			} else {
-				k.Status.CollectionController.ErrorMessage = condition.Message
+				k.Status.CollectionController.Message = condition.Message
 			}
 
 			break

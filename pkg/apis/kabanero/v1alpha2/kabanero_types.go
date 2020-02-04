@@ -57,9 +57,9 @@ type InstanceStackConfig struct {
 
 // PipelineSpec defines the sets of default pipelines for the stacks.
 type PipelineSpec struct {
-	Id string `json:"id,omitempty"`
-	Sha256 string `json:"sha256,omitempty"`
-	Https HttpsProtocolFile `json:"https,omitempty"`
+	Id     string            `json:"id,omitempty"`
+	Sha256 string            `json:"sha256,omitempty"`
+	Https  HttpsProtocolFile `json:"https,omitempty"`
 }
 
 // HttpsProtocolFile defines how to retrieve a file over https
@@ -70,9 +70,9 @@ type HttpsProtocolFile struct {
 
 // TriggerSpec defines the sets of default triggers for the stacks
 type TriggerSpec struct {
-	Id string `json:"id,omitempty"`
-	Sha256 string `json:"sha256,omitempty"`
-	Https HttpsProtocolFile `json:"https,omitempty"`
+	Id     string            `json:"id,omitempty"`
+	Sha256 string            `json:"sha256,omitempty"`
+	Https  HttpsProtocolFile `json:"https,omitempty"`
 }
 
 // GithubConfig represents the Github information (public or GHE) where
@@ -88,10 +88,10 @@ type GithubConfig struct {
 
 // RepositoryConfig defines customization entries for a stack.
 type RepositoryConfig struct {
-	Name                       string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 	// +listType=set
-	Pipelines                  []PipelineSpec `json:"pipelines,omitempty"`
-	Https                      HttpsProtocolFile `json:"https,omitempty"`
+	Pipelines []PipelineSpec    `json:"pipelines,omitempty"`
+	Https     HttpsProtocolFile `json:"https,omitempty"`
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
@@ -212,59 +212,59 @@ type KabaneroStatus struct {
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
 type KabaneroInstanceStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // TektonStatus defines the observed status details of Tekton.
 type TektonStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // ServerlessStatus defines the observed status details of Open Shift serverless.
 type ServerlessStatus struct {
 	Ready          string               `json:"ready,omitempty"`
-	ErrorMessage   string               `json:"errorMessage,omitempty"`
+	Message        string               `json:"message,omitempty"`
 	Version        string               `json:"version,omitempty"`
 	KnativeServing KnativeServingStatus `json:"knativeServing,omitempty"`
 }
 
 // KnativeServingStatus defines the observed status details of Knative Serving.
 type KnativeServingStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // CliStatus defines the observed status details of the Kabanero CLI.
 type CliStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
 	// +listType=set
 	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 // KabaneroLandingPageStatus defines the observed status details of the Kabanero landing page.
 type KabaneroLandingPageStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // AppsodyStatus defines the observed status details of Appsody.
 type AppsodyStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // KappnavStatus defines the observed status details of Kubernetes Application Navigator.
 type KappnavStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
 	// +listType=set
 	UiLocations []string `json:"uiLocations,omitempty"`
 	// +listType=set
@@ -274,7 +274,7 @@ type KappnavStatus struct {
 // CheStatus defines the observed status details of Che.
 type CheStatus struct {
 	Ready               string                    `json:"ready,omitempty"`
-	ErrorMessage        string                    `json:"errorMessage,omitempty"`
+	Message             string                    `json:"message,omitempty"`
 	CheOperator         CheOperatorStatus         `json:"cheOperator,omitempty"`
 	KabaneroChe         KabaneroCheStatus         `json:"kabaneroChe,omitempty"`
 	KabaneroCheInstance KabaneroCheInstanceStatus `json:"kabaneroCheInstance,omitempty"`
@@ -299,37 +299,37 @@ type KabaneroCheInstanceStatus struct {
 
 // EventsStatus defines the observed status details of the Kabanero events.
 type EventsStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
 	// +listType=set
 	Hostnames []string `json:"hostnames,omitempty"`
 }
 
 // CollectionControllerStatus defines the observed status details of the Kabanero collection controller.
 type CollectionControllerStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // StackControllerStatus defines the observed status details of the Kabanero stack controller.
 type StackControllerStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // AdmissionControllerWebhookStatus defines the observed status details of the Kabanero mutating and validating admission webhooks.
 type AdmissionControllerWebhookStatus struct {
-	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Ready   string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 // Status of the SSO server
 type SsoStatus struct {
 	Configured   string `json:"configured,omitempty"`
 	Ready        string `json:"ready,omitempty"`
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Message      string `json:"message,omitempty"`
 }
 
 // Kabanero is the Schema for the kabaneros API

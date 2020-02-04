@@ -174,7 +174,7 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 
 // Returns the readiness status of the Kabanero stack controller installation.
 func getStackControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) (bool, error) {
-	k.Status.StackController.ErrorMessage = ""
+	k.Status.StackController.Message = ""
 	k.Status.StackController.Ready = "False"
 
 	// Retrieve the Kabanero stack controller version.
@@ -182,7 +182,7 @@ func getStackControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	if err != nil {
 		message := "Unable to retrieve the stack controller version."
 		sclog.Error(err, message)
-		k.Status.StackController.ErrorMessage = message + ": " + err.Error()
+		k.Status.StackController.Message = message + ": " + err.Error()
 		return false, err
 	}
 	k.Status.StackController.Version = rev.Version
@@ -196,7 +196,7 @@ func getStackControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	if err != nil {
 		message := "Unable to retrieve the Kabanero stack controller deployment object."
 		sclog.Error(err, message)
-		k.Status.StackController.ErrorMessage = message + ": " + err.Error()
+		k.Status.StackController.Message = message + ": " + err.Error()
 		return false, err
 	}
 
@@ -208,7 +208,7 @@ func getStackControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 				ready = true
 				k.Status.StackController.Ready = "True"
 			} else {
-				k.Status.StackController.ErrorMessage = condition.Message
+				k.Status.StackController.Message = condition.Message
 			}
 
 			break
