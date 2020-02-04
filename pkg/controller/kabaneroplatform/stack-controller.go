@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/go-logr/logr"
 	mf "github.com/kabanero-io/manifestival"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,7 +23,7 @@ const (
 )
 
 // Installs the Kabanero stack controller.
-func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) error {
+func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, _ logr.Logger) error {
 	logger := sclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling Kabanero stack controller installation.")
 
