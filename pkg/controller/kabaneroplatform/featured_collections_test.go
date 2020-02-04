@@ -107,8 +107,12 @@ func (ch stackIndexHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 var defaultIndexName = "/kabanero-index.yaml"
 var secondIndexName = "/kabanero-index-two.yaml"
 
+var appsodyIndexName = "/appsody-index.yaml"
+
 var defaultIndexPipeline = "https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz"
+var defaultIndexPipelineDigest = "0123456789012345678901234567890123456789012345678901234567890123"
 var secondIndexPipeline = "https://github.com/kabanero-io/collections/releases/download/0.6.0/incubator.common.pipeline.default.tar.gz"
+var secondIndexPipelineDigest = "1234567890123456789012345678901234567890123456789012345678901234"
 
 // -----------------------------------------------------------------------------------------------
 // Test cases
@@ -282,7 +286,145 @@ func TestReconcileFeaturedStacksTwoRepositories(t *testing.T) {
 	}
 }
 
-// TODO: Tests where we specify the pipeline zips in the Kabanero CR instance.
+// Read an appsody index and specify custom pipelines in the Kabanero CR instance.
+func TestReconcileAppsodyStacksCustomPipelines(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(stackIndexHandler{})
+	defer server.Close()
+
+	ctx := context.Background()
+	cl := unitTestClient{make(map[string]*kabanerov1alpha2.Stack)}
+	stackUrl := server.URL + appsodyIndexName
+	k := createKabanero(stackUrl)
+
+	// Need to specify the pipelines information
+	pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: defaultIndexPipeline}
+	k.Spec.Stacks.Pipelines = append(k.Spec.Stacks.Pipelines, kabanerov1alpha2.PipelineSpec{Id: "default", Sha256: defaultIndexPipelineDigest, Https: pipelineUrl})
+
+	customPipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: secondIndexPipeline}
+	k.Spec.Stacks.Repositories[0].Pipelines = append(k.Spec.Stacks.Repositories[0].Pipelines, kabanerov1alpha2.PipelineSpec{Id: "custom", Sha256: secondIndexPipelineDigest, Https: customPipelineUrl})
+	
+	err := reconcileFeaturedStacks(ctx, k, cl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should have been two stacks created
+	javaMicroprofileStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileStack)
+	if err != nil {
+		t.Fatal("Could not resolve the java-microprofile stack", err)
+	}
+
+	nodejsStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsStack)
+	if err != nil {
+		t.Fatal("Could not resolve the nodejs stack", err)
+	}
+
+	// Make sure the stack has an owner set
+	if len(nodejsStack.OwnerReferences) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsStack.OwnerReferences), nodejsStack))
+	}
+
+	if nodejsStack.OwnerReferences[0].UID != k.UID {
+		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsStack.OwnerReferences[0].UID))
+	}
+
+	// Make sure the stack is active
+	if len(nodejsStack.Spec.Versions) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 stack version, but found %v: %v", len(nodejsStack.Spec.Versions), nodejsStack.Spec.Versions))
+	}
+
+	if nodejsStack.Spec.Versions[0].Version != "0.3.2" {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack version \"0.3.2\", but found %v", nodejsStack.Spec.Versions[0].Version))
+	}
+
+	if len(nodejsStack.Spec.Versions[0].DesiredState) != 0 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack desiredState to be empty, but was %v", nodejsStack.Spec.Versions[0].DesiredState))
+	}
+
+	if len(nodejsStack.Spec.Versions[0].Pipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack to have 1 pipeline zip, but had %v: %v", len(nodejsStack.Spec.Versions[0].Pipelines), nodejsStack.Spec.Versions[0].Pipelines))
+	}
+
+	if nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url != secondIndexPipeline {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", secondIndexPipeline, nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url))
+	}
+
+	if nodejsStack.Spec.Versions[0].Pipelines[0].Sha256 != secondIndexPipelineDigest {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", secondIndexPipelineDigest, nodejsStack.Spec.Versions[0].Pipelines[0].Sha256))
+	}
+}
+
+// Read an appsody index and specify the pipelines in the Kabanero CR instance.
+func TestReconcileAppsodyStacksDefaultPipelines(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewServer(stackIndexHandler{})
+	defer server.Close()
+
+	ctx := context.Background()
+	cl := unitTestClient{make(map[string]*kabanerov1alpha2.Stack)}
+	stackUrl := server.URL + appsodyIndexName
+	k := createKabanero(stackUrl)
+
+	// Need to specify the pipelines information
+	pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: defaultIndexPipeline}
+	k.Spec.Stacks.Pipelines = append(k.Spec.Stacks.Pipelines, kabanerov1alpha2.PipelineSpec{Id: "default", Sha256: defaultIndexPipelineDigest, Https: pipelineUrl})
+	
+	err := reconcileFeaturedStacks(ctx, k, cl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should have been two stacks created
+	javaMicroprofileStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "java-microprofile"}, javaMicroprofileStack)
+	if err != nil {
+		t.Fatal("Could not resolve the java-microprofile stack", err)
+	}
+
+	nodejsStack := &kabanerov1alpha2.Stack{}
+	err = cl.Get(ctx, types.NamespacedName{Name: "nodejs"}, nodejsStack)
+	if err != nil {
+		t.Fatal("Could not resolve the nodejs stack", err)
+	}
+
+	// Make sure the stack has an owner set
+	if len(nodejsStack.OwnerReferences) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 owner, but found %v: %v", len(nodejsStack.OwnerReferences), nodejsStack))
+	}
+
+	if nodejsStack.OwnerReferences[0].UID != k.UID {
+		t.Fatal(fmt.Sprintf("Expected owner UID to be %v, but was %v", k.UID, nodejsStack.OwnerReferences[0].UID))
+	}
+
+	// Make sure the stack is active
+	if len(nodejsStack.Spec.Versions) != 1 {
+		t.Fatal(fmt.Sprintf("Expected 1 stack version, but found %v: %v", len(nodejsStack.Spec.Versions), nodejsStack.Spec.Versions))
+	}
+
+	if nodejsStack.Spec.Versions[0].Version != "0.3.2" {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack version \"0.3.2\", but found %v", nodejsStack.Spec.Versions[0].Version))
+	}
+
+	if len(nodejsStack.Spec.Versions[0].DesiredState) != 0 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack desiredState to be empty, but was %v", nodejsStack.Spec.Versions[0].DesiredState))
+	}
+
+	if len(nodejsStack.Spec.Versions[0].Pipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack to have 1 pipeline zip, but had %v: %v", len(nodejsStack.Spec.Versions[0].Pipelines), nodejsStack.Spec.Versions[0].Pipelines))
+	}
+
+	if nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url != defaultIndexPipeline {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipeline, nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url))
+	}
+
+	if nodejsStack.Spec.Versions[0].Pipelines[0].Sha256 != defaultIndexPipelineDigest {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipelineDigest, nodejsStack.Spec.Versions[0].Pipelines[0].Sha256))
+	}
+}
+
 
 // Attempts to resolve the featured stacks from the default repository
 func TestResolveFeaturedStacks(t *testing.T) {
@@ -363,5 +505,3 @@ func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Expected two versions of nodejs stack, but found %v: %v", len(nodejsStackVersions), nodejsStackVersions))
 	}
 }
-
-
