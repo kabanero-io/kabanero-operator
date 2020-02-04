@@ -148,7 +148,6 @@ func cleanupEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.
 	return nil
 }
 
-
 // Tries to see if the events route has been assigned a hostname.
 func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
 
@@ -160,7 +159,7 @@ func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLog
 
 	k.Status.Events = &kabanerov1alpha2.EventsStatus{}
 	k.Status.Events.Ready = "False"
-	
+
 	// Check that the route is accepted
 	eventsRoute := &routev1.Route{}
 	eventsRouteName := types.NamespacedName{Namespace: k.ObjectMeta.Namespace, Name: "kabanero-events"}
@@ -182,10 +181,10 @@ func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLog
 		// If we found a hostname from an admitted route, we're done.
 		if len(k.Status.Events.Hostnames) > 0 {
 			k.Status.Events.Ready = "True"
-			k.Status.Events.ErrorMessage = ""
+			k.Status.Events.Message = ""
 		} else {
 			k.Status.Events.Ready = "False"
-			k.Status.Events.ErrorMessage = "There were no accepted ingress objects in the Route"
+			k.Status.Events.Message = "There were no accepted ingress objects in the Route"
 			return false, err
 		}
 	} else {
@@ -197,7 +196,7 @@ func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLog
 		}
 		reqLogger.Error(err, message)
 		k.Status.Events.Ready = "False"
-		k.Status.Events.ErrorMessage = message + ": " + err.Error()
+		k.Status.Events.Message = message + ": " + err.Error()
 		k.Status.Events.Hostnames = nil
 		return false, err
 	}

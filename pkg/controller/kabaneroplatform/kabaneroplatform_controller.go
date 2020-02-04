@@ -20,10 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -121,8 +121,8 @@ func (r *ReconcileKabanero) determineHowToRequeue(ctx context.Context, request r
 	// if first time or current time is after the requeue time we requested previously, request a requeue
 	if requeueDelay == 0 || currentTime.After(localFutureTime) {
 		// only update status if error message changed
-		if strings.Compare(errorMessage, instance.Status.KabaneroInstance.ErrorMessage) != 0 {
-			instance.Status.KabaneroInstance.ErrorMessage = errorMessage
+		if strings.Compare(errorMessage, instance.Status.KabaneroInstance.Message) != 0 {
+			instance.Status.KabaneroInstance.Message = errorMessage
 			instance.Status.KabaneroInstance.Ready = "False"
 			// Update the kabanero instance status.
 			err := r.client.Status().Update(ctx, instance)
@@ -154,7 +154,7 @@ func (r *ReconcileKabanero) convertTo_v1alpha2(kabInstanceUnstructured *unstruct
 	data, err := kabInstanceUnstructured.MarshalJSON()
 	if err != nil {
 		reqLogger.Error(err, "Error marshalling unstructured data: ")
-		return 
+		return
 	}
 
 	kabInstanceV1 := &kabanerov1alpha1.Kabanero{}
@@ -232,7 +232,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			return reconcile.Result{}, nil // Will run again since we changed the object
 		}
 	}
-	
+
 	// Fetch the Kabanero instance
 	instance := &kabanerov1alpha2.Kabanero{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -274,7 +274,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		processStatus(ctx, request, instance, r.client, reqLogger)
 		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
-	
+
 	// Deploy the kabanero operator collection controller.
 	err = reconcileCollectionController(ctx, instance, r.client)
 	if err != nil {
@@ -326,7 +326,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		reqLogger.Error(err, "Error reconciling kabanero-events")
 		return reconcile.Result{}, err
 	}
-	
+
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, request, instance, r.client, reqLogger)
 	if err != nil {
@@ -468,7 +468,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isCheReady, _ := getCheStatus(ctx, k, c)
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
-	
+
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
 		isStackControllerReady &&
@@ -483,10 +483,10 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isAdmissionControllerWebhookReady
 
 	if isKabaneroReady {
-		k.Status.KabaneroInstance.ErrorMessage = ""
+		k.Status.KabaneroInstance.Message = ""
 		k.Status.KabaneroInstance.Ready = "True"
 	} else {
-		k.Status.KabaneroInstance.ErrorMessage = errorMessage
+		k.Status.KabaneroInstance.Message = errorMessage
 	}
 
 	// Update the kabanero instance status in a retriable manner. The instance may have changed.
