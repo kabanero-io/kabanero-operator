@@ -142,7 +142,7 @@ func createKabanero(repositoryUrl string) *kabanerov1alpha2.Kabanero {
 }
 
 // Test that we can read a legacy CollectionHub that contains embedded
-// pipeline data.
+// pipeline and image data.
 func TestReconcileFeaturedStacks(t *testing.T) {
 	// The server that will host the pipeline zip
 	server := httptest.NewServer(stackIndexHandler{})
@@ -199,6 +199,15 @@ func TestReconcileFeaturedStacks(t *testing.T) {
 
 	if nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url != defaultIndexPipeline {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipeline, nodejsStack.Spec.Versions[0].Pipelines[0].Https.Url))
+	}
+
+	if len(nodejsStack.Spec.Versions[0].Images) != 1 {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack to have one image, but has %v", len(nodejsStack.Spec.Versions[0].Images)))
+	}
+
+	expectedImage := "kabanero/nodejs:0.2"
+	if nodejsStack.Spec.Versions[0].Images[0].Image != expectedImage {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack image of %v, but was %v", expectedImage, nodejsStack.Spec.Versions[0].Images[0].Image))
 	}
 }
 
