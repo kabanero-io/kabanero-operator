@@ -154,7 +154,7 @@ func (r *ReconcileKabanero) convertTo_v1alpha2(kabInstanceUnstructured *unstruct
 	data, err := kabInstanceUnstructured.MarshalJSON()
 	if err != nil {
 		reqLogger.Error(err, "Error marshalling unstructured data: ")
-		return
+		return 
 	}
 
 	kabInstanceV1 := &kabanerov1alpha1.Kabanero{}
@@ -232,7 +232,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			return reconcile.Result{}, nil // Will run again since we changed the object
 		}
 	}
-
+	
 	// Fetch the Kabanero instance
 	instance := &kabanerov1alpha2.Kabanero{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -274,7 +274,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		processStatus(ctx, request, instance, r.client, reqLogger)
 		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
-
+	
 	// Deploy the kabanero operator collection controller.
 	err = reconcileCollectionController(ctx, instance, r.client)
 	if err != nil {
@@ -327,6 +327,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// Reconcile the SSO server
+	err = reconcileSso(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling SSO")
+		return reconcile.Result{}, err
+	}
+	
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, request, instance, r.client, reqLogger)
 	if err != nil {
@@ -468,7 +475,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isCheReady, _ := getCheStatus(ctx, k, c)
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
-
+	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
+	
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
 		isStackControllerReady &&
@@ -480,7 +488,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isKubernetesAppNavigatorReady &&
 		isCheReady &&
 		isEventsRouteReady &&
-		isAdmissionControllerWebhookReady
+		isAdmissionControllerWebhookReady &&
+		isSsoReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.Message = ""

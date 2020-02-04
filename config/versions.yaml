@@ -22,6 +22,7 @@ kabanero:
     collection-controller: "0.6.0-alpha.1"
     stack-controller: "0.6.0-alpha.1"
     admission-webhook: "0.6.0-alpha.1"
+    sso: "7.3.2"
 
 related-software:
   landing:
@@ -73,3 +74,7 @@ related-software:
     identifiers:
       repository: "kabanero/kabanero-operator-admission-webhook"
       tag: "0.6.0-alpha.1"
+
+  sso:
+  - version: "7.3.2"
+    orchestrations: "orchestrations/sso/0.1"

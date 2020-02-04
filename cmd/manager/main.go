@@ -15,6 +15,7 @@ import (
 	"github.com/kabanero-io/kabanero-operator/pkg/controller"
 
 	knsapis "github.com/knative/serving-operator/pkg/apis"
+	appsv1 "github.com/openshift/api/apps/v1"
 	consolev1 "github.com/openshift/api/console/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -157,6 +158,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := appsv1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	
 	if err := consolev1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)

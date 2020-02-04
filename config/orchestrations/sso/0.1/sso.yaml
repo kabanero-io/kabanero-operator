@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: The web server's https port.
+    service.alpha.openshift.io/dependencies: '[{"name": "sso-postgresql", "kind": "Service"}]'
+    service.alpha.openshift.io/serving-cert-secret-name: sso-x509-https-secret
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso
+spec:
+  ports:
+  - port: 8443
+    targetPort: 8443
+  selector:
+    deploymentConfig: sso
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: The database server's port.
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso-postgresql
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    deploymentConfig: sso-postgresql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: The JGroups ping port for clustering.
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+    service.alpha.openshift.io/serving-cert-secret-name: sso-x509-jgroups-secret
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso-ping
+spec:
+  clusterIP: None
+  ports:
+  - name: ping
+    port: 8888
+  selector:
+    deploymentConfig: sso
+---
+apiVersion: route.openshift.io/v1
+id: sso-https
+kind: Route
+metadata:
+  annotations:
+    description: Route for application's https service.
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso
+spec:
+  tls:
+    termination: reencrypt
+  to:
+    name: sso
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso
+spec:
+  replicas: 1
+  selector:
+    deploymentConfig: sso
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        application: sso
+        deploymentConfig: sso
+      name: sso
+    spec:
+      containers:
+      - env:
+        - name: SSO_HOSTNAME
+          value: ""
+        - name: DB_SERVICE_PREFIX_MAPPING
+          value: sso-postgresql=DB
+        - name: DB_JNDI
+          value: java:jboss/datasources/KeycloakDS
+        - name: DB_USERNAME
+          value: user3YM
+        - name: DB_PASSWORD
+          value: CHFaWcvHfFpbeWg8x00BPcKHv2Ur8hTh
+        - name: DB_DATABASE
+          value: root
+        - name: TX_DATABASE_PREFIX_MAPPING
+          value: sso-postgresql=DB
+        - name: DB_MIN_POOL_SIZE
+          value: ""
+        - name: DB_MAX_POOL_SIZE
+          value: ""
+        - name: DB_TX_ISOLATION
+          value: ""
+        - name: JGROUPS_PING_PROTOCOL
+          value: openshift.DNS_PING
+        - name: OPENSHIFT_DNS_PING_SERVICE_NAME
+          value: sso-ping
+        - name: OPENSHIFT_DNS_PING_SERVICE_PORT
+          value: "8888"
+        - name: X509_CA_BUNDLE
+          value: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+        - name: JGROUPS_CLUSTER_PASSWORD
+          value: eADYLYToDw5EMFYPiYp4V23mDA4quBAJ
+        - name: SSO_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoAdminSecretName }}
+              key: username
+        - name: SSO_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoAdminSecretName }}
+              key: password
+        - name: SSO_REALM
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoAdminSecretName }}
+              key: realm
+        - name: SSO_SERVICE_USERNAME
+          value: ""
+        - name: SSO_SERVICE_PASSWORD
+          value: ""
+        image: sso
+        imagePullPolicy: Always
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - /opt/eap/bin/livenessProbe.sh
+          initialDelaySeconds: 60
+        name: sso
+        ports:
+        - containerPort: 8778
+          name: jolokia
+          protocol: TCP
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        - containerPort: 8888
+          name: ping
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - /opt/eap/bin/readinessProbe.sh
+        resources:
+          limits:
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /etc/x509/https
+          name: sso-x509-https-volume
+          readOnly: true
+        - mountPath: /etc/x509/jgroups
+          name: sso-x509-jgroups-volume
+          readOnly: true
+      terminationGracePeriodSeconds: 75
+      volumes:
+      - name: sso-x509-https-volume
+        secret:
+          secretName: sso-x509-https-secret
+      - name: sso-x509-jgroups-volume
+        secret:
+          secretName: sso-x509-jgroups-secret
+  triggers:
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - sso
+      from:
+        kind: ImageStreamTag
+        name: redhat-sso73-openshift:1.0
+        namespace: openshift
+    type: ImageChange
+  - type: ConfigChange
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso-postgresql
+spec:
+  replicas: 1
+  selector:
+    deploymentConfig: sso-postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        application: sso
+        deploymentConfig: sso-postgresql
+      name: sso-postgresql
+    spec:
+      containers:
+      - env:
+        - name: POSTGRESQL_USER
+          value: user3YM
+        - name: POSTGRESQL_PASSWORD
+          value: CHFaWcvHfFpbeWg8x00BPcKHv2Ur8hTh
+        - name: POSTGRESQL_DATABASE
+          value: root
+        - name: POSTGRESQL_MAX_CONNECTIONS
+          value: ""
+        - name: POSTGRESQL_MAX_PREPARED_TRANSACTIONS
+          value: ""
+        - name: POSTGRESQL_SHARED_BUFFERS
+          value: ""
+        image: postgresql
+        imagePullPolicy: Always
+        livenessProbe:
+          initialDelaySeconds: 30
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        name: sso-postgresql
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -i
+            - -c
+            - psql -h 127.0.0.1 -U $POSTGRESQL_USER -q -d $POSTGRESQL_DATABASE -c 'SELECT 1'
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /var/lib/pgsql/data:z
+          name: sso-postgresql-pvol
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: sso-postgresql-pvol
+        persistentVolumeClaim:
+          claimName: sso-postgresql-claim
+  triggers:
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - sso-postgresql
+      from:
+        kind: ImageStreamTag
+        name: postgresql:10
+        namespace: openshift
+    type: ImageChange
+  - type: ConfigChange
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    application: sso
+    rhsso: 7.3.2.GA
+    template: sso73-x509-postgresql-persistent
+  name: sso-postgresql-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

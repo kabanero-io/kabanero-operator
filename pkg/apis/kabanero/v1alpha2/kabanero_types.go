@@ -42,6 +42,8 @@ type KabaneroSpec struct {
 	StackController StackControllerSpec `json:"stackController,omitempty"`
 
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
+
+	Sso SsoCustomizationSpec `json:"sso,omitempty"`
 }
 
 // InstanceStackConfig defines the customization entries for a set of stacks.
@@ -159,6 +161,12 @@ type AdmissionControllerWebhookCustomizationSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
+type SsoCustomizationSpec struct {
+	Enable     bool   `json:"enable,omitempty"`
+	Provider   string `json:"provider,omitempty"`
+	AdminSecretName string `json:"adminSecretName,omitempty"`
+}
+
 // KabaneroStatus defines the observed state of the Kabanero instance.
 // +k8s:openapi-gen=true
 type KabaneroStatus struct {
@@ -197,6 +205,9 @@ type KabaneroStatus struct {
 
 	// Admission webhook instance status
 	AdmissionControllerWebhook AdmissionControllerWebhookStatus `json:"admissionControllerWebhook,omitempty"`
+
+	// SSO server status
+	Sso SsoStatus `json:"sso,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
@@ -312,6 +323,13 @@ type StackControllerStatus struct {
 type AdmissionControllerWebhookStatus struct {
 	Ready   string `json:"ready,omitempty"`
 	Message string `json:"message,omitempty"`
+}
+
+// Status of the SSO server
+type SsoStatus struct {
+	Configured   string `json:"configured,omitempty"`
+	Ready        string `json:"ready,omitempty"`
+	Message      string `json:"message,omitempty"`
 }
 
 // Kabanero is the Schema for the kabaneros API
