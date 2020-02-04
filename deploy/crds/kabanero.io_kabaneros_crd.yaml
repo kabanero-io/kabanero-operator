@@ -645,7 +645,7 @@ spec:
               codereadyWorkspaces:
                 description: Codeready-workspaces instance readiness status.
                 properties:
-                  errorMessage:
+                  message:
                     type: string
                   operator:
                     description: CRWOperatorStatus defines the observed status details

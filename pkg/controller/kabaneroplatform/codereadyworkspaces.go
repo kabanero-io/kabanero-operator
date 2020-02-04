@@ -377,12 +377,12 @@ func getCRWStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	k.Status.CodereadyWorkspaces = &kabanerov1alpha2.CRWStatus{}
 
 	k.Status.CodereadyWorkspaces.Ready = "False"
-	k.Status.CodereadyWorkspaces.ErrorMessage = ""
+	k.Status.CodereadyWorkspaces.Message = ""
 
 	// Retrieve the version of the codeready-workspaces operator.
 	crwOperatorVersion, err := getCRWOperatorVersion(k, c)
 	if err != nil {
-		k.Status.CodereadyWorkspaces.ErrorMessage = "Unable to retrieve the version of installed codeready-workspaces operator. Error: " + err.Error()
+		k.Status.CodereadyWorkspaces.Message = "Unable to retrieve the version of installed codeready-workspaces operator. Error: " + err.Error()
 		return false, err
 	}
 
@@ -392,7 +392,7 @@ func getCRWStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	crwInst, err := getCRWInstance(ctx, k, c)
 	if err != nil {
 		custErr := fmt.Errorf("Unable to retrieve the codeready-workspaces instance object. Error: %v", err)
-		k.Status.CodereadyWorkspaces.ErrorMessage = custErr.Error()
+		k.Status.CodereadyWorkspaces.Message = custErr.Error()
 		return false, custErr
 	}
 
@@ -400,13 +400,13 @@ func getCRWStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	cheClusterRunning, found, err := unstructured.NestedString(crwInst.Object, "status", "cheClusterRunning")
 	if err != nil {
 		custErr := fmt.Errorf("Unable to retrieve status.cheClusterRunning from the codeready-workspaces instance, Error: %v", err)
-		k.Status.CodereadyWorkspaces.ErrorMessage = custErr.Error()
+		k.Status.CodereadyWorkspaces.Message = custErr.Error()
 		return false, custErr
 	}
 
 	if !found {
 		custErr := fmt.Errorf("The value of codeready-workspaces instance entry status.cheClusterRunning was not found")
-		k.Status.CodereadyWorkspaces.ErrorMessage = custErr.Error()
+		k.Status.CodereadyWorkspaces.Message = custErr.Error()
 		return false, custErr
 	}
 
@@ -431,7 +431,7 @@ func getCRWStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		ready = true
 		k.Status.CodereadyWorkspaces.Ready = "True"
 	} else {
-		k.Status.CodereadyWorkspaces.ErrorMessage = cheClusterRunning
+		k.Status.CodereadyWorkspaces.Message = cheClusterRunning
 	}
 
 	return ready, nil
@@ -460,13 +460,13 @@ func deleteCRWOperatorResources(ctx context.Context, k *kabanerov1alpha2.Kabaner
 	if err != nil {
 		return err
 	}
-	crwiList := &kabanerov1alpha2.KabaneroList{}
-	err = c.List(context.TODO(), crwiList, client.InNamespace(k.Namespace))
+	kiList := &kabanerov1alpha2.KabaneroList{}
+	err = c.List(context.TODO(), kiList)
 	if err != nil {
 		return err
 	}
 
-	if len(crwiList.Items) == 1 {
+	if len(kiList.Items) == 1 {
 		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindClusterRole, false)
 		if err != nil {
 			return err
@@ -512,7 +512,6 @@ func deleteCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev ve
 
 // Retrieves the codeready-workspaces instance deployed by the input kabanero CR instance.
 func getCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client) (*unstructured.Unstructured, error) {
-	instanceName := buildCRWInstanceName(k)
 	crwInst := &unstructured.Unstructured{}
 	crwInst.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    "CheCluster",
@@ -521,7 +520,7 @@ func getCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.
 	})
 
 	err := c.Get(ctx, client.ObjectKey{
-		Name:      instanceName,
+		Name:      crwOperatorCRNameSuffix,
 		Namespace: k.ObjectMeta.Namespace}, crwInst)
 
 	return crwInst, err
@@ -577,11 +576,6 @@ func getCRWCRDevfileRegistryImage(k *kabanerov1alpha2.Kabanero, rev versioning.S
 	}
 
 	return dfrImage, nil
-}
-
-// Returns the metadata.name value to be used when deploying an instance of the codeready-workspaces CR.
-func buildCRWInstanceName(k *kabanerov1alpha2.Kabanero) string {
-	return k.GetObjectMeta().GetName() + "-" + crwOperatorCRNameSuffix
 }
 
 // Returns the spec.server.cheWorkspaceClusterRole value to be used when deploying an instance of the codeready-workspaces CR.

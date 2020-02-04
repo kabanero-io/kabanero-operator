@@ -281,9 +281,9 @@ type KappnavStatus struct {
 
 // CRWStatus defines the observed status details of codeready-workspaces.
 type CRWStatus struct {
-	Ready        string            `json:"ready,omitempty"`
-	ErrorMessage string            `json:"errorMessage,omitempty"`
-	Operator     CRWOperatorStatus `json:"operator,omitempty"`
+	Ready    string            `json:"ready,omitempty"`
+	Message  string            `json:"message,omitempty"`
+	Operator CRWOperatorStatus `json:"operator,omitempty"`
 }
 
 // CRWOperatorStatus defines the observed status details of the codeready-workspaces operator.

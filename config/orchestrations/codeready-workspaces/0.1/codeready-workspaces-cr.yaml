@@ -1,8 +1,7 @@
 apiVersion: org.eclipse.che/v1
 kind: CheCluster
 metadata:
-  # The name prefixed with the kabanero instance name for multiple instance creation.
-  name: {{ .kabaneroInstanceName }}-codeready-workspaces
+  name: codeready-workspaces
 spec:
   server:
     # server image used in Che deployment
