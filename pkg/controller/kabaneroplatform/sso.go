@@ -40,9 +40,34 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 	
-	//The context which will be used to render any templates
+	// The context which will be used to render any templates
 	templateContext := make(map[string]interface{})
 	templateContext["ssoAdminSecretName"] = k.Spec.Sso.AdminSecretName
+
+	// OpenShift modifies the spec section of the deployment config after we've deployed it.
+	// That means that manifestival will try and change it back when it runs.  To prevent
+	// that, we're going to try and insert the fields that change, if they already exist.
+	postgreDeploymentConfigInstance := &appsv1.DeploymentConfig{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "sso-postgresql",
+		Namespace: k.ObjectMeta.Namespace}, postgreDeploymentConfigInstance)
+
+	if (err != nil) || (len(postgreDeploymentConfigInstance.Spec.Template.Spec.Containers) != 1) || (len(postgreDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image) == 0) {
+		templateContext["postgreImage"] = "postgresql"
+	} else {
+		templateContext["postgreImage"] = postgreDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image
+	}
+
+	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "sso",
+		Namespace: k.ObjectMeta.Namespace}, ssoDeploymentConfigInstance)
+
+	if (err != nil) || (len(ssoDeploymentConfigInstance.Spec.Template.Spec.Containers) != 1) || (len(ssoDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image) == 0) {
+		templateContext["ssoImage"] = "sso"
+	} else {
+		templateContext["ssoImage"] = ssoDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image
+	}
 	
 	f, err := rev.OpenOrchestration("sso.yaml")
 	if err != nil {
@@ -185,13 +210,9 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 	podList := &corev1.PodList{}
 	err = c.List(context.Background(), podList, client.InNamespace(k.GetNamespace()), client.MatchingLabels{"application": "sso", "deploymentConfig": "sso-postgresql"})
 	if err == nil {
-		reqLogger.Info(fmt.Sprintf("TDK SSO Pod list returned %v entries", len(podList.Items)))
 		for _, pod := range podList.Items {
-			reqLogger.Info(fmt.Sprintf("TDK pod name %v phase %v", pod.Name, pod.Status.Phase))
 			if pod.Status.Phase == corev1.PodPending {
-				reqLogger.Info(fmt.Sprintf("TDK condition list %v entries", len(pod.Status.Conditions)))
 				for _, condition := range pod.Status.Conditions {
-					reqLogger.Info(fmt.Sprintf("TDK condition type %v status %v reason %v", condition.Type, condition.Status, condition.Reason))
 					if (condition.Type == corev1.PodScheduled) && (condition.Status == corev1.ConditionFalse) && (condition.Reason == corev1.PodReasonUnschedulable) {
 						// There is a reason the pod cannot be scheduled.  Lets tell the user what it is.
 						err = fmt.Errorf("SSO-postgre pod %v cannot be scheduled: %v", pod.Name, condition.Message)
@@ -201,8 +222,6 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 				}
 			}
 		}
-	} else {
-		reqLogger.Error(err, fmt.Sprintf("TDK pod list error"))
 	}
 	
 	// Determine if the postgressl SSO components are available.

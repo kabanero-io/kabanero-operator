@@ -143,7 +143,7 @@ spec:
           value: ""
         - name: SSO_SERVICE_PASSWORD
           value: ""
-        image: sso
+        image: {{ .ssoImage }}
         imagePullPolicy: Always
         livenessProbe:
           exec:
@@ -237,7 +237,7 @@ spec:
           value: ""
         - name: POSTGRESQL_SHARED_BUFFERS
           value: ""
-        image: postgresql
+        image: {{ .postgreImage }}
         imagePullPolicy: Always
         livenessProbe:
           initialDelaySeconds: 30
