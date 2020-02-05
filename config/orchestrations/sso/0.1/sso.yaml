@@ -101,9 +101,15 @@ spec:
         - name: DB_JNDI
           value: java:jboss/datasources/KeycloakDS
         - name: DB_USERNAME
-          value: user3YM
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoDbSecretName }}
+              key: DB_USERNAME
         - name: DB_PASSWORD
-          value: CHFaWcvHfFpbeWg8x00BPcKHv2Ur8hTh
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoDbSecretName }}
+              key: DB_PASSWORD
         - name: DB_DATABASE
           value: root
         - name: TX_DATABASE_PREFIX_MAPPING
@@ -123,7 +129,10 @@ spec:
         - name: X509_CA_BUNDLE
           value: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
         - name: JGROUPS_CLUSTER_PASSWORD
-          value: eADYLYToDw5EMFYPiYp4V23mDA4quBAJ
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoDbSecretName }}
+              key: JGROUPS_CLUSTER_PASSWORD
         - name: SSO_ADMIN_USERNAME
           valueFrom:
             secretKeyRef:
@@ -143,7 +152,7 @@ spec:
           value: ""
         - name: SSO_SERVICE_PASSWORD
           value: ""
-        image: sso
+        image: {{ .ssoImage }}
         imagePullPolicy: Always
         livenessProbe:
           exec:
@@ -226,9 +235,15 @@ spec:
       containers:
       - env:
         - name: POSTGRESQL_USER
-          value: user3YM
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoDbSecretName }}
+              key: DB_USERNAME
         - name: POSTGRESQL_PASSWORD
-          value: CHFaWcvHfFpbeWg8x00BPcKHv2Ur8hTh
+          valueFrom:
+            secretKeyRef:
+              name: {{ .ssoDbSecretName }}
+              key: DB_PASSWORD
         - name: POSTGRESQL_DATABASE
           value: root
         - name: POSTGRESQL_MAX_CONNECTIONS
@@ -237,7 +252,7 @@ spec:
           value: ""
         - name: POSTGRESQL_SHARED_BUFFERS
           value: ""
-        image: postgresql
+        image: {{ .postgreImage }}
         imagePullPolicy: Always
         livenessProbe:
           initialDelaySeconds: 30

@@ -10,6 +10,7 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
+	"github.com/go-logr/logr"
 	mf "github.com/kabanero-io/manifestival"
 	consolev1 "github.com/openshift/api/console/v1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -26,7 +27,7 @@ import (
 var kllog = rlog.Log.WithName("kabanero-landing")
 
 // Deploys resources and customizes to the Openshift web console.
-func deployLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
+func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, _ logr.Logger) error {
 	// if enable is false do not deploy the landing page
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
 		err := cleanupLandingPage(k, c)

@@ -48,7 +48,7 @@ func initializeCRW(k *kabanerov1alpha2.Kabanero) {
 	}
 }
 
-func reconcileCRW(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, ctrlr controller.Controller) error {
+func reconcileCRW(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 	logger := crwlog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling codeready-workspaces install.")
 
@@ -81,7 +81,7 @@ func reconcileCRW(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 
 	// Apply the codeready-workspaces CR instance if it does not already exists.
 	if crdActive {
-		err = deployCRWInstance(ctx, k, c, ctrlr, rev, logger)
+		err = deployCRWInstance(ctx, k, c, rev, logger)
 		if err != nil {
 			logger.Error(err, fmt.Sprintf("Failed to create or validate codeready-workspaces instance. Controller: %v.", ctrlr))
 			return err
@@ -93,7 +93,7 @@ func reconcileCRW(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 
 // Deploys the codeready-workspaces operator CR if one does not exist. If the codeready-workspaces operator CR exists,
 // it validates that the image and tag values are consistent with what was configured.
-func deployCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, ctrlr controller.Controller, rev versioning.SoftwareRevision, logger logr.Logger) error {
+func deployCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, rev versioning.SoftwareRevision, logger logr.Logger) error {
 	deployed, err := isCRWInstanceDeployed(ctx, k, c)
 	if err != nil {
 		return err
@@ -109,11 +109,6 @@ func deployCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c clie
 		}
 
 		err = processCRWYaml(ctx, k, rev, templateCtx, c, crwOperatorCR, true)
-		if err != nil {
-			return err
-		}
-
-		err = watchCRWInstance(ctrlr)
 		if err != nil {
 			return err
 		}
