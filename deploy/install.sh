@@ -120,21 +120,18 @@ checksub () {
 # Removes a resource instance in the specified namespace.
 removeResourceInstance() {
 	if [ `oc get crds $1 --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
-        # Delete an input Kind objects in a specific namespace.  Print a list of
-        # each Kind instance along with its namespace.  Then delete them one
-        # by one.
-        oc get $2 -n $3 -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace --no-headers --ignore-not-found | while read KAB_NAME KAB_NAMESPACE; do oc delete $2 $KAB_NAME --namespace $KAB_NAMESPACE; done
+        # Delete an input Kind object in a specific namespace.  
+        oc delete $2 $3 -n $4 --ignore-not-found
 
-        # Wait for all of the Kind instances to be deleted.  We don't want to
-        # delete the Kind until instance finalized are processed.
-		echo "Waiting for $2 instances in the $3 namespace to be deleted...."
+        # Wait for the specified instance to be deleted.
+	echo "Waiting for $2 instance ($3) in the $4 namespace to be deleted...."
     	LOOP_COUNT=0
-   		while [ `oc get $2 -n $3 | wc -l` -gt 0 ]
+   		while [ `oc get $2 -n $4 | wc -l` -gt 0 ]
     	do
         	sleep 5
         	LOOP_COUNT=`expr $LOOP_COUNT + 1`
         	if [ $LOOP_COUNT -gt 10 ] ; then
-           		echo "Timed out waiting for $2 instances in the $3 namespace to be deleted"
+           		echo "Timed out waiting for $2 instance ($3) in the $4 namespace to be deleted"
            		exit 1
         	fi
     	done
@@ -259,9 +256,15 @@ checksub appsody-operator-certified openshift-operators
 
 # Install 14-subscription (codeready-workspaces, kabanero)
 
-# Prior to installing codeready-workspaces, remove all eclipse-che instances and 
-# eclipse-che operator deployments in the kabanero namespace.
-removeResourceInstance checlusters.org.eclipse.che CheCluster kabanero
+# Eclipse-che operator and Codeready-workspaces operator cannot be both installed at the same 
+# time in the same namespace. The kabanero operator installation will attempt to uninstall 
+# the eclipe-che CR instance (codewind-che) and Eclipse-che operator previously 
+# installed by the kabanero operator.
+# If the current installation of Eclipse-che was not done through the kabanero operator/install, 
+# it must be uninstalled prior to running the kabanero installation script. Furthermore, users 
+# need to be sure to delete any operatorgroups other than kabanero (i.e. kabanero-5pn6b) in 
+# the kabanero namespace that may have been created as result of a manual Eclipse-che installation.
+removeResourceInstance checlusters.org.eclipse.che CheCluster codewind-che kabanero
 unsubscribe eclipse-che kabanero
 
 # Codewind is required to run as privileged and as root because it builds container images

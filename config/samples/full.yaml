@@ -70,7 +70,7 @@ spec:
     image: kabanero/kabanero-operator-admission-webhook:0.6.0-alpha.1
   
   codeReadyWorkspaces:
-    # CodeReadyWorkspaces is disabled by default. Set the value to true to enable it.
+    # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
     enable: true
 
     operator:
