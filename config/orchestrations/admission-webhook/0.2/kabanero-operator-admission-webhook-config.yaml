@@ -124,6 +124,33 @@ webhooks:
     service:
       name: kabanero-operator-admission-webhook
       namespace: kabanero
+      path: /validate-kabaneros/v1aplpha2
+  failurePolicy: Fail
+  name: validating.kabanero.kabanero.io
+  namespaceSelector:
+    matchExpressions:
+    - key: control-plane
+      operator: DoesNotExist
+  rules:
+  - apiGroups:
+    - kabanero.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kabaneros
+    scope: '*'
+  sideEffects: Unknown
+  timeoutSeconds: 30
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .caBundle }}
+    service:
+      name: kabanero-operator-admission-webhook
+      namespace: kabanero
       path: /validate-stacks
   failurePolicy: Fail
   name: validating.stack.kabanero.io
