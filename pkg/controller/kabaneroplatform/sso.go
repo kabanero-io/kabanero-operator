@@ -38,52 +38,48 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 	
+	// Go make sure that the necessary secret has been created.
+	err = checkSecret(ctx, k, c, reqLogger)
+	if err != nil {
+		return err
+	}
+	
 	//The context which will be used to render any templates
 	templateContext := make(map[string]interface{})
+	templateContext["ssoAdminSecretName"] = k.Spec.Sso.AdminSecretName
 
-	// Go make sure that the necessary secret has been created.
-	if len(k.Spec.Sso.AdminSecretName) == 0 {
-		return errors.New("The SSO admin secret name must be specified in the Kabanero CR instance")
-	}
-	
-	secretInstance := &corev1.Secret{}
+	// OpenShift modifies the spec section of the deployment config after we've deployed it.
+	// That means that manifestival will try and change it back when it runs.  To prevent
+	// that, we're going to try and insert the fields that change, if they already exist.
+	postgreDeploymentConfigInstance := &appsv1.DeploymentConfig{}
 	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      k.Spec.Sso.AdminSecretName,
-		Namespace: k.ObjectMeta.Namespace}, secretInstance)
+		Name:      "sso-postgresql",
+		Namespace: k.ObjectMeta.Namespace}, postgreDeploymentConfigInstance)
 
-	if err != nil {
-		if kerrors.IsNotFound(err) == false {
-			return fmt.Errorf("The SSO admin secret was not found: %v", err.Error())
+	if (err != nil) || (len(postgreDeploymentConfigInstance.Spec.Template.Spec.Containers) != 1) || (len(postgreDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image) == 0) {
+		templateContext["postgreImage"] = "postgresql"
+	} else {
+		templateContext["postgreImage"] = postgreDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image
 		}
 
-		return fmt.Errorf("Could not retrieve the SSO admin secret: %v", err.Error())
+	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "sso",
+		Namespace: k.ObjectMeta.Namespace}, ssoDeploymentConfigInstance)
+
+	if (err != nil) || (len(ssoDeploymentConfigInstance.Spec.Template.Spec.Containers) != 1) || (len(ssoDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image) == 0) {
+		templateContext["ssoImage"] = "sso"
+	} else {
+		templateContext["ssoImage"] = ssoDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image
 	}
 
-	// Make sure the required keys are assigned.
-	ssoAdminUserName, ok := secretInstance.Data["username"]
-	if (!ok) || (len(ssoAdminUserName) == 0) {
-		return fmt.Errorf("The SSO admin secret %v does not contain key 'username'", k.Spec.Sso.AdminSecretName)
-	}
-
-	ssoAdminPassword, ok := secretInstance.Data["password"]
-	if (!ok) || (len(ssoAdminPassword) == 0) {
-		return fmt.Errorf("The SSO admin secret %v does not contain key 'password'", k.Spec.Sso.AdminSecretName)
-	}
-
-	ssoRealm, ok := secretInstance.Data["realm"]
-	if (!ok) || (len(ssoRealm) == 0) {
-		return fmt.Errorf("The SSO admin secret %v does not contain key 'realm'", k.Spec.Sso.AdminSecretName)
-	}
-	
 	// Create DB secret if it does not exist
 	err = createDbSecret(k, c, reqLogger)
 	if err != nil {
 		return fmt.Errorf("Failed to create the SSO DB secret: %v", err.Error())
 	}
-	
-	templateContext["ssoAdminSecretName"] = k.Spec.Sso.AdminSecretName
 	templateContext["ssoDbSecretName"] = sso_db_secret_name
-	
+
 	f, err := rev.OpenOrchestration("sso.yaml")
 	if err != nil {
 		return err
@@ -117,6 +113,46 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	return nil
 }
 
+// Checks to make sure the secret required by the SSO configuration has
+// been created and contains the required keys.
+func checkSecret(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
+
+	if len(k.Spec.Sso.AdminSecretName) == 0 {
+		return errors.New("The SSO admin secret name must be specified in the Kabanero CR instance")
+	}
+	
+	secretInstance := &corev1.Secret{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      k.Spec.Sso.AdminSecretName,
+		Namespace: k.ObjectMeta.Namespace}, secretInstance)
+
+	if err != nil {
+		if kerrors.IsNotFound(err) == false {
+			return fmt.Errorf("The SSO admin secret was not found: %v", err.Error())
+		}
+
+		return fmt.Errorf("Could not retrieve the SSO admin secret: %v", err.Error())
+	}
+
+	// Make sure the required keys are assigned.
+	ssoAdminUserName, ok := secretInstance.Data["username"]
+	if (!ok) || (len(ssoAdminUserName) == 0) {
+		return fmt.Errorf("The SSO admin secret %v does not contain key 'username'", k.Spec.Sso.AdminSecretName)
+	}
+
+	ssoAdminPassword, ok := secretInstance.Data["password"]
+	if (!ok) || (len(ssoAdminPassword) == 0) {
+		return fmt.Errorf("The SSO admin secret %v does not contain key 'password'", k.Spec.Sso.AdminSecretName)
+	}
+
+	ssoRealm, ok := secretInstance.Data["realm"]
+	if (!ok) || (len(ssoRealm) == 0) {
+		return fmt.Errorf("The SSO admin secret %v does not contain key 'realm'", k.Spec.Sso.AdminSecretName)
+	}
+	
+	return nil
+}
+
 func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 	// Figure out what version of the orchestration we are going to use.
 	noOverrideVersion := ""
@@ -127,7 +163,7 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 	
 	// The context which will be used to render any templates.  Note that
 	// since we're just going to delete things, these values don't matter
-	// to much.
+	// too much.
 	templateContext := make(map[string]interface{})
 	templateContext["ssoAdminSecretName"] = "default"
 	templateContext["ssoDbSecretName"] = sso_db_secret_name
@@ -170,40 +206,37 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		return true, nil
 	}
 
-	// Determine if the SSO components are available.
+	// Make sure the configuration is correct
 	k.Status.Sso.Configured = sso_true
 	k.Status.Sso.Ready = sso_false
 	k.Status.Sso.Message = ""
 
-	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      "sso",
-		Namespace: k.ObjectMeta.Namespace}, ssoDeploymentConfigInstance)
-
+	err := checkSecret(context.Background(), k, c, reqLogger)
 	if err != nil {
 		k.Status.Sso.Message = err.Error()
 		return false, err
 	}
 
-	foundAvailableCondition := false
-	for _, condition := range ssoDeploymentConfigInstance.Status.Conditions {
-		if condition.Type == appsv1.DeploymentAvailable {
-			if condition.Status != corev1.ConditionTrue {
-				err = fmt.Errorf("The SSO DeploymentConfig reported that it is not available: %v", condition.Message)
-				k.Status.Sso.Message = err.Error()
-				return false, err
+	// Before checking the deployment configs, check specifically if the
+	// postgresql pod is waiting for a persistent volume (PV).
+	podList := &corev1.PodList{}
+	err = c.List(context.Background(), podList, client.InNamespace(k.GetNamespace()), client.MatchingLabels{"application": "sso", "deploymentConfig": "sso-postgresql"})
+	if err == nil {
+		for _, pod := range podList.Items {
+			if pod.Status.Phase == corev1.PodPending {
+				for _, condition := range pod.Status.Conditions {
+					if (condition.Type == corev1.PodScheduled) && (condition.Status == corev1.ConditionFalse) && (condition.Reason == corev1.PodReasonUnschedulable) {
+						// There is a reason the pod cannot be scheduled.  Lets tell the user what it is.
+						err = fmt.Errorf("SSO-postgre pod %v cannot be scheduled: %v", pod.Name, condition.Message)
+						k.Status.Sso.Message = err.Error()
+						return false, err
+					}
+				}
 			}
-			foundAvailableCondition = true
 		}
 	}
-
-	if foundAvailableCondition == false {
-		err = errors.New("The SSO DeploymentConfig did not contain an 'Available' condition")
-		k.Status.Sso.Message = err.Error()
-		return false, err
-	}
-
-	// Now check the postgresql DeploymentConfig in the same way.
+	
+	// Determine if the postgressl SSO components are available.
 	postgreDeploymentConfigInstance := &appsv1.DeploymentConfig{}
 	err = c.Get(context.Background(), types.NamespacedName{
 		Name:      "sso-postgresql",
@@ -214,7 +247,7 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		return false, err
 	}
 
-	foundAvailableCondition = false
+	foundAvailableCondition := false
 	for _, condition := range postgreDeploymentConfigInstance.Status.Conditions {
 		if condition.Type == appsv1.DeploymentAvailable {
 			if condition.Status != corev1.ConditionTrue {
@@ -228,6 +261,35 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 
 	if foundAvailableCondition == false {
 		err = errors.New("The SSO-Postgre DeploymentConfig did not contain an 'Available' condition")
+		k.Status.Sso.Message = err.Error()
+		return false, err
+	}
+
+	// Check if the SSO components are available
+	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      "sso",
+		Namespace: k.ObjectMeta.Namespace}, ssoDeploymentConfigInstance)
+
+	if err != nil {
+		k.Status.Sso.Message = err.Error()
+		return false, err
+	}
+
+	foundAvailableCondition = false
+	for _, condition := range ssoDeploymentConfigInstance.Status.Conditions {
+		if condition.Type == appsv1.DeploymentAvailable {
+			if condition.Status != corev1.ConditionTrue {
+				err = fmt.Errorf("The SSO DeploymentConfig reported that it is not available: %v", condition.Message)
+				k.Status.Sso.Message = err.Error()
+				return false, err
+			}
+			foundAvailableCondition = true
+		}
+	}
+
+	if foundAvailableCondition == false {
+		err = errors.New("The SSO DeploymentConfig did not contain an 'Available' condition")
 		k.Status.Sso.Message = err.Error()
 		return false, err
 	}

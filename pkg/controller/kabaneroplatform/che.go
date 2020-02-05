@@ -52,7 +52,7 @@ func initializeChe(k *kabanerov1alpha2.Kabanero) {
 	}
 }
 
-func reconcileChe(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, ctrlr controller.Controller) error {
+func reconcileChe(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, _ logr.Logger) error {
 	// The Che entry was not configured in the spec. Consider Che to be disabled.
 	if *k.Spec.Che.Enable == false {
 		cleanupChe(ctx, k, c)
@@ -91,7 +91,7 @@ func reconcileChe(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 
 	// Apply the codewind-che CR instance if it does not already exists.
 	if crdActive {
-		err = deployCheInstance(ctx, k, c, ctrlr, logger)
+		err = deployCheInstance(ctx, k, c, logger)
 		if err != nil {
 			logger.Error(err, fmt.Sprintf("Failed to create or validate Che instance. Controller: %v.", ctrlr))
 			return err
@@ -103,7 +103,7 @@ func reconcileChe(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 
 // Deploys the Che operator CR if one does not exist. If the Che operator CR exists, it validates that the image and tag values
 // are consistent with what was configured.
-func deployCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, ctrlr controller.Controller, logger logr.Logger) error {
+func deployCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, logger logr.Logger) error {
 	deployed, err := isCheInstanceDeployed(ctx, k, c, nameCodewindCheOperatorCR)
 	if err != nil {
 		return err
@@ -127,12 +127,6 @@ func deployCheInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c clie
 		templateCtx["workspaceClusterRole"] = getWorkspaceClusterRole(k)
 
 		err = processYaml(ctx, k, rev, templateCtx, c, yamlNameCodewindCheOperatorCR, true)
-		if err != nil {
-			return err
-		}
-
-		// Watch Che instances. TODO: Do this only once if Che use is enabled.
-		err = watchCheInstance(ctrlr)
 		if err != nil {
 			return err
 		}

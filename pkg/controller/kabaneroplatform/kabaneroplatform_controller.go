@@ -30,6 +30,24 @@ import (
 var log = logf.Log.WithName("controller_kabaneroplatform")
 var ctrlr controller.Controller
 
+// A list of functions driven by the reconciler
+type reconcileFunc func(context.Context, *kabanerov1alpha2.Kabanero, client.Client, logr.Logger) error
+
+type reconcileFuncType struct {
+	name string
+	function reconcileFunc
+}
+
+var reconcileFuncs = []reconcileFuncType{
+	{name: "collection controller", function: reconcileCollectionController},
+	{name: "stack controller", function: reconcileStackController},
+	{name: "landing page", function: deployLandingPage},
+	{name: "cli service", function: reconcileKabaneroCli},
+	{name: "che", function: reconcileChe},
+	{name: "events", function: reconcileEvents},
+	{name: "sso", function: reconcileSso},
+}
+
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -81,6 +99,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch CheCluster instances.  We watch these so that we can enforce
+	// some fields that should not be changed by the user.
+	err = watchCheInstance(c)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -274,65 +299,28 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		processStatus(ctx, request, instance, r.client, reqLogger)
 		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
+
+	// Iterate the components and try to reconcile.  If something goes wrong,
+	// update the status and try again later.
+	for _, component := range reconcileFuncs {
+		err = component.function(ctx, instance, r.client, reqLogger)
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Error deploying %v.", component.name))
+			processStatus(ctx, request, instance, r.client, reqLogger)
+			return reconcile.Result{}, err
+		}
+	}
 	
-	// Deploy the kabanero operator collection controller.
-	err = reconcileCollectionController(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error deploying the kabanero collection controller.")
-		return reconcile.Result{}, err
-	}
-
-	// Deploy the kabanero operator stack controller.
-	err = reconcileStackController(ctx, instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error deploying the kabanero stack controller.")
-		return reconcile.Result{}, err
-	}
-
 	// Deploy feature collection resources.
 	err = reconcileFeaturedStacks(ctx, instance, r.client)
 	if err != nil {
 		reqLogger.Error(err, "Error reconciling featured stacks.")
+		processStatus(ctx, request, instance, r.client, reqLogger)
 		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMap, reqLogger)
 	}
 
 	// things worked reset requeue data
 	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
-
-	// Deploy the kabanero landing page
-	err = deployLandingPage(instance, r.client)
-	if err != nil {
-		reqLogger.Error(err, "Error deploying the kabanero landing page.")
-		return reconcile.Result{}, err
-	}
-
-	// Reconcile the Kabanero CLI.
-	err = reconcileKabaneroCli(ctx, instance, r.client, reqLogger)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling the Kabanero CLI.")
-		return reconcile.Result{}, err
-	}
-
-	// Reconcile the Che Operator.
-	err = reconcileChe(ctx, instance, r.client, ctrlr)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling Che.")
-		return reconcile.Result{}, err
-	}
-
-	// Reconcile kabanero events
-	err = reconcileEvents(ctx, instance, r.client, reqLogger)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling kabanero-events")
-		return reconcile.Result{}, err
-	}
-
-	// Reconcile the SSO server
-	err = reconcileSso(ctx, instance, r.client, reqLogger)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling SSO")
-		return reconcile.Result{}, err
-	}
 	
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, request, instance, r.client, reqLogger)
