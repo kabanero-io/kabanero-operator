@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
@@ -15,11 +17,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	sso_true string = "True"
 	sso_false string = "False"
+	sso_db_secret_name = "kabanero-sso-db-secret"
 )
 
 func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
@@ -33,14 +37,14 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	if err != nil {
 		return err
 	}
-
+	
 	// Go make sure that the necessary secret has been created.
 	err = checkSecret(ctx, k, c, reqLogger)
 	if err != nil {
 		return err
 	}
 	
-	// The context which will be used to render any templates
+	//The context which will be used to render any templates
 	templateContext := make(map[string]interface{})
 	templateContext["ssoAdminSecretName"] = k.Spec.Sso.AdminSecretName
 
@@ -56,7 +60,7 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		templateContext["postgreImage"] = "postgresql"
 	} else {
 		templateContext["postgreImage"] = postgreDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image
-	}
+		}
 
 	ssoDeploymentConfigInstance := &appsv1.DeploymentConfig{}
 	err = c.Get(context.Background(), types.NamespacedName{
@@ -68,7 +72,14 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	} else {
 		templateContext["ssoImage"] = ssoDeploymentConfigInstance.Spec.Template.Spec.Containers[0].Image
 	}
-	
+
+	// Create DB secret if it does not exist
+	err = createDbSecret(k, c, reqLogger)
+	if err != nil {
+		return fmt.Errorf("Failed to create the SSO DB secret: %v", err.Error())
+	}
+	templateContext["ssoDbSecretName"] = sso_db_secret_name
+
 	f, err := rev.OpenOrchestration("sso.yaml")
 	if err != nil {
 		return err
@@ -138,7 +149,7 @@ func checkSecret(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cli
 	if (!ok) || (len(ssoRealm) == 0) {
 		return fmt.Errorf("The SSO admin secret %v does not contain key 'realm'", k.Spec.Sso.AdminSecretName)
 	}
-
+	
 	return nil
 }
 
@@ -155,6 +166,7 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 	// too much.
 	templateContext := make(map[string]interface{})
 	templateContext["ssoAdminSecretName"] = "default"
+	templateContext["ssoDbSecretName"] = sso_db_secret_name
 	
 	f, err := rev.OpenOrchestration("sso.yaml")
 	if err != nil {
@@ -282,8 +294,79 @@ func getSsoStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.
 		return false, err
 	}
 
-
 	k.Status.Sso.Ready = sso_true
 	return true, nil
 }
 
+// Creates the secret containing DB_USERNAME, DB_PASSWORD, JGROUPS_CLUSTER_PASSWORD
+func createDbSecret(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
+
+	// Check if the Secret already exists.
+	secretInstance := &corev1.Secret{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      sso_db_secret_name,
+		Namespace: k.ObjectMeta.Namespace}, secretInstance)
+
+	if err != nil {
+		if kerrors.IsNotFound(err) == false {
+			return err
+		}
+
+		// Not found.  Make a new one.
+		var ownerRef metav1.OwnerReference
+		ownerRef, err = getOwnerReference(k, c, reqLogger)
+		if err != nil {
+			return err
+		}
+
+		secretInstance := &corev1.Secret{}
+		secretInstance.ObjectMeta.Name = sso_db_secret_name
+		secretInstance.ObjectMeta.Namespace = k.ObjectMeta.Namespace
+		secretInstance.ObjectMeta.OwnerReferences = append(secretInstance.ObjectMeta.OwnerReferences, ownerRef)
+
+		secretMap := make(map[string]string)
+		secretMap["DB_USERNAME"] = randSecret(16)
+		secretMap["DB_PASSWORD"] = randSecret(32)
+		secretMap["JGROUPS_CLUSTER_PASSWORD"] = randSecret(32)
+		
+		secretInstance.StringData = secretMap
+
+		reqLogger.Info(fmt.Sprintf("Attempting to create the SSO DB secret"))
+		err = c.Create(context.TODO(), secretInstance)
+	}
+
+	return err
+}
+
+
+// Generate a random username, password
+// Rules: Minimum Length: 9, 2 Digits, 2 Uppers, 2 Lowers
+// Specials may break sed in sso startup
+func randSecret(length int) string {
+
+	if length < 9 {
+		length = 9
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	digits := "0123456789"
+	lowers := "abcdefghijklmnopqrstuvwxyz"
+	uppers := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	all := digits + lowers + uppers
+
+	buf := make([]byte, length)
+	buf[0] = digits[rand.Intn(len(digits))]
+	buf[1] = digits[rand.Intn(len(digits))]
+	buf[2] = lowers[rand.Intn(len(lowers))]
+	buf[3] = lowers[rand.Intn(len(lowers))]
+	buf[4] = uppers[rand.Intn(len(uppers))]
+	buf[5] = uppers[rand.Intn(len(uppers))]
+	for i := 6; i < length; i++ {
+			buf[i] = all[rand.Intn(len(all))]
+	}
+	rand.Shuffle(len(buf), func(i, j int) {
+			buf[i], buf[j] = buf[j], buf[i]
+	})
+	
+	return string(buf)
+}
