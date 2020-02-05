@@ -1,28 +1,28 @@
 apiVersion: org.eclipse.che/v1
 kind: CheCluster
 metadata:
-  name: codewind-che
+  name: codeready-workspaces
 spec:
   server:
     # server image used in Che deployment
-    cheImage: {{ .repository }}
+    cheImage: ''
     # tag of an image used in Che deployment
-    cheImageTag: {{ .tag }}
+    cheImageTag: ''
     # image:tag used in Devfile registry deployment
-    devfileRegistryImage: 'kabanero/che-devfile-registry:{{ .tag }}'
+    devfileRegistryImage: {{ .devfileRegistryImage }}
     # image:tag used in plugin registry deployment
-    pluginRegistryImage: 'quay.io/eclipse/che-plugin-registry:{{ .eclipseCheTag }}'
+    pluginRegistryImage: ''
     # defaults to `che`. When set to `codeready`, CodeReady Workspaces is deployed
     # the difference is in images, labels, exec commands
-    cheFlavor: ''
+    cheFlavor: 'codeready'
     # specifies a custom cluster role to user for the Che workspaces
     # Uses the default roles if left blank.
-    cheWorkspaceClusterRole: {{ .workspaceClusterRole }}
+    cheWorkspaceClusterRole: {{ .cheWorkspaceClusterRole }}
     # when set to true the operator will attempt to get a secret in OpenShift router namespace
     # to add it to Java trust store of Che server. Requires cluster-admin privileges for operator service account
-    selfSignedCert: false
+    selfSignedCert: {{ .selfSignedCert }}
     # TLS mode for Che. Make sure you either have public cert, or set selfSignedCert to true
-    tlsSupport: false
+    tlsSupport: {{ .tlsSupport }}
     # protocol+hostname of a proxy server. Automatically added as JAVA_OPTS and https(s)_proxy
     # to Che server and workspaces containers
     proxyURL: ''
@@ -41,6 +41,8 @@ spec:
     # additional custom Che properties
     customCheProperties:
       CHE_INFRA_KUBERNETES_WORKSPACE__START__TIMEOUT__MIN: "5"
+      CHE_LIMITS_WORKSPACE_IDLE_TIMEOUT: "0"
+      CHE_WORKSPACE_PLUGIN__BROKER_WAIT__TIMEOUT__MIN: "15"
   database:
     # when set to true, the operator skips deploying Postgres, and passes connection details of existing DB to Che server
     # otherwise a Postgres deployment is created
@@ -80,7 +82,7 @@ spec:
     # password for keycloak database user. Auto generated if left blank
     keycloakPostgresPassword: ''
     # desired admin username of Keycloak admin user (applicable only when externalIdentityProvider is false)
-    identityProviderAdminUserName: ''
+    identityProviderAdminUserName: 'admin'
     # desired password of Keycloak admin user (applicable only when externalIdentityProvider is false)
     identityProviderPassword: 'admin'
     # name of a keycloak realm. This realm will be created, when externalIdentityProvider is true, otherwise passed to Che server
@@ -89,25 +91,10 @@ spec:
     identityProviderClientId: ''
     # instructs an Operator to enable OpenShift v3 identity provider in Keycloak,
     # as well as create respective oAuthClient and configure Che configMap accordingly
-    openShiftoAuth: false
+    openShiftoAuth: {{ .openShiftOAuth }}
     # name of oAuthClient used in OpenShift v3 identity provider in Keycloak realm. Auto generated if left blank
     oAuthClientName: ''
     # secret used in oAuthClient. Auto generated if left blank
     oAuthSecret: ''
     # image:tag used in Keycloak deployment
-    identityProviderImage: 'eclipse/che-keycloak:{{ .eclipseCheTag }}'
-  k8s:
-    # your global ingress domain
-    ingressDomain: ''
-    # kubernetes.io/ingress.class, defaults to nginx
-    ingressClass: ''
-    # IngressStrategy is the way ingresses are created.
-    # Can be multi-host (host is explicitly provided in ingress, <ingress-name>-<namespace>.<global-ingress-domain>),
-    # single-host (host is provided, path based rules, <ingress-domain>/path) and default-host *(no host is provided, path based rules)
-    ingressStrategy: ''
-    # secret name used for tls termination
-    tlsSecretName: ''
-    # FSGroup the Che POD and Workspace pod containers should run in  
-    securityContextFsGroup: '' 
-    # User the Che POD and Workspace pod containers should run as  
-    securityContextRunAsUser: '' 
+    identityProviderImage: ''

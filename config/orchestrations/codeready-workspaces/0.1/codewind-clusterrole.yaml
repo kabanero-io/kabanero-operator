@@ -19,7 +19,7 @@ rules:
 
 - apiGroups: [""]
   resources: ["secrets"]
-  verbs: ["get", "list", "create", "watch"]
+  verbs: ["get", "list", "create", "watch", "delete", "patch", "update"]
 
 - apiGroups: [""]
   resources: ["serviceaccounts"]
@@ -30,20 +30,12 @@ rules:
   verbs: ["get", "list", "create", "delete", "patch"]
 
 - apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get", "list"]
-
-- apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get", "list", "create", "update", "delete", "patch"]
 
 - apiGroups: [""]
   resources: ["persistentvolumeclaims", "persistentvolumeclaims/finalizers", "persistentvolumeclaims/status"]
   verbs: ["*"]
-
-- apiGroups: ["icp.ibm.com"]
-  resources: ["images"]
-  verbs: ["get", "list", "create", "watch"]
 
 - apiGroups: ["apps", "extensions"]
   resources: ["deployments"]
@@ -52,22 +44,6 @@ rules:
 - apiGroups: ["extensions", "apps"]
   resources: ["replicasets", "replicasets/finalizers"]
   verbs: ["get", "list", "update", "delete"]
-
-- apiGroups: ["apiextensions.k8s.io"]
-  resources: ["customresourcedefinitions"]
-  verbs: ["get", "list", "create", "delete"]
-
-- apiGroups: ["certificates.k8s.io"]
-  resources: ["certificatesigningrequests"]
-  verbs: ["delete", "get", "list", "watch", "create"]
-
-- apiGroups: ["certificates.k8s.io"]
-  resources: ["certificatesigningrequests/approval", "certificatesigningrequests/status"]
-  verbs: ["update"]
-
-- apiGroups: ["authorization.k8s.io"]
-  resources: ["subjectaccessreviews"]
-  verbs: ["create"]
 
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["rolebindings", "roles", "clusterroles"]

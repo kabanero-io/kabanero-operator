@@ -94,10 +94,10 @@ if [ `oc get crds kappnavs.kappnav.io --no-headers --ignore-not-found | wc -l` -
     done
 
 fi
+
 oc delete serviceaccounts,deployments --selector=kabanero.io/component=kappnav --namespace kappnav --ignore-not-found
 oc delete clusterroles,clusterrolebindings,crds --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
-
 
 # Delete the Role used by the collection controller to manipulate triggers
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
@@ -140,8 +140,6 @@ if [ `oc get crds kabaneros.kabanero.io --no-headers --ignore-not-found | wc -l`
         fi
     done
 fi
-
-
 
 # Delete CRs
 for CRD in "${CRDS[@]}"
@@ -201,7 +199,13 @@ unsubscribe jaeger-product openshift-operators
 
 unsubscribe elasticsearch-operator openshift-operators
 
-unsubscribe eclipse-che kabanero
+# Unsubscribe the codereay-workspaces operator. Note that all codeready-workspace operator instances
+# are deleted when the kabanero instance that created it is deleted.
+unsubscribe codeready-workspaces kabanero
+
+# Remove codewind privileges added during installation.
+oc adm policy remove-scc-from-user anyuid system:serviceaccount:kabanero:che-workspace
+oc adm policy remove-scc-from-user privileged system:serviceaccount:kabanero:che-workspace
 
 # Delete OperatorGroup
 oc delete -n kabanero operatorgroup kabanero

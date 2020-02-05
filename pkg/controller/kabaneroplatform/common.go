@@ -15,25 +15,34 @@ import (
 // the Kabanero resource (the provided overrides). These values should be `` if no override is provided
 // Precedence order is embedded data, repository/tag, and then image
 func imageUriWithOverrides(repositoryOverride string, tagOverride string, imageOverride string, rev versioning.SoftwareRevision) (string, error) {
+	image, err := customImageUriWithOverrides(repositoryOverride, tagOverride, imageOverride, rev, versioning.REPOSITORY_IDENTIFIER, versioning.TAG_IDENTIFIER)
+	if err != nil {
+		return "", err
+	}
+
+	return image, nil
+}
+
+func customImageUriWithOverrides(repositoryOverride string, tagOverride string, imageOverride string, rev versioning.SoftwareRevision, repoId string, tagId string) (string, error) {
 	var r string
 	var t string
 	var i string
 
 	// Start with embedded version specific data
 	// Embedded data does not include an image as a single string, only repository and tag
-	if v, ok := rev.Identifiers[versioning.REPOSITORY_IDENTIFIER]; ok {
+	if v, ok := rev.Identifiers[repoId]; ok {
 		if s, isString := v.(string); isString {
 			r = s
 		} else {
-			return "", fmt.Errorf("The embedded identifier `%v` was expected to be a string", versioning.REPOSITORY_IDENTIFIER)
+			return "", fmt.Errorf("The embedded identifier `%v` was expected to be a string", repoId)
 		}
 
 	}
-	if v, ok := rev.Identifiers[versioning.TAG_IDENTIFIER]; ok {
+	if v, ok := rev.Identifiers[tagId]; ok {
 		if s, isString := v.(string); isString {
 			t = s
 		} else {
-			return "", fmt.Errorf("The embedded identifier `%v` was expected to be a string", versioning.TAG_IDENTIFIER)
+			return "", fmt.Errorf("The embedded identifier `%v` was expected to be a string", tagId)
 		}
 	}
 

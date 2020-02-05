@@ -43,7 +43,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "stack controller", function: reconcileStackController},
 	{name: "landing page", function: deployLandingPage},
 	{name: "cli service", function: reconcileKabaneroCli},
-	{name: "che", function: reconcileChe},
+	{name: "CodeReady Workspaces", function: reconcileCRW},
 	{name: "events", function: reconcileEvents},
 	{name: "sso", function: reconcileSso},
 }
@@ -101,7 +101,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch CheCluster instances.  We watch these so that we can enforce
 	// some fields that should not be changed by the user.
-	err = watchCheInstance(c)
+	err = watchCRWInstance(c)
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		processStatus(ctx, request, instance, r.client, reqLogger)
 		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
-
+	
 	// Iterate the components and try to reconcile.  If something goes wrong,
 	// update the status and try again later.
 	for _, component := range reconcileFuncs {
@@ -310,7 +310,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			return reconcile.Result{}, err
 		}
 	}
-	
+
 	// Deploy feature collection resources.
 	err = reconcileFeaturedStacks(ctx, instance, r.client)
 	if err != nil {
@@ -428,6 +428,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 		return err
 	}
 
+	// Remove resources deployed in support of codeready-workspaces.
+	err = deleteCRWOperatorResources(ctx, k, client)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -460,7 +466,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isCliRouteReady, _ := getCliRouteStatus(k, reqLogger, c)
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
-	isCheReady, _ := getCheStatus(ctx, k, c)
+	isCRWReady, _ := getCRWStatus(ctx, k, c)
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
@@ -474,7 +480,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isKabaneroLandingReady &&
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady &&
-		isCheReady &&
+		isCRWReady &&
 		isEventsRouteReady &&
 		isAdmissionControllerWebhookReady &&
 		isSsoReady
@@ -510,6 +516,6 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 
 // Initializes dependencies.
 func initializeDependencies(k *kabanerov1alpha2.Kabanero) {
-	// Che initialization.
-	initializeChe(k)
+	// Codeready-workspaces initialization.
+	initializeCRW(k)
 }

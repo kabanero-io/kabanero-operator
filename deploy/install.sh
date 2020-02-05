@@ -117,6 +117,53 @@ checksub () {
 	done
 }
 
+# Removes a resource instance in the specified namespace.
+removeResourceInstance() {
+	if [ `oc get crds $1 --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
+        # Delete an input Kind object in a specific namespace.  
+        oc delete $2 $3 -n $4 --ignore-not-found
+
+        # Wait for the specified instance to be deleted.
+	echo "Waiting for $2 instance ($3) in the $4 namespace to be deleted...."
+    	LOOP_COUNT=0
+   		while [ `oc get $2 -n $4 | wc -l` -gt 0 ]
+    	do
+        	sleep 5
+        	LOOP_COUNT=`expr $LOOP_COUNT + 1`
+        	if [ $LOOP_COUNT -gt 10 ] ; then
+           		echo "Timed out waiting for $2 instance ($3) in the $4 namespace to be deleted"
+           		exit 1
+        	fi
+    	done
+    fi
+} 
+
+# Remove subscription and associated resources if found.
+unsubscribe () {
+	# Get CluserServiceVersion
+	CSV=$(oc get subscription $1 -n $2 --ignore-not-found=true --output=jsonpath={.status.installedCSV})
+
+	# Delete Subscription 
+	oc delete subscription $1 -n $2 --ignore-not-found=true
+
+	if [ -n "$CSV" ] ; then
+		# Delete the Installed ClusterServiceVersion
+		oc delete clusterserviceversion $CSV -n $2
+	
+		# Wait for the Copied ClusterServiceVersions to cleanup
+		while [ `oc get clusterserviceversions --all-namespaces --field-selector=metadata.name=$CSV | wc -l` -gt 0 ]
+		do
+			sleep $SLEEP_LONG
+			LOOP_COUNT=`expr $LOOP_COUNT + 1`
+			if [ $LOOP_COUNT -gt 10 ] ; then
+					echo "Timed out waiting for Copied ClusterServiceVersions $CSV to be deleted"
+				break
+			fi
+		done
+	fi
+}
+
+
 ### Upgrade Prep
 
 # ServiceMeshMemberRole
@@ -207,13 +254,29 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=13-subsc
 checksub openshift-pipelines openshift-operators
 checksub appsody-operator-certified openshift-operators
 
-# Install 14-subscription (che, kabanero)
+# Install 14-subscription (codeready-workspaces, kabanero)
+
+# Eclipse-che operator and Codeready-workspaces operator cannot be both installed at the same 
+# time in the same namespace. The kabanero operator installation will attempt to uninstall 
+# the eclipe-che CR instance (codewind-che) and Eclipse-che operator previously 
+# installed by the kabanero operator.
+# If the current installation of Eclipse-che was not done through the kabanero operator/install, 
+# it must be uninstalled prior to running the kabanero installation script. Furthermore, users 
+# need to be sure to delete any operatorgroups other than kabanero (i.e. kabanero-5pn6b) in 
+# the kabanero namespace that may have been created as result of a manual Eclipse-che installation.
+removeResourceInstance checlusters.org.eclipse.che CheCluster codewind-che kabanero
+unsubscribe eclipse-che kabanero
+
+# Codewind is required to run as privileged and as root because it builds container images
+oc adm policy add-scc-to-user anyuid system:serviceaccount:kabanero:che-workspace
+oc adm policy add-scc-to-user privileged system:serviceaccount:kabanero:che-workspace
+
+# Apply codeready-workspaces and kabanero subscriptions.
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=14-subscription
 
 # Verify Subscriptions
-checksub eclipse-che kabanero
+checksub codeready-workspaces kabanero 
 checksub kabanero-operator kabanero
-
 
 ### CustomResources
 

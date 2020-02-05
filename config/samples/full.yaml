@@ -69,25 +69,39 @@ spec:
     # Overrides the image uri
     image: kabanero/kabanero-operator-admission-webhook:0.6.0-alpha.3
     
-  che:
-    # che is disabled by default. Set the enable value to true/false to enable/disable the Che installation.
+  codeReadyWorkspaces:
+    # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
     enable: true
 
-    kabaneroChe:
-      # Overrides the platform wide settings for version on this component.
+    operator:
+      # Custom resource instance configuration.
+      customResourceInstance:
+        # Image used in Devfile registry deployment.
+        devFileRegistryImage:
+          # Overrides the setting for version on this component.
       version: "0.6.0"
 
-      # Overrides the image as a separate repository or tag.
-      repository: kabanero/kabanero-che
-      tag: "0.6.0"
+          # Overrides the image as a separate repository or tag
+          repository: kabanero/che-devfile-registry
+          tag: "0.8.0"
 
-      # Overrides the image uri.
-      image: kabanero/kabanero-che:0.6.0
+          # Overrides the image uri
+          image: kabanero/che-devfile-registry:0.8.0
 
-    cheOperatorInstance:
-      # Overrides the workspaceClusterRole to be used when deploying an instance of the Che CR.
-      # The default workspaceClusterRole name is eclipse-codewind.
+        # Specifies a custom cluster role to user for the Che workspaces uses the default roles if left blank.
+        # The default value is eclipse-codewind.
       cheWorkspaceClusterRole: eclipse-codewind
+
+        # TLS mode for Che. Make sure you either have public cert, or set selfSignedCert to true. The default value is false.
+        tlsSupport: false
+
+        # When set to true the operator will attempt to get a secret in OpenShift router namespace to add it to Java
+        # trust store of Che server. Requires cluster-admin privileges for operator service account. The default value is false.
+        selfSignedCert: false
+
+        # Instructs an Operator to enable OpenShift v3 identity provider in Keycloak, as well as create respective
+        # oAuthClient and configure Che configMap accordingly. The default value is false.
+        openShiftOAuth: false
 
   stacks:
     # A list of those repositories which are searched for collections

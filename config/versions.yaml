@@ -17,12 +17,12 @@ kabanero:
   related-versions: 
     cli-services: "0.5.0"
     landing: "0.5.0"
-    kabanero-che: "0.6.0"
     events: "0.1.0"
     collection-controller: "0.6.0-alpha.3"
     stack-controller: "0.6.0-alpha.3"
     admission-webhook: "0.6.0-alpha.3"
     sso: "7.3.2"
+    codeready-workspaces: "0.6.0"
 
 related-software:
   landing:
@@ -39,13 +39,12 @@ related-software:
       repository: "kabanero/kabanero-command-line-services"
       tag: "0.5.0"
 
-  kabanero-che:
+  codeready-workspaces:
   - version: "0.6.0"
-    orchestrations: "orchestrations/che/0.1"
+    orchestrations: "orchestrations/codeready-workspaces/0.1"
     identifiers:
-      eclipseCheTag: "7.3.1"
-      repository: "kabanero/kabanero-che"
-      tag: "0.6.0"
+      devfile-reg-repository: "kabanero/che-devfile-registry"
+      devfile-reg-tag: "0.8.0"
 
   events:
   - version: "0.1.0"
