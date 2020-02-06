@@ -10,13 +10,14 @@ import (
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
 	collectionwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/collection"
-	kabanerowebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero"
+	kabanerowebhookv1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero/v1alpha1"
+	kabanerowebhookv1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero/v1alpha2"
 	stackwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/stack"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
@@ -79,7 +80,7 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:          namespace,
+		Namespace: namespace,
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -99,8 +100,9 @@ func main() {
 	hookServer.Port = 9443
 	hookServer.Register("/validate-collections", collectionwebhook.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/mutate-collections", collectionwebhook.BuildMutatingWebhook(&mgr))
-	hookServer.Register("/validate-kabaneros", kabanerowebhook.BuildValidatingWebhook(&mgr))
-	hookServer.Register("/mutate-kabaneros", kabanerowebhook.BuildMutatingWebhook(&mgr))
+	hookServer.Register("/validate-kabaneros", kabanerowebhookv1alpha1.BuildValidatingWebhook(&mgr))
+	hookServer.Register("/mutate-kabaneros", kabanerowebhookv1alpha1.BuildMutatingWebhook(&mgr))
+	hookServer.Register("/validate-kabaneros/v1aplpha2", kabanerowebhookv1alpha2.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/validate-stacks", stackwebhook.BuildValidatingWebhook(&mgr))
 
 	log.Info("Starting the Cmd.")
