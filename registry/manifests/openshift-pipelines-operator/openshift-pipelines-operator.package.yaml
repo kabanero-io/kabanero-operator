@@ -5,5 +5,7 @@ channels:
   name: kabanero-0.4
 - currentCSV: openshift-pipelines-operator.v0.8.1
   name: kabanero-0.5
-defaultChannel: kabanero-0.5
+- currentCSV: openshift-pipelines-operator.v0.10.4
+  name: kabanero-0.6
+defaultChannel: kabanero-0.6
 packageName: openshift-pipelines-operator

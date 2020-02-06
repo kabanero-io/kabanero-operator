@@ -89,7 +89,7 @@ metadata:
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: kabanero-0.5
+  channel: kabanero-0.6
   config:
     resources: {}
   installPlanApproval: Automatic
