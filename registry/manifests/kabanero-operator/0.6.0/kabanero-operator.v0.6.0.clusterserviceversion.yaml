@@ -57,16 +57,17 @@ metadata:
             "name": "java-microprofile",
             "versions": [
               { "version": "0.2.21",
-                "repositoryUrl": "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.4/kabanero-index.yaml",
+                "repositoryUrl": "https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "8e36cce12c473efd76a0e11458db6c845eca6cf99e50d76b40b5cf7675adf59e",
-                    "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.3/incubator.common.pipeline.default.tar.gz"
+                    "sha256": "14285a7f0bb152759b3e2141db19d72ea1f94f01bbf5ffbf866cab4e60e093dd",
+                    https:
+                      "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0/incubator.common.pipeline.default.tar.gz"
                   }
                 ],
                 "images": [
                   { "id": "java-microprofile",
-                    "image": "docker.io/kabanerobeta/java-microprofile:0.2"
+                    "image": "docker.io/kabanero/java-microprofile:0.2"
                   }
                 ]
               }
