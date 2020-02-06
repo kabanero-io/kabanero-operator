@@ -6,6 +6,7 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/stack"
+	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,7 +60,14 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 
 		// Add each version to the versions array if it's not already there.  If it's already there, just
 		// update the repository URL, don't touch the desired state.
-		for _, stack := range value {
+		for i, stack := range value {
+			// Remove the tag portion of all images associated with the input stack version.
+			err := sutils.RemoveTagFromStackImages(&stack, key)
+			if err != nil {
+				return err
+			}
+			value[i].Images = stack.Images
+
 			foundVersion := false
 			for j, stackVersion := range stackResource.Spec.Versions {
 				if stackVersion.Version == stack.Version {

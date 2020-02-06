@@ -104,6 +104,7 @@ func main() {
 	hookServer.Register("/mutate-kabaneros", kabanerowebhookv1alpha1.BuildMutatingWebhook(&mgr))
 	hookServer.Register("/validate-kabaneros/v1aplpha2", kabanerowebhookv1alpha2.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/validate-stacks", stackwebhook.BuildValidatingWebhook(&mgr))
+	hookServer.Register("/mutate-stacks", stackwebhook.BuildMutatingWebhook(&mgr))
 
 	log.Info("Starting the Cmd.")
 

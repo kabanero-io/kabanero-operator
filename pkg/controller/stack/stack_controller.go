@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mf "github.com/kabanero-io/manifestival"
 
@@ -158,7 +159,6 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-
 	// If the stack is being deleted, and our finalizer is set, process it.
 	beingDeleted, err := processDeletion(ctx, instance, r.client, reqLogger)
 	if err != nil {
@@ -185,7 +185,6 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 	return rr, err
 }
 
-
 // Check to see if the status contains any assets that are failed
 func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	for _, version := range status.Versions {
@@ -200,12 +199,11 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	return false
 }
 
-
 // Used internally by ReconcileStack to store matching stacks
 // Could be less cumbersome to just use kabanerov1alpha2.Stack
 type resolvedStack struct {
 	repositoryURL string
-	stack    Stack
+	stack         Stack
 }
 
 // ReconcileStack activates or deactivates the input stack.
@@ -273,7 +271,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 	// Gather the known stack asset (*-tasks, *-pipeline) substitution data.
 	renderingContext := make(map[string]interface{})
-	
+
 	// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
 	// Appsody stack creation namimg constrains the length to 68 characters:
 	// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
@@ -525,14 +523,14 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 	// Now update the StackStatus to reflect the current state of things.
 	newStackStatus := kabanerov1alpha2.StackStatus{}
-	for _, curSpec := range stackResource.Spec.Versions {
+	for i, curSpec := range stackResource.Spec.Versions {
 		newStackVersionStatus := kabanerov1alpha2.StackVersionStatus{Version: curSpec.Version}
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
 			if (len(curSpec.DesiredState) > 0) && (!strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateActive)) {
 				newStackVersionStatus.StatusMessage = "An invalid desiredState value of " + curSpec.DesiredState + " was specified. The stack is activated by default."
 			}
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive
-			
+
 			for _, pipeline := range curSpec.Pipelines {
 				key := pipelineUseMapKey{url: pipeline.Https.Url, digest: pipeline.Sha256}
 				value := assetUseMap[key]
@@ -549,7 +547,17 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					}
 				}
 			}
-			
+
+			// Before we update the status, validate that the images reported in the status do not contain a tag.
+			// This action should never need to update the images and it should never fail.
+			// If it fails, the stack mutating webhook and/or kabanero stack create/update
+			// processing is incorrect.
+			err := sutils.RemoveTagFromStackImages(&curSpec, stackResource.Spec.Name)
+			if err != nil {
+				return err
+			}
+			stackResource.Spec.Versions[i] = curSpec
+
 			// Update the status of the Stack object to reflect the images used
 			newStackVersionStatus.Images = curSpec.Images
 		} else {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,7 +49,7 @@ func (a *stackMutator) Handle(ctx context.Context, req admission.Request) admiss
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	
+
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledStack)
 }
 
@@ -72,11 +73,17 @@ func (a *stackMutator) mutateStackFn(ctx context.Context, stack *kabanerov1alpha
 
 // No update mutations are needed for Stacks at this time
 func processUpdate(current *kabanerov1alpha2.Stack, new *kabanerov1alpha2.Stack) error {
+	// Remove the tag portion of all images associated with the new input stack.
+	for i, version := range new.Spec.Versions {
+		err := sutils.RemoveTagFromStackImages(&version, new.Spec.Name)
+		if err != nil {
+			return err
+		}
+		new.Spec.Versions[i] = version
+	}
 
 	return nil
 }
-
-
 
 // InjectClient injects the client.
 func (v *stackMutator) InjectClient(c client.Client) error {
