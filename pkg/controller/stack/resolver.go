@@ -2,11 +2,11 @@ package stack
 
 import (
 	"regexp"
-	"strconv"
+	"fmt"
 
-	"github.com/blang/semver"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"gopkg.in/yaml.v2"
+
 )
 
 // ResolveIndex returns a structure representation of the yaml file represented by the index.
@@ -43,23 +43,39 @@ func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipeli
 // Updates the loaded stack index structure for compliance with the current implementation.
 func processIndexPostRead(index *Index, pipelines []Pipelines, triggers []Trigger, imagePrefix string) error {
 	// Add common pipelines and image.
-	for i, stack := range index.Stacks {
+	
+	tmpstack := index.Stacks[:0]
+	for _, stack := range index.Stacks {
 		if len(stack.Pipelines) == 0 {
 			stack.Pipelines = pipelines
 		}
 
+		// Do not index a malformed stack that has no Image or at least one Images[].Image
+		// If there is a singleton Image, assign it to the Images list
 		if len(stack.Images) == 0 {
-			version, err := semver.ParseTolerant(stack.Version)
-			if err != nil {
-				return err
+			if len(stack.Image) == 0 {
+				log.Info(fmt.Sprintf("Stack %v %v not created. Index entry must contain at least one Image or Images[].", stack.Name, stack.Version))
+			} else {
+				stack.Images = []Images{{Id: stack.Name, Image: stack.Image}}
+				tmpstack = append(tmpstack, stack)
 			}
-
-			image := imagePrefix + "/" + stack.Id + ":" + strconv.FormatUint(version.Major, 10) + "." + strconv.FormatUint(version.Minor, 10)
-			stack.Images = append(stack.Images, Images{Id: stack.Id, Image: image})
+		} else {
+			var imagefound bool
+			imagefound = false
+			for _, image := range stack.Images {
+				if len(image.Image) != 0{
+					imagefound = true
+				}
+			}
+			if imagefound {
+				tmpstack = append(tmpstack, stack)
+			} else {
+				log.Info(fmt.Sprintf("Stack %v %v not created. No Images[].Image found.", stack.Name, stack.Version))
+			}
+			
 		}
-
-		index.Stacks[i] = stack
 	}
+	index.Stacks = tmpstack
 
 	// Add common triggers.
 	if len(index.Triggers) == 0 {

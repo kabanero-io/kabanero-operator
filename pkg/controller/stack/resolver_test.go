@@ -32,7 +32,7 @@ func TestResolveIndex(t *testing.T) {
 func TestResolveIndexForStacks(t *testing.T) {
 	repoConfig := kabanerov1alpha2.RepositoryConfig{
 		Name:  "openLibertyTest",
-		Https: kabanerov1alpha2.HttpsProtocolFile{Url: "https://github.com/appsody/stacks/releases/download/java-openliberty-v0.1.2/incubator-index.yaml"},
+		Https: kabanerov1alpha2.HttpsProtocolFile{Url: "https://github.com/appsody/stacks/releases/download/java-spring-boot2-v0.3.23/incubator-index.yaml"},
 	}
 
 	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
@@ -49,8 +49,9 @@ func TestResolveIndexForStacks(t *testing.T) {
 
 	// Validate pipeline entries.
 	numStacks := len(index.Stacks)
+	
 	if len(index.Stacks[numStacks-numStacks].Pipelines) == 0 {
-		t.Fatal("Index.Stacks[0].Pipelines is empty. An entry was expected")
+		t.Fatal("Index.Stacks[0].Pipelines is empty. An entry was expected.")
 	}
 
 	c0p0 := index.Stacks[numStacks-numStacks].Pipelines[0]
