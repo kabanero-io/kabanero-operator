@@ -8,6 +8,7 @@ type Stack struct {
 	DefaultTemplate  string        `yaml:"default-template,omitempty"`
 	Description      string        `yaml:"description,omitempty"`
 	Id               string        `yaml:"id,omitempty"`
+	Image            string        `yaml:"image,omitempty"`
 	Images           []Images      `yaml:"images,omitempty"`
 	License          string        `yaml:"license,omitempty"`
 	Maintainers      []Maintainers `yaml:"maintainers,omitempty"`

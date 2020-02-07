@@ -20,6 +20,7 @@ stacks:
   templates:
   - id: default
     url: https://github.com/appsody/stacks/releases/download/java-microprofile-v0.2.21/incubator.java-microprofile.v0.2.21.templates.default.tar.gz
+  image: docker.io/appsody/java-microprofile:0.2.21
 - id: nodejs
   name: Node.js
   version: 0.3.2
@@ -37,3 +38,4 @@ stacks:
   requirements:
     docker-version: '>= 17.09.0'
     appsody-version: '>= 0.2.7'
+  image: docker.io/appsody/nodejs:0.3.2
