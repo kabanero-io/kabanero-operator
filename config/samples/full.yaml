@@ -34,25 +34,25 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.6.0-alpha.4"
+    version: "0.6.0-alpha.5"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-collection-controller
-    tag: "0.6.0-alpha.4"
+    tag: "0.6.0-alpha.5"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-collection-controller:0.6.0-alpha.4
+    image: kabanero/kabanero-operator-collection-controller:0.6.0-alpha.5
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.6.0-alpha.4"
+    version: "0.6.0-alpha.5"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-stack-controller
-    tag: "0.6.0-alpha.4"
+    tag: "0.6.0-alpha.5"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-stack-controller:0.6.0-alpha.4
+    image: kabanero/kabanero-operator-stack-controller:0.6.0-alpha.5
 
   landing:
     # The landing page is enabled by default. To disable specify false.
@@ -60,14 +60,14 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.6.0-alpha.4"
+    version: "0.6.0-alpha.5"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator-admission-webhook
-    tag: "0.6.0-alpha.4"
+    tag: "0.6.0-alpha.5"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-admission-webhook:0.6.0-alpha.4
+    image: kabanero/kabanero-operator-admission-webhook:0.6.0-alpha.5
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
