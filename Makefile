@@ -191,7 +191,7 @@ else
 	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 endif
 
-check: format build #test
+check: format build test
 
 dependencies: 
 ifeq (, $(shell which dep))
