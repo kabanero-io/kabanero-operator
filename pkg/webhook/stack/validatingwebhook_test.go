@@ -25,17 +25,17 @@ var validatingStack kabanerov1alpha2.Stack = kabanerov1alpha2.Stack{
 	Spec: kabanerov1alpha2.StackSpec{
 		Name: "java-microprofile",
 		Versions: []kabanerov1alpha2.StackVersion{{
-			DesiredState:  "active",
-			Version:       "1.2.3",
-			Pipelines:     []kabanerov1alpha2.PipelineSpec{{
-				Sha256:      "abc121cba",
-				Https:       kabanerov1alpha2.HttpsProtocolFile{
-					Url:       "http://pipelinelink",
+			DesiredState: "active",
+			Version:      "1.2.3",
+			Pipelines: []kabanerov1alpha2.PipelineSpec{{
+				Sha256: "abc121cba",
+				Https: kabanerov1alpha2.HttpsProtocolFile{
+					Url: "http://pipelinelink",
 				},
 			}},
-			Images:        []kabanerov1alpha2.Image{{
-				Id:          "java-microprofile",
-				Image:       "kabanero/java-microprofile:latest",
+			Images: []kabanerov1alpha2.Image{{
+				Id:    "java-microprofile",
+				Image: "kabanero/java-microprofile",
 			}},
 		}},
 	},
@@ -44,12 +44,12 @@ var validatingStack kabanerov1alpha2.Stack = kabanerov1alpha2.Stack{
 // Fully formed stack
 func TestValidatingWebhook1(t *testing.T) {
 	newStack := validatingStack.DeepCopy()
-	
+
 	cv := stackValidator{}
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if !allowed {
-		t.Fatal("Validation should have passed. The validation was not allowed: ", err)
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
 	}
 
 	if len(msg) != 0 {
@@ -70,7 +70,7 @@ func TestValidatingWebhook2(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {
@@ -91,7 +91,7 @@ func TestValidatingWebhook3(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {
@@ -112,7 +112,7 @@ func TestValidatingWebhook4(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if !allowed {
-		t.Fatal("Validation should have passed. The validation was not allowed: ", err)
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
 	}
 
 	if len(msg) != 0 {
@@ -133,7 +133,7 @@ func TestValidatingWebhook5(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if !allowed {
-		t.Fatal("Validation should have passed. The validation was not allowed: ", err)
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
 	}
 
 	if len(msg) != 0 {
@@ -145,7 +145,6 @@ func TestValidatingWebhook5(t *testing.T) {
 	}
 }
 
-
 // Spec.Versions[].DesiredState not active/inactive
 func TestValidatingWebhook6(t *testing.T) {
 	newStack := validatingStack.DeepCopy()
@@ -155,7 +154,7 @@ func TestValidatingWebhook6(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {
@@ -176,7 +175,7 @@ func TestValidatingWebhook7(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {
@@ -197,7 +196,7 @@ func TestValidatingWebhook8(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {
@@ -218,7 +217,7 @@ func TestValidatingWebhook9(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {
@@ -230,7 +229,6 @@ func TestValidatingWebhook9(t *testing.T) {
 	}
 }
 
-
 // Spec.Versions not semver
 func TestValidatingWebhook10(t *testing.T) {
 	newStack := validatingStack.DeepCopy()
@@ -240,7 +238,49 @@ func TestValidatingWebhook10(t *testing.T) {
 	allowed, msg, err := cv.validateStackFn(nil, newStack)
 
 	if allowed {
-		t.Fatal("Validation should have failed. The validation was allowed instead: ", err)
+		t.Fatal("Validation should have failed. The stack update/create was incorrectly allowed.")
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}
+
+// Spec.Versions[].Images[] is empty
+func TestValidatingWebhook11(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Images = []kabanerov1alpha2.Image{}
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed because Spec.Versions[].Images[] is empty. The stack update/create was incorrectly allowed.")
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}
+
+// Spec.Versions[].Images[].Image has a tag
+func TestValidatingWebhook12(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Images[0].Image = "kabanero/java-microprofile:1.2.3"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed because the stack's image has a tag. The stack update/create was incorrectly allowed.")
 	}
 
 	if len(msg) == 0 {

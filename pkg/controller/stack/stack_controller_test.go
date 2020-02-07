@@ -89,10 +89,10 @@ func TestReconcileStack(t *testing.T) {
 			},
 		},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:         "somename",
-			Versions:     []kabanerov1alpha2.StackVersion{
+			Name: "somename",
+			Versions: []kabanerov1alpha2.StackVersion{
 				{
-					DesiredState:   "active",
+					DesiredState: "active",
 				},
 			},
 		},
@@ -110,7 +110,7 @@ func TestFailedAssets(t *testing.T) {
 	var samplePipelineStatus = []kabanerov1alpha2.PipelineStatus{{Name: "myAsset", Url: "http://myurl.com", Digest: "1234", ActiveAssets: sampleAsset}}
 	var sampleStackVersionStatus = []kabanerov1alpha2.StackVersionStatus{{Version: "", Location: "", Pipelines: samplePipelineStatus, Status: "", StatusMessage: ""}}
 	status := kabanerov1alpha2.StackStatus{Versions: sampleStackVersionStatus}
-	
+
 	if failedAssets(status) == false {
 		t.Fatal("Should be one failed asset in the status")
 	}
@@ -141,7 +141,6 @@ func TestNoFailedAssetsEmptyStatus(t *testing.T) {
 		t.Fatal("Should be no failed asset in the status")
 	}
 }
-
 
 // -------------------------------------------------------------------------------
 // Asset reuse tests
@@ -376,18 +375,18 @@ func TestStackIDValidation(t *testing.T) {
 		}
 	}
 
-		// Test invalid id containing a single number.
-		invalidID = "9"
-  	stackResource.Spec.Name = invalidID
-		err = reconcileActiveVersions(&stackResource, client)
-	
-		if err == nil {
-			t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
-		} else {
-			if !strings.Contains(err.Error(), invalidID) {
-				t.Fatal(fmt.Sprintf("The error message should have contained the name of the invalid stack ID: %v. Error: %v", invalidID, err))
-			}
+	// Test invalid id containing a single number.
+	invalidID = "9"
+	stackResource.Spec.Name = invalidID
+	err = reconcileActiveVersions(&stackResource, client)
+
+	if err == nil {
+		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
+	} else {
+		if !strings.Contains(err.Error(), invalidID) {
+			t.Fatal(fmt.Sprintf("The error message should have contained the name of the invalid stack ID: %v. Error: %v", invalidID, err))
 		}
+	}
 
 	// Test invalid id with a length greater than 68 characters.
 	invalidID = "abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-69c"
@@ -443,17 +442,17 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: "default",
+					Id:     "default",
 					Sha256: basicPipeline.sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
 				}},
 				Images: []kabanerov1alpha2.Image{{
-					Id: "default",
+					Id:    "default",
 					Image: "kabanero/kabanero-image:latest",
 				}},
 			}},
@@ -572,14 +571,14 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -720,14 +719,14 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "inactive",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -770,7 +769,6 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 	if stackResource.Status.Versions[0].Version != desiredStack.Version {
 		t.Fatal(fmt.Sprintf("Stack deactive version should be %v, but is %v", desiredStack.Version, stackResource.Status.Versions[0].Version))
 	}
-
 
 	if stackResource.Status.Versions[0].StatusMessage == "" {
 		t.Fatal("Stack status message should not be empty for an inactive stack")
@@ -818,14 +816,14 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -919,14 +917,14 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "inactive",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -1010,14 +1008,14 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -1068,7 +1066,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 	}
 
 	// Make sure the actual assets are correct
-	pipeline :=stackResource.Status.Versions[0].Pipelines[0]
+	pipeline := stackResource.Status.Versions[0].Pipelines[0]
 	if len(pipeline.ActiveAssets) != 2 {
 		t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
 	}
@@ -1122,14 +1120,14 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -1246,14 +1244,14 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -1334,6 +1332,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 	defer server.Close()
 
 	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
+	desiredImage := Images{Id: "default", Image: "kabanero/kabanero-image"}
 
 	pipelineZipUrl := server.URL + triggerPipeline.name
 	desiredStack := Stack{
@@ -1341,24 +1340,24 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 		Id:        "java-microprofile",
 		Version:   "0.2.5",
 		Pipelines: []Pipelines{{Id: "default", Sha256: triggerPipeline.sha256, Url: pipelineZipUrl}},
-		Images:    []Images{defaultImage},
+		Images:    []Images{desiredImage},
 	}
 
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.5",
+				Version:      "0.2.5",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: desiredStack.Pipelines[0].Id,
+					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
 				}},
 				Images: []kabanerov1alpha2.Image{{
-					Id: desiredStack.Images[0].Id,
-					Image: desiredStack.Images[0].Image,
+					Id:    defaultImage.Id,
+					Image: defaultImage.Image,
 				}},
 			}},
 		},
@@ -1484,8 +1483,8 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Status should contain one image, but contains %v: %#v", len(stackResource.Status.Versions[0].Images), stackResource.Status))
 	}
 
-	if stackResource.Status.Versions[0].Images[0].Image != defaultImage.Image {
-		t.Fatal(fmt.Sprintf("Image should be %v, but is %v", defaultImage.Image, stackResource.Status.Versions[0].Images[0].Image))
+	if stackResource.Status.Versions[0].Images[0].Image != desiredImage.Image {
+		t.Fatal(fmt.Sprintf("Image should be %v, but is %v", desiredImage.Image, stackResource.Status.Versions[0].Images[0].Image))
 	}
 }
 
@@ -1526,21 +1525,21 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{
 				kabanerov1alpha2.StackVersion{
-					Version: "0.2.5",
+					Version:      "0.2.5",
 					DesiredState: "active",
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
-						Id: stacks[0].stack.Pipelines[0].Id,
+						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
-					Version: "0.2.6",
+					Version:      "0.2.6",
 					DesiredState: "active",
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
-						Id: stacks[1].stack.Pipelines[0].Id,
+						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
 					}},
 				},
 			},
@@ -1655,21 +1654,21 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{
 				kabanerov1alpha2.StackVersion{
-					Version: "0.2.5",
+					Version:      "0.2.5",
 					DesiredState: "active",
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
-						Id: stacks[0].stack.Pipelines[0].Id,
+						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
-					Version: "0.2.6",
+					Version:      "0.2.6",
 					DesiredState: "active",
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
-						Id: stacks[1].stack.Pipelines[0].Id,
+						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
 					}},
 				},
 			},
@@ -1770,14 +1769,14 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{{
-				Version: "0.2.6",
+				Version:      "0.2.6",
 				DesiredState: "active",
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
-					Id: stacks[1].stack.Pipelines[0].Id,
+					Id:     stacks[1].stack.Pipelines[0].Id,
 					Sha256: stacks[1].stack.Pipelines[0].Sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
 				}},
 			}},
 		},
@@ -1907,21 +1906,21 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{
 				kabanerov1alpha2.StackVersion{
-					Version: "0.2.5",
+					Version:      "0.2.5",
 					DesiredState: "inactive",
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
-						Id: stacks[0].stack.Pipelines[0].Id,
+						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
-					Version: "0.2.6",
+					Version:      "0.2.6",
 					DesiredState: "active",
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
-						Id: stacks[1].stack.Pipelines[0].Id,
+						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
 					}},
 				},
 			},
