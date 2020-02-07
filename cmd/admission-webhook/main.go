@@ -102,7 +102,7 @@ func main() {
 	hookServer.Register("/mutate-collections", collectionwebhook.BuildMutatingWebhook(&mgr))
 	hookServer.Register("/validate-kabaneros", kabanerowebhookv1alpha1.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/mutate-kabaneros", kabanerowebhookv1alpha1.BuildMutatingWebhook(&mgr))
-	hookServer.Register("/validate-kabaneros/v1aplpha2", kabanerowebhookv1alpha2.BuildValidatingWebhook(&mgr))
+	hookServer.Register("/validate-kabaneros/v1alpha2", kabanerowebhookv1alpha2.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/validate-stacks", stackwebhook.BuildValidatingWebhook(&mgr))
 
 	log.Info("Starting the Cmd.")

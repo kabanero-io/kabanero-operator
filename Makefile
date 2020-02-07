@@ -157,7 +157,8 @@ format:
 
 generate:
 	GO111MODULE=on operator-sdk generate k8s
-	GO111MODULE=on operator-sdk generate openapi
+	# GO111MODULE=on operator-sdk generate openapi
+	GO111MODULE=on operator-sdk generate crds
 	GO111MODULE=on go generate ./pkg/assets
 
 install:
@@ -193,15 +194,6 @@ endif
 
 check: format build test
 
-dependencies: 
-ifeq (, $(shell which dep))
-	GO111MODULE=on go get -u github.com/golang/dep/cmd/dep
-endif
-	dep ensure
-
-  # Remove some creative commons licensed tests/samples
-	rm vendor/golang.org/x/net/http2/h2demo/tmpl.go
-	rm -r vendor/golang.org/x/text/internal/testtext
 
 # Requires https://github.com/mitchellh/golicense
 # Note that the tool currently fails when a license is not found.  Since

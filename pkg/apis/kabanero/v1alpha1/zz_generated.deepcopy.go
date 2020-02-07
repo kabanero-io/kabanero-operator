@@ -215,7 +215,7 @@ func (in *CollectionControllerStatus) DeepCopy() *CollectionControllerStatus {
 func (in *CollectionList) DeepCopyInto(out *CollectionList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Collection, len(*in))
@@ -588,7 +588,7 @@ func (in *KabaneroLandingPageStatus) DeepCopy() *KabaneroLandingPageStatus {
 func (in *KabaneroList) DeepCopyInto(out *KabaneroList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Kabanero, len(*in))
