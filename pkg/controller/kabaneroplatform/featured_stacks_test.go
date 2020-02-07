@@ -7,12 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	
+
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,7 +60,7 @@ func (c unitTestClient) Create(ctx context.Context, obj runtime.Object, opts ...
 	c.objs[u.Name] = u
 	return nil
 }
-func (c unitTestClient)	Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+func (c unitTestClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 	return errors.New("Delete is not supported")
 }
 func (c unitTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
@@ -205,9 +205,14 @@ func TestReconcileFeaturedStacks(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack to have one image, but has %v", len(nodejsStack.Spec.Versions[0].Images)))
 	}
 
-	expectedImage := "kabanero/nodejs:0.2"
-	if nodejsStack.Spec.Versions[0].Images[0].Image != expectedImage {
-		t.Fatal(fmt.Sprintf("Expected nodejs stack image of %v, but was %v", expectedImage, nodejsStack.Spec.Versions[0].Images[0].Image))
+	njsExpectedImage := "kabanero/nodejs"
+	if nodejsStack.Spec.Versions[0].Images[0].Image != njsExpectedImage {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack image of %v, but was %v", njsExpectedImage, nodejsStack.Spec.Versions[0].Images[0].Image))
+	}
+
+	jmpExpectedImage := "kabanero/java-microprofile"
+	if javaMicroprofileStack.Spec.Versions[0].Images[0].Image != jmpExpectedImage {
+		t.Fatal(fmt.Sprintf("Expected nodejs stack image of %v, but was %v", jmpExpectedImage, javaMicroprofileStack.Spec.Versions[0].Images[0].Image))
 	}
 }
 
@@ -303,7 +308,7 @@ func TestReconcileAppsodyStacksCustomPipelines(t *testing.T) {
 
 	customPipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: secondIndexPipeline}
 	k.Spec.Stacks.Repositories[0].Pipelines = append(k.Spec.Stacks.Repositories[0].Pipelines, kabanerov1alpha2.PipelineSpec{Id: "custom", Sha256: secondIndexPipelineDigest, Https: customPipelineUrl})
-	
+
 	err := reconcileFeaturedStacks(ctx, k, cl)
 	if err != nil {
 		t.Fatal(err)
@@ -371,7 +376,7 @@ func TestReconcileAppsodyStacksDefaultPipelines(t *testing.T) {
 	// Need to specify the pipelines information
 	pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: defaultIndexPipeline}
 	k.Spec.Stacks.Pipelines = append(k.Spec.Stacks.Pipelines, kabanerov1alpha2.PipelineSpec{Id: "default", Sha256: defaultIndexPipelineDigest, Https: pipelineUrl})
-	
+
 	err := reconcileFeaturedStacks(ctx, k, cl)
 	if err != nil {
 		t.Fatal(err)
@@ -424,7 +429,6 @@ func TestReconcileAppsodyStacksDefaultPipelines(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack pipeline zip name to be %v, but was %v", defaultIndexPipelineDigest, nodejsStack.Spec.Versions[0].Pipelines[0].Sha256))
 	}
 }
-
 
 // Attempts to resolve the featured stacks from the default repository
 func TestResolveFeaturedStacks(t *testing.T) {

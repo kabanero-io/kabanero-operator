@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	
+
 	"github.com/blang/semver"
 )
 
@@ -59,15 +59,15 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 		err = fmt.Errorf(reason)
 		return false, reason, err
 	}
-	
+
 	if len(stack.Spec.Versions) == 0 {
 		reason = fmt.Sprintf("Stack %v Spec.Versions[] list is empty. stack: %v", stack.Spec.Name, stack)
 		err = fmt.Errorf(reason)
 		return false, reason, err
 	}
-	
+
 	for _, version := range stack.Spec.Versions {
-	
+
 		if len(version.Version) == 0 {
 			reason = fmt.Sprintf("Stack %v must set spec.Versions[].Version. stack: %v", stack.Spec.Name, stack)
 			err = fmt.Errorf(reason)
@@ -80,19 +80,27 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 			err = fmt.Errorf(reason)
 			return false, reason, err
 		}
-	
+
 		if (len(version.DesiredState) != 0) && !((strings.ToLower(version.DesiredState) == "active") || (strings.ToLower(version.DesiredState) == "inactive")) {
 			reason = fmt.Sprintf("Stack %v %v Spec.Versions[].DesiredState may only be set to active or inactive. stack: %v", stack.Spec.Name, version.Version, stack)
 			err = fmt.Errorf(reason)
 			return false, reason, err
 		}
-		
+
 		if len(version.Images) == 0 {
 			reason = fmt.Sprintf("Stack %v %v must contain at least one entry for spec.Versions[].Images. stack: %v", stack.Spec.Name, version.Version, stack)
 			err = fmt.Errorf(reason)
 			return false, reason, err
+		} else {
+			for _, image := range version.Images {
+				if strings.Contains(image.Image, ":") {
+					reason = fmt.Sprintf("Image %v associated with Stack %v %v should not contain an image tag. Stack: %v", image.Image, stack.Spec.Name, version.Version, stack)
+					err = fmt.Errorf(reason)
+					return false, reason, err
+				}
+			}
 		}
-	
+
 		for _, pipeline := range version.Pipelines {
 			if len(pipeline.Https.Url) == 0 {
 				reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Https.Url is not set. stack: %v", stack.Spec.Name, version.Version, stack)

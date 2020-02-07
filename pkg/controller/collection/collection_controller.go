@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-
+	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -181,31 +181,31 @@ func (r *ReconcileCollection) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	err = r.client.Get(context.TODO(), name, &stack)
-			if err != nil {
+	if err != nil {
 		if errors.IsNotFound(err) {
 			stackInstance, err := r.convertCollectionToStack(k, instance)
 
-		if err != nil {
+			if err != nil {
 				reqLogger.Error(err, fmt.Sprintf("Unable convert collection with the name of %v to stack.", collectionName))
 				return reconcile.Result{}, err
-		}
+			}
 
 			err = r.client.Create(context.TODO(), stackInstance)
-		if err != nil {
+			if err != nil {
 				reqLogger.Error(err, fmt.Sprintf("Unable create a stack from collection with the name of %v.", collectionName))
 				return reconcile.Result{}, err
-		}
-	} else {
+			}
+		} else {
 			return reconcile.Result{}, err
-	}
+		}
 	}
 
 	// Clean up existing collection assets.
 	err = deleteCollection(r.client, instance, reqLogger)
-		if err != nil {
+	if err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Unable delete collection with the name of %v.", collectionName))
 		return reconcile.Result{}, err
-			}
+	}
 
 	return reconcile.Result{}, nil
 }
@@ -230,7 +230,7 @@ func (r *ReconcileCollection) convertCollectionToStack(k *kabanerov1alpha1.Kaban
 		Spec: kabanerov1alpha2.StackSpec{
 			Name: collection.Spec.Name,
 		},
-}
+	}
 
 	// Add the versions field.
 	cCopy := collection.DeepCopy()
@@ -241,14 +241,14 @@ func (r *ReconcileCollection) convertCollectionToStack(k *kabanerov1alpha1.Kaban
 			DesiredState:         collection.Spec.DesiredState,
 			SkipCertVerification: collection.Spec.SkipCertVerification,
 		}}
-}
+	}
 	err := r.processVersionsField(k, stackInstance, cCopy)
 	if err != nil {
 		return nil, err
-}
+	}
 
 	return stackInstance, nil
-	}
+}
 
 // Adds collection information to the versions field of the input stack object.
 func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero, stackInstance *kabanerov1alpha2.Stack, collection *kabanerov1alpha1.Collection) error {
@@ -272,14 +272,14 @@ func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero,
 				images = scvData.Images
 				pipelines = scvData.Pipelines
 				break
+			}
 		}
-	}
 
 		if collection.Status.Status != kabanerov1alpha1.CollectionDesiredStateActive || len(images) == 0 || len(pipelines) == 0 {
 			collections, err := r.readCollectionsFromIndex(k)
 			if err != nil {
 				return err
-	}
+			}
 
 			cByNameMap, ok := collections[collection.Spec.Name]
 			if ok {
@@ -287,20 +287,24 @@ func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero,
 				if ok {
 					stackInstance.Spec.Versions[i].Images = make([]kabanerov1alpha2.Image, len(indexCollection.Images))
 					for j, m := range indexCollection.Images {
-						stackInstance.Spec.Versions[i].Images[j].Image = m.Image
+						repo, err := sutils.GetImageRepository(m.Image)
+						if err != nil {
+							return fmt.Errorf(fmt.Sprintf("Collection %v %v contained an invalid image. Image: %v. Error: %v", collection.Spec.Name, collection.Spec.Versions[i].Version, m.Image, err))
+						}
+						stackInstance.Spec.Versions[i].Images[j].Image = repo
 						stackInstance.Spec.Versions[i].Images[j].Id = m.Id
-	}
+					}
 
 					stackInstance.Spec.Versions[i].Pipelines = make([]kabanerov1alpha2.PipelineSpec, len(indexCollection.Pipelines))
 					for k, p := range indexCollection.Pipelines {
 						stackInstance.Spec.Versions[i].Pipelines[k].Id = p.Id
 						stackInstance.Spec.Versions[i].Pipelines[k].Sha256 = p.Sha256
 						stackInstance.Spec.Versions[i].Pipelines[k].Https.Url = p.Url
-	}
+					}
 
 					continue
-		}
-	}
+				}
+			}
 
 			err = fmt.Errorf(fmt.Sprintf("Collection with the name of %v and version of %v was not found in kabanero configured indexes.", collection.Name, cv.Version))
 			return err
@@ -309,9 +313,13 @@ func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero,
 		// Copy data from the status section
 		stackInstance.Spec.Versions[i].Images = make([]kabanerov1alpha2.Image, len(images))
 		for j, m := range images {
-			stackInstance.Spec.Versions[i].Images[j].Image = m.Image
+			repo, err := sutils.GetImageRepository(m.Image)
+			if err != nil {
+				return fmt.Errorf(fmt.Sprintf("Collection %v %v contained an invalid image. Image: %v. Error: %v", collection.Spec.Name, collection.Spec.Versions[i].Version, m.Image, err))
+			}
+			stackInstance.Spec.Versions[i].Images[j].Image = repo
 			stackInstance.Spec.Versions[i].Images[j].Id = m.Id
-	}
+		}
 		stackInstance.Spec.Versions[i].Pipelines = make([]kabanerov1alpha2.PipelineSpec, len(pipelines))
 		for k, p := range pipelines {
 			stackInstance.Spec.Versions[i].Pipelines[k].Id = p.Name
@@ -321,48 +329,48 @@ func (r *ReconcileCollection) processVersionsField(k *kabanerov1alpha1.Kabanero,
 	}
 
 	return nil
-				}
+}
 
 // Retrieves all collection objects associated with the kabanero specified indexes.
 func (r *ReconcileCollection) readCollectionsFromIndex(k *kabanerov1alpha1.Kabanero) (map[string]map[string]Collection, error) {
 	collectionMap := make(map[string]map[string]Collection)
 	for _, repo := range k.Spec.Collections.Repositories {
 		index, err := r.indexResolver(repo, []Pipelines{}, []Trigger{}, "")
-				if err != nil {
+		if err != nil {
 			return nil, err
-				}
+		}
 		versionMap := make(map[string]Collection)
 		for i, c := range index.Collections {
 			versionMap[index.Collections[i].Version] = c
 			collectionMap[c.Id] = versionMap
-				}
-			}
+		}
+	}
 
 	return collectionMap, nil
-				}
+}
 
 // Deletes the specified collection.
 func deleteCollection(c client.Client, collection *kabanerov1alpha1.Collection, reqLogger logr.Logger) error {
 	// Clean up existing collection assets.
 	err := cleanupAssets(context.TODO(), collection, c, reqLogger)
-				if err != nil {
+	if err != nil {
 		reqLogger.Error(err, "Error during cleanup processing.")
 		return err
-						}
+	}
 
 	// Remove the finalizer entry from the instance.
 	err = removeCollectionFinalizer(context.TODO(), collection, c, reqLogger)
-								if err != nil {
+	if err != nil {
 		reqLogger.Error(err, "Error while attempting to remove the finalizer.")
 		return err
-					}
+	}
 
 	// Delete the collection.
 	err = c.Delete(context.TODO(), collection)
-						if err != nil {
+	if err != nil {
 		reqLogger.Error(err, "Error while attempting to remove the finalizer.")
 		return err
-					}
+	}
 
 	return nil
 }
@@ -414,15 +422,15 @@ func processDeletion(ctx context.Context, collection *kabanerov1alpha1.Collectio
 
 // Removes the collection finalizer.
 func removeCollectionFinalizer(ctx context.Context, collection *kabanerov1alpha1.Collection, c client.Client, reqLogger logr.Logger) error {
-		var newFinalizerList []string
-		for _, finalizer := range collection.Finalizers {
+	var newFinalizerList []string
+	for _, finalizer := range collection.Finalizers {
 		if finalizer == collectionFinalizerName {
-				continue
-			}
-			newFinalizerList = append(newFinalizerList, finalizer)
+			continue
 		}
+		newFinalizerList = append(newFinalizerList, finalizer)
+	}
 
-		collection.Finalizers = newFinalizerList
+	collection.Finalizers = newFinalizerList
 	err := c.Update(ctx, collection)
 
 	return err
