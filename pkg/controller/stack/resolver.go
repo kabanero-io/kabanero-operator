@@ -33,7 +33,7 @@ func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipeli
 		return nil, err
 	}
 
-	processIndexPostRead(&index, pipelines, triggers, imagePrefix)
+	processIndexPostRead(&index, pipelines, triggers)
 
 	index.URL = url
 
@@ -41,7 +41,7 @@ func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipeli
 }
 
 // Updates the loaded stack index structure for compliance with the current implementation.
-func processIndexPostRead(index *Index, pipelines []Pipelines, triggers []Trigger, imagePrefix string) error {
+func processIndexPostRead(index *Index, pipelines []Pipelines, triggers []Trigger) error {
 	// Add common pipelines and image.
 	
 	tmpstack := index.Stacks[:0]
