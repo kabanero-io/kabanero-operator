@@ -221,7 +221,7 @@ rules:
 - apiGroups:
   - kabanero.io
   resources:
-  - collections
+  - stacks
   verbs:
   - get
   - list
