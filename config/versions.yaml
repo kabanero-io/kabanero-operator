@@ -15,7 +15,7 @@ default: "0.6.0"
 kabanero:
 - version: "0.6.0"
   related-versions: 
-    cli-services: "0.5.0"
+    cli-services: "0.6.0"
     landing: "0.5.0"
     events: "0.1.0"
     collection-controller: "0.6.0-alpha.5"
@@ -33,11 +33,11 @@ related-software:
       tag: "0.5.0"
 
   cli-services: 
-  - version: "0.5.0"
+  - version: "0.6.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.5.0"
+      tag: "0.6.0-rc.2"
 
   codeready-workspaces:
   - version: "0.6.0"
