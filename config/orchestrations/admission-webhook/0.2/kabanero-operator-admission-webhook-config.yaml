@@ -151,7 +151,7 @@ webhooks:
     service:
       name: kabanero-operator-admission-webhook
       namespace: kabanero
-      path: /validate-kabaneros/v1aplpha2
+      path: /validate-kabaneros/v1alpha2
   failurePolicy: Fail
   name: validating.kabanero.kabanero.io
   namespaceSelector:
