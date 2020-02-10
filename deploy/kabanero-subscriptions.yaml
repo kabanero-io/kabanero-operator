@@ -19,7 +19,7 @@ metadata:
   labels:
     kabanero.io/install: 10-subscription
 spec:
-  channel: "4.2"
+  channel: "4.3"
   installPlanApproval: Automatic
   name: elasticsearch-operator
   source: redhat-operators
