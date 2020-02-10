@@ -1,12 +1,11 @@
 package stack
 
 import (
-	"regexp"
 	"fmt"
+	"regexp"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"gopkg.in/yaml.v2"
-
 )
 
 // ResolveIndex returns a structure representation of the yaml file represented by the index.
@@ -43,10 +42,16 @@ func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipeli
 // Updates the loaded stack index structure for compliance with the current implementation.
 func processIndexPostRead(index *Index, pipelines []Pipelines, triggers []Trigger) error {
 	// Add common pipelines and image.
-	
+
 	tmpstack := index.Stacks[:0]
 	for _, stack := range index.Stacks {
-		if len(stack.Pipelines) == 0 {
+		// Stack index.yaml files may not define pipeline formation. Therefore, the following order of
+		// preference is applied when obtaining pipeline information:
+		// a. k.Spec.Stacks.Repositories.Pipelines.
+		// b. k.Spec.Stacks.Pipelines.
+		// c. index.Stack.Pipelines.
+		// Note: The caller has already processed order a and b.
+		if len(pipelines) != 0 {
 			stack.Pipelines = pipelines
 		}
 
@@ -63,7 +68,7 @@ func processIndexPostRead(index *Index, pipelines []Pipelines, triggers []Trigge
 			var imagefound bool
 			imagefound = false
 			for _, image := range stack.Images {
-				if len(image.Image) != 0{
+				if len(image.Image) != 0 {
 					imagefound = true
 				}
 			}
@@ -72,7 +77,7 @@ func processIndexPostRead(index *Index, pipelines []Pipelines, triggers []Trigge
 			} else {
 				log.Info(fmt.Sprintf("Stack %v %v not created. No Images[].Image found.", stack.Name, stack.Version))
 			}
-			
+
 		}
 	}
 	index.Stacks = tmpstack
