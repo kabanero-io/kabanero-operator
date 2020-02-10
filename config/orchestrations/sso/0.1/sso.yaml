@@ -273,7 +273,7 @@ spec:
           initialDelaySeconds: 5
           timeoutSeconds: 1
         volumeMounts:
-        - mountPath: /var/lib/pgsql/data:z
+        - mountPath: /var/lib/pgsql/data
           name: sso-postgresql-pvol
       terminationGracePeriodSeconds: 60
       volumes:
@@ -287,7 +287,7 @@ spec:
       - sso-postgresql
       from:
         kind: ImageStreamTag
-        name: postgresql:10
+        name: postgresql:9.6
         namespace: openshift
     type: ImageChange
   - type: ConfigChange
