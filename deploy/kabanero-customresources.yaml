@@ -286,7 +286,6 @@ rules:
   resources:
   - triggerbindings
   - triggertemplates
-  - conditions
   verbs:
   - get
   - list
