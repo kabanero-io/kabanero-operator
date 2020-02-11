@@ -104,7 +104,7 @@ oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabane
 
 # Tekton Dashboard
 oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.5.1/openshift-tekton-webhooks-extension-release.yaml
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.5.1/tekton-dashboard-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.5.1/openshift-tekton-dashboard-release.yaml
 
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
