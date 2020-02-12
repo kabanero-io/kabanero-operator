@@ -1,40 +1,48 @@
 package stack
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"regexp"
 
+	"github.com/google/go-github/v29/github"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"gopkg.in/yaml.v2"
 )
 
 // ResolveIndex returns a structure representation of the yaml file represented by the index.
 func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipelines, triggers []Trigger, imagePrefix string) (*Index, error) {
-	url := repoConf.Https.Url
+	var indexBytes []byte
 
-	// user may specify url to yaml file or directory
-	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url)
-	if err != nil {
-		return nil, err
-	}
-	if !matched {
-		url = url + "/index.yaml"
-	}
-
-	b, err := getFromCache(url, repoConf.Https.SkipCertVerification)
-	if err != nil {
-		return nil, err
+	switch {
+	// GIT:
+	case isGitReleaseUsable(repoConf.GitRelease):
+		bytes, err := getStackIndexUsingGit(repoConf)
+		if err != nil {
+			return nil, err
+		}
+		indexBytes = bytes
+	// HTTP:
+	case len(repoConf.Https.Url) != 0:
+		bytes, err := getStackIndexUsingHttp(repoConf)
+		if err != nil {
+			return nil, err
+		}
+		indexBytes = bytes
+	// NOT SUPPORTED:
+	default:
+		return nil, fmt.Errorf("No information was provided to retrieve the stack's index file from the repository identified as %v. Specify a stack index HTTP URL location or a Git release information.", repoConf.Name)
 	}
 
 	var index Index
-	err = yaml.Unmarshal(b, &index)
+	err := yaml.Unmarshal(indexBytes, &index)
 	if err != nil {
 		return nil, err
 	}
 
 	processIndexPostRead(&index, pipelines, triggers)
-
-	index.URL = url
 
 	return &index, nil
 }
@@ -107,4 +115,84 @@ func SearchStack(stackName string, index *Index) ([]Stack, error) {
 	}
 
 	return stackRefs, nil
+}
+
+// Returns true if the user specified values Kabanero.Spec.Stacks.Repositories.GitRelease.
+// Note that Kabanero.Spec.Stacks.Repositories.GitRelease.Hostname is excluded from the check because
+// users may or may not specify it when connecting to a public Git repository.
+func isGitReleaseUsable(gitRelease kabanerov1alpha2.GitReleaseSpec) bool {
+	return len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
+		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
+
+}
+
+// Retrieves a stack index file content using HTTP.
+func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, error) {
+	url := repoConf.Https.Url
+	// user may specify url to yaml file or directory
+	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url)
+	if err != nil {
+		return nil, err
+	}
+	if !matched {
+		url = url + "/index.yaml"
+	}
+
+	return getFromCache(url, repoConf.Https.SkipCertVerification)
+}
+
+// Retrieves a stack index file content using Git APIs
+func getStackIndexUsingGit(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, error) {
+	var indexBytes []byte
+
+	// Get a Github client.
+	gclient, err := getGitClient(repoConf.GitRelease)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the release tagged in Github as repoConf.GitRelease.Release.
+	release, response, err := gclient.Repositories.GetReleaseByTag(context.Background(), repoConf.GitRelease.Organization, repoConf.GitRelease.Project, repoConf.GitRelease.Release)
+	if err != nil || response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Unable to retrieve object representing Github repository release %v. Configured GitRelease data: %v. Error: %v", repoConf.GitRelease.Release, repoConf.GitRelease, err)
+	}
+	assets := release.Assets
+
+	// Find the asset identified as repoConf.GitRelease.AssetName and download it.
+	for _, asset := range assets {
+		if asset.GetName() == repoConf.GitRelease.AssetName {
+			id := asset.GetID()
+			reader, _, err := gclient.Repositories.DownloadReleaseAsset(context.Background(), repoConf.GitRelease.Organization, repoConf.GitRelease.Project, id, http.DefaultClient)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to download release asset %v. Configured GitRelease data: %v. Error: %v", repoConf.GitRelease.AssetName, repoConf.GitRelease, err)
+			}
+			defer reader.Close()
+
+			indexBytes, err = ioutil.ReadAll(reader)
+			if err != nil {
+				return nil, fmt.Errorf(fmt.Sprintf("Unable to read downloaded asset %v from request. Configured GitRelease data: %v. Error: %v", repoConf.GitRelease.AssetName, repoConf.GitRelease, err))
+			}
+
+			break
+		}
+	}
+
+	return indexBytes, err
+}
+
+// Retrieves a Git client.
+func getGitClient(gitRelease kabanerov1alpha2.GitReleaseSpec) (*github.Client, error) {
+	client := github.NewClient(http.DefaultClient)
+	if len(gitRelease.Hostname) != 0 && gitRelease.Hostname != "github.com" {
+		// GHE hostnames must be suffixed with /api/v3/ otherwise 406 status codes will be returned.
+		// Using NewEnterpriseClient will do that for us automatically.
+		url := "https://" + gitRelease.Hostname
+		eclient, err := github.NewEnterpriseClient(url, url, http.DefaultClient)
+		if err != nil {
+			return nil, err
+		}
+		client = eclient
+	}
+
+	return client, nil
 }
