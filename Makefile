@@ -252,8 +252,8 @@ int-test-uninstall: creds int-uninstall
 int-uninstall:
 	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/uninstall.sh
 
-# Collections: Can be run in parallel ( -j ). Test manual pipeline run of collections.
-int-test-collections: int-test-java-microprofile int-test-java-spring-boot2 int-test-nodejs int-test-nodejs-express int-test-nodejs-loopback
+# Stacks: Can be run in parallel ( -j ). Test manual pipeline run of stacks.
+int-test-stacks: int-test-java-microprofile int-test-java-spring-boot2 int-test-nodejs int-test-nodejs-express int-test-nodejs-loopback
 
 int-test-java-microprofile:
 	tests/10-java-microprofile.sh
@@ -270,13 +270,13 @@ int-test-nodejs-express:
 int-test-nodejs-loopback:
 	tests/14-nodejs-loopback.sh
 
-# Lifecycle: Lifecycle of Kabanero, Collection and owned objects
-int-test-lifecycle: int-test-delete-pipeline int-test-delete-collection int-test-update-index int-test-deactivate-collection
+# Lifecycle: Lifecycle of Kabanero, Stack and owned objects
+int-test-lifecycle: int-test-delete-pipeline int-test-delete-stack int-test-update-index int-test-deactivate-stack
 int-test-delete-pipeline:
 	tests/20-delete-pipeline.sh
-int-test-delete-collection:
-	tests/21-delete-collection.sh
+int-test-delete-stack:
+	tests/21-delete-stack.sh
 int-test-update-index:
 	tests/22-update-index.sh
-int-test-deactivate-collection:
-	tests/23-deactivate-collection.sh
+int-test-deactivate-stack:
+	tests/23-deactivate-stack.sh

@@ -3,4 +3,4 @@ spec:
     repositories:
     - activateDefaultCollections: false
       name: incubator
-      url: https://github.com/kabanero-io/collections/releases/download/0.3.1/kabanero-index.yaml
+      url: https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml
