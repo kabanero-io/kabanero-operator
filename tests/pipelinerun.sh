@@ -62,6 +62,11 @@ metadata:
   name: ${PIPELINE_RUN}
   namespace: kabanero
 spec:
+  params:
+  - name: event-type
+    value: push
+  - name: event-ref
+    value: refs/heads/master
   pipelineRef:
     name: ${PIPELINE_REF}
   resources:
@@ -74,7 +79,6 @@ spec:
   serviceAccountName: kabanero-pipeline
   timeout: 60m
 EOF
-
 
 
 # Run Completion
