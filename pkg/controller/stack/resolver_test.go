@@ -1,6 +1,10 @@
 package stack
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
@@ -92,12 +96,27 @@ func TestResolveIndexForStacks(t *testing.T) {
 	}
 }
 
+// HTTP handler that serves pipeline zips
+type githubHandler struct {
+}
+
+func (ch githubHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	filename := fmt.Sprintf("testdata/%v", req.URL.String())
+	fmt.Printf("Serving %v\n", filename)
+	rw.WriteHeader(http.StatusNotFound)
+}
+
 // Tests that an index in a public Git hub repository is able to be read using the information provided
 // in the under the gitRelease element of the Kabanero CR instance yaml.
 func TestResolveIndexForStacksInPublicGit(t *testing.T) {
+	server := httptest.NewServer(stackHandler{})
+	defer server.Close()
+
+	a, _ := url.Parse(server.URL)
+	
 	repoConfig := kabanerov1alpha2.RepositoryConfig{
 		Name:       "openLibertyTest",
-		GitRelease: kabanerov1alpha2.GitReleaseSpec{Hostname: "github.com", Organization: "appsody", Project: "stacks", Release: "java-spring-boot2-v0.3.23", AssetName: "incubator-index.yaml"},
+		GitRelease: kabanerov1alpha2.GitReleaseSpec{Hostname: a.Host, Organization: "appsody", Project: "stacks", Release: "java-spring-boot2-v0.3.23", AssetName: "incubator-index.yaml"},
 	}
 
 	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
