@@ -247,12 +247,13 @@ oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=12-subsc
 # Verify Subscriptions
 checksub serverless-operator openshift-operators
 
-# Install 13-subscription (pipelines, appsody)
+# Install 13-subscription (pipelines, appsody, openliberty)
 oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=13-subscription
 
 # Verify Subscriptions
 checksub openshift-pipelines openshift-operators
 checksub appsody-operator-certified openshift-operators
+checksub open-liberty-certified openshift-operators
 
 # Install 14-subscription (codeready-workspaces, kabanero)
 
