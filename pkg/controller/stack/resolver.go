@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -182,12 +183,13 @@ func getStackIndexUsingGit(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, 
 
 // Retrieves a Git client.
 func getGitClient(gitRelease kabanerov1alpha2.GitReleaseSpec) (*github.Client, error) {
-	client := github.NewClient(http.DefaultClient)
+	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}}
+	client := github.NewClient(httpClient)
 	if len(gitRelease.Hostname) != 0 && gitRelease.Hostname != "github.com" {
 		// GHE hostnames must be suffixed with /api/v3/ otherwise 406 status codes will be returned.
 		// Using NewEnterpriseClient will do that for us automatically.
 		url := "https://" + gitRelease.Hostname
-		eclient, err := github.NewEnterpriseClient(url, url, http.DefaultClient)
+		eclient, err := github.NewEnterpriseClient(url, url, httpClient)
 		if err != nil {
 			return nil, err
 		}

@@ -561,6 +561,8 @@ spec:
                               type: string
                             release:
                               type: string
+                            skipCertVerification:
+                              type: boolean
                           type: object
                         https:
                           description: HttpsProtocolFile defines how to retrieve a

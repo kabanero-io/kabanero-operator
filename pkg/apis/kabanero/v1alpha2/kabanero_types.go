@@ -102,6 +102,7 @@ type GitReleaseSpec struct {
 	Project      string `json:"project,omitempty"`
 	Release      string `json:"release,omitempty"`
 	AssetName    string `json:"assetName,omitempty"`
+	SkipCertVerification bool `json:"skipCertVerification,omitempty"`
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
