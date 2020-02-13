@@ -113,6 +113,22 @@ spec:
   source: kabanero-catalog
   sourceNamespace: openshift-marketplace
 ---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: open-liberty-certified
+  namespace: openshift-operators
+  labels:
+    kabanero.io/install: 13-subscription
+spec:
+  channel: kabanero-0.7
+  config:
+    resources: {}
+  installPlanApproval: Automatic
+  name: open-liberty-certified
+  source: kabanero-catalog
+  sourceNamespace: openshift-marketplace
+---
 apiVersion: v1
 kind: Namespace
 metadata:

@@ -1,0 +1,5 @@
+channels:
+- currentCSV: open-liberty-operator.0.3.0
+  name: kabanero-0.7
+defaultChannel: kabanero-0.7
+packageName: open-liberty-certified
