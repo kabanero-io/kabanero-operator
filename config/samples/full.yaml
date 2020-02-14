@@ -21,10 +21,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.6.0-rc.3"
+    tag: "0.6.0-rc.4"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.6.0-rc.3
+    image: kabanero/kabanero-command-line-services:0.6.0-rc.4
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -34,25 +34,25 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.6.0-rc.1"
+    version: "0.6.0-rc.2"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-collection-controller
-    tag: "0.6.0-rc.1"
+    tag: "0.6.0-rc.2"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-collection-controller:0.6.0-rc.1
+    image: kabanero/kabanero-operator-collection-controller:0.6.0-rc.2
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.6.0-rc.1"
+    version: "0.6.0-rc.2"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-stack-controller
-    tag: "0.6.0-rc.1"
+    tag: "0.6.0-rc.2"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-stack-controller:0.6.0-rc.1
+    image: kabanero/kabanero-operator-stack-controller:0.6.0-rc.2
 
   landing:
     # The landing page is enabled by default. To disable specify false.
@@ -60,14 +60,14 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.6.0-rc.1"
+    version: "0.6.0-rc.2"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator-admission-webhook
-    tag: "0.6.0-rc.1"
+    tag: "0.6.0-rc.2"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-admission-webhook:0.6.0-rc.1
+    image: kabanero/kabanero-operator-admission-webhook:0.6.0-rc.2
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
@@ -108,12 +108,12 @@ spec:
     repositories: 
     - name: incubator
       https:
-        url: https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml
+        url: https://github.com/kabanero-io/collections/releases/download/0.6.0-rc.1/kabanero-index.yaml
     pipelines:
     - id: default
-      sha256: 14d59b7ebae113c18fb815c2ccfd8a846c5fbf91d926ae92e0017ca5caf67c95
+      sha256: 6eb598555a6b0c1d0a7e1a215343145f83cea70820eb99f60ee67f3d3201e441
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc1/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc2/default-kabanero-pipelines.tar.gz
 
   # The information in the Github section is used by the Kabanero CLI to
   # perform user to role mapping when accessing the collection.

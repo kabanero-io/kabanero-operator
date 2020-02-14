@@ -28,16 +28,16 @@ metadata:
                 {
                   "name": "incubator",
                   "https": {
-                    "url": "https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml"
+                    "url": "https://github.com/kabanero-io/collections/releases/download/0.6.0-rc.1/kabanero-index.yaml"
                   }
                 }
               ],
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "14d59b7ebae113c18fb815c2ccfd8a846c5fbf91d926ae92e0017ca5caf67c95",
+                  "sha256": "6eb598555a6b0c1d0a7e1a215343145f83cea70820eb99f60ee67f3d3201e441",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc1/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc2/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -65,13 +65,13 @@ metadata:
           "spec": {
             "name": "java-microprofile",
             "versions": [
-              { "version": "0.2.21",
-                "repositoryUrl": "https://github.com/kabanero-io/collections/releases/download/0.5.0/kabanero-index.yaml",
+              { "version": "0.2.25",
+                "repositoryUrl": "https://github.com/kabanero-io/collections/releases/download/0.6.0-rc.1/kabanero-index.yaml",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "14d59b7ebae113c18fb815c2ccfd8a846c5fbf91d926ae92e0017ca5caf67c95",
+                    "sha256": "6eb598555a6b0c1d0a7e1a215343145f83cea70820eb99f60ee67f3d3201e441",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc1/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc2/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
