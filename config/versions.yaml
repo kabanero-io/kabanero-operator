@@ -37,7 +37,7 @@ related-software:
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.6.0-rc.3"
+      tag: "0.6.0-rc.4"
 
   codeready-workspaces:
   - version: "0.6.0"
