@@ -136,7 +136,7 @@ type ReconcileStack struct {
 	scheme *runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
-	indexResolver func(kabanerov1alpha2.RepositoryConfig, []Pipelines, []Trigger, string) (*Index, error)
+	indexResolver func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string) (*Index, error)
 }
 
 // Reconcile reads that state of the cluster for a Stack object and makes changes based on the state read

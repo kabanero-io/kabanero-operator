@@ -439,7 +439,7 @@ func TestResolveFeaturedStacks(t *testing.T) {
 	stack_index_url := server.URL + defaultIndexName
 	k := createKabanero(stack_index_url)
 
-	stacks, err := featuredStacks(k)
+	stacks, err := featuredStacks(k, nil)
 	if err != nil {
 		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}
@@ -480,7 +480,7 @@ func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 	k := createKabanero(stack_index_url)
 	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stack_index_url_two}})
 
-	stacks, err := featuredStacks(k)
+	stacks, err := featuredStacks(k, nil)
 	if err != nil {
 		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}

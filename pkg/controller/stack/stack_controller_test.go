@@ -41,7 +41,7 @@ func init() {
 }
 
 func TestReconcileStack(t *testing.T) {
-	r := &ReconcileStack{indexResolver: func(kabanerov1alpha2.RepositoryConfig, []Pipelines, []Trigger, string) (*Index, error) {
+	r := &ReconcileStack{indexResolver: func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string) (*Index, error) {
 		return &Index{
 			APIVersion: "v2",
 			Stacks: []Stack{

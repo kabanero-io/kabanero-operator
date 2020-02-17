@@ -7,6 +7,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.3.1
+	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v29 v29.0.3
 	github.com/knative/pkg v0.0.0-20190817231834-12ee58e32cc8 // indirect
 	github.com/knative/serving-operator v0.0.0-20190702004031-e30377b852ff
@@ -20,6 +21,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tektoncd/operator v0.0.0-20191017104520-be5a46fc149a
 	github.com/tektoncd/pipeline v0.10.1
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/yaml.v2 v2.2.5
 	k8s.io/api v0.17.0
 	k8s.io/apiextensions-apiserver v0.0.0

@@ -6,21 +6,26 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strings"
 
 	"github.com/google/go-github/v29/github"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ResolveIndex returns a structure representation of the yaml file represented by the index.
-func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipelines, triggers []Trigger, imagePrefix string) (*Index, error) {
+func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, namespace string, pipelines []Pipelines, triggers []Trigger, imagePrefix string) (*Index, error) {
 	var indexBytes []byte
 
 	switch {
 	// GIT:
 	case isGitReleaseUsable(repoConf.GitRelease):
-		bytes, err := getStackIndexUsingGit(repoConf)
+		bytes, err := getStackIndexUsingGit(c, repoConf, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +39,7 @@ func ResolveIndex(repoConf kabanerov1alpha2.RepositoryConfig, pipelines []Pipeli
 		indexBytes = bytes
 	// NOT SUPPORTED:
 	default:
-		return nil, fmt.Errorf("No information was provided to retrieve the stack's index file from the repository identified as %v. Specify a stack index HTTP URL location or a Git release information.", repoConf.Name)
+		return nil, fmt.Errorf("No information was provided to retrieve the stack's index file from the repository identified as %v. Specify a stack repository that includes a HTTP URL location or GitHub release information.", repoConf.Name)
 	}
 
 	var index Index
@@ -130,6 +135,7 @@ func isGitReleaseUsable(gitRelease kabanerov1alpha2.GitReleaseSpec) bool {
 // Retrieves a stack index file content using HTTP.
 func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, error) {
 	url := repoConf.Https.Url
+
 	// user may specify url to yaml file or directory
 	matched, err := regexp.MatchString(`/([^/]+)[.]yaml$`, url)
 	if err != nil {
@@ -142,12 +148,12 @@ func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte,
 	return getFromCache(url, repoConf.Https.SkipCertVerification)
 }
 
-// Retrieves a stack index file content using Git APIs
-func getStackIndexUsingGit(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, error) {
+// Retrieves a stack index file content using GitHub APIs
+func getStackIndexUsingGit(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, namespace string) ([]byte, error) {
 	var indexBytes []byte
 
 	// Get a Github client.
-	gclient, err := getGitClient(repoConf.GitRelease)
+	gclient, err := getGitClient(c, repoConf.GitRelease, namespace, repoConf.GitRelease.Hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -182,19 +188,114 @@ func getStackIndexUsingGit(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, 
 }
 
 // Retrieves a Git client.
-func getGitClient(gitRelease kabanerov1alpha2.GitReleaseSpec) (*github.Client, error) {
-	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}}
-	client := github.NewClient(httpClient)
-	if len(gitRelease.Hostname) != 0 && gitRelease.Hostname != "github.com" {
-		// GHE hostnames must be suffixed with /api/v3/ otherwise 406 status codes will be returned.
-		// Using NewEnterpriseClient will do that for us automatically.
+func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string, hostname string) (*github.Client, error) {
+	var client *github.Client
+
+	switch {
+	// Private repository.
+	case len(gitRelease.Hostname) != 0 && gitRelease.Hostname != "github.com":
+		// Search all secrets under the given namespace for the one containing the required hostname.
+		pat, err := getPATFromSecret(c, namespace, hostname)
+		if err != nil {
+			return nil, err
+		}
+		if pat == nil {
+			return nil, fmt.Errorf("Unable to build a Git enterprise client. Secret security data was not found. Namespace: %v. Hostname: %v.", namespace, hostname)
+		}
+
+		// Get the http client genereate by the oauth2 API.
+		httpClient, err := cutils.GetOauth2HTTPCLient(pat)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get the GHE client. GHE hostnames must be suffixed with /api/v3/ otherwise 406 status codes
+		// will be returned. Using NewEnterpriseClient will do that for us automatically.
 		url := "https://" + gitRelease.Hostname
 		eclient, err := github.NewEnterpriseClient(url, url, httpClient)
 		if err != nil {
 			return nil, err
 		}
 		client = eclient
+	// Assume public.
+	default:
+		httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}}
+		client = github.NewClient(httpClient)
 	}
 
 	return client, nil
+}
+
+// Get the personal access token (PAT) from a secret resource. If no secret annotation values
+// contain the input hostname a nil value is returned.
+func getPATFromSecret(c client.Client, namespace string, hostname string) ([]byte, error) {
+	secret, err := cutils.GetMatchingSecret(c, namespace, secretFilter, hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	if secret != nil {
+		pat, found := secret.Data["password"]
+		if !found {
+			return nil, fmt.Errorf("secret key (password) not found under the data section of secret: %v.", secret)
+		}
+
+		return pat, nil
+	}
+
+	return nil, nil
+}
+
+// Custom filter method that allows the retrieval of a secret containing an annotation with a value
+// that has the input filter strings (hostname). If there are multiple matching secrets, the annotation
+// with the lexically lowest value key (kabanero.io/git-*) is used. If no secret matches annotation key
+// kabanero.io/git-*, but there are secrets with an annotation value that matches the hostname, the
+// first one seen is used.
+func secretFilter(secretList *corev1.SecretList, filterStrings ...string) (*corev1.Secret, error) {
+	var keyMatchingSecret *corev1.Secret = nil
+	var noKeyMatchingSecret *corev1.Secret = nil
+	kabKey := ""
+	for _, secret := range secretList.Items {
+		annotations := secret.GetAnnotations()
+		for key, value := range annotations {
+			matchedUrl, err := regexp.MatchString("^https?://", value)
+			if err != nil {
+				return nil, err
+			}
+			if matchedUrl {
+				surl, err := url.Parse(value)
+				if err != nil {
+					fmt.Println("Unable to parse secret annotation value URL: ", surl, ". Secret: ", secret)
+				}
+
+				if surl.Hostname() == filterStrings[0] {
+					if strings.HasPrefix(key, "kabanero.io/git-") {
+						if len(kabKey) == 0 {
+							kabKey = key
+							keyMatchingSecret = secret.DeepCopy()
+						} else {
+							if kabKey > key {
+								kabKey = key
+								keyMatchingSecret = secret.DeepCopy()
+							}
+						}
+					} else {
+						// Save the first secret we see matching the hostname.
+						if noKeyMatchingSecret == nil {
+							noKeyMatchingSecret = secret.DeepCopy()
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if keyMatchingSecret != nil {
+		return keyMatchingSecret, nil
+	}
+	if noKeyMatchingSecret != nil {
+		return noKeyMatchingSecret, nil
+	}
+
+	return nil, nil
 }
