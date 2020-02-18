@@ -61,7 +61,7 @@ metadata:
   labels:
     kabanero.io/install: 11-subscription
 spec:
-  channel: kabanero-0.6
+  channel: kabanero-0.7
   installPlanApproval: Automatic
   name: servicemeshoperator
   source: kabanero-catalog

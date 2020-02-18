@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: servicemeshoperator.v1.0.2
+  name: servicemeshoperator.v1.0.5
   namespace: placeholder
   annotations:
     categories: "OpenShift Optional, Integration & Delivery"
@@ -11,8 +11,8 @@ metadata:
     description: |-
       The OpenShift Service Mesh Operator enables you to install, configure, and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service Mesh is based on the open source Istio project.
 
-    containerImage: registry.redhat.io/openshift-service-mesh/istio-rhel8-operator:1.0.2
-    createdAt: 2019-10-28T17:38:47UTC
+    containerImage: registry.redhat.io/openshift-service-mesh/istio-rhel8-operator:1.0.5
+    createdAt: 2020-01-22T01:31:34UTC
     support: Red Hat, Inc. 
     alm-examples: |-
       [
@@ -24,7 +24,6 @@ metadata:
           },
           "spec": {
             "istio": {
-
               "gateways": {
                 "istio-egressgateway": {
                   "autoscaleEnabled": false
@@ -75,7 +74,7 @@ metadata:
         }
       ]
 spec:
-  version: 1.0.2
+  version: 1.0.5
   maturity: alpha
   displayName: Red Hat OpenShift Service Mesh
   description: |-
@@ -91,10 +90,10 @@ spec:
     url: https://github.com/Maistra/istio-operator
   - name: Istio
     url: https://istio.io/
-  replaces: servicemeshoperator.v1.0.1
+  replaces: servicemeshoperator.v1.0.4
   installModes:
   - type: OwnNamespace
-    supported: true
+    supported: false
   - type: SingleNamespace
     supported: false
   - type: MultiNamespace
@@ -256,6 +255,12 @@ spec:
           verbs:
             - get
         - apiGroups:
+            - config.openshift.io
+          resources:
+            - networks
+          verbs:
+            - get
+        - apiGroups:
             - network.openshift.io
           resources:
             - netnamespaces
@@ -322,7 +327,7 @@ spec:
                     medium: Memory
               containers:
                 - name: istio-operator
-                  image: registry.redhat.io/openshift-service-mesh/istio-rhel8-operator:1.0.2
+                  image: registry.redhat.io/openshift-service-mesh/istio-rhel8-operator:1.0.5
                   ports:
                     - containerPort: 11999
                       name: validation
@@ -343,7 +348,7 @@ spec:
                     - name: OPERATOR_NAME
                       value: istio-operator
                     - name: ISTIO_CNI_IMAGE
-                      value: registry.redhat.io/openshift-service-mesh/istio-cni-rhel8:1.0.2
+                      value: registry.redhat.io/openshift-service-mesh/istio-cni-rhel8:1.0.5
                   volumeMounts:
                     - name: discovery-cache
                       mountPath: /home/istio-operator/.kube/cache/discovery
