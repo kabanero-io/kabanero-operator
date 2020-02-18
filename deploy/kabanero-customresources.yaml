@@ -56,7 +56,7 @@ metadata:
     kabanero.io/install: 22-cr-knative-serving
     kabanero.io/namespace: 'true'
 ---
-apiVersion: serving.knative.dev/v1alpha1
+apiVersion: operator.knative.dev/v1alpha1
 kind: KnativeServing
 metadata:
   name: knative-serving
