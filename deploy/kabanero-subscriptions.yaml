@@ -75,7 +75,7 @@ metadata:
   labels:
     kabanero.io/install: 12-subscription
 spec:
-  channel: kabanero-0.6
+  channel: kabanero-0.7
   installPlanApproval: Automatic
   name: serverless-operator
   source: kabanero-catalog
