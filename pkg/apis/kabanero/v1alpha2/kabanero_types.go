@@ -90,8 +90,19 @@ type GithubConfig struct {
 type RepositoryConfig struct {
 	Name string `json:"name,omitempty"`
 	// +listType=set
-	Pipelines []PipelineSpec    `json:"pipelines,omitempty"`
-	Https     HttpsProtocolFile `json:"https,omitempty"`
+	Pipelines  []PipelineSpec    `json:"pipelines,omitempty"`
+	Https      HttpsProtocolFile `json:"https,omitempty"`
+	GitRelease GitReleaseSpec    `json:"gitRelease,omitempty"`
+}
+
+// GitReleaseSpec defines customization entries for a Git release.
+type GitReleaseSpec struct {
+	Hostname     string `json:"hostname,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	Project      string `json:"project,omitempty"`
+	Release      string `json:"release,omitempty"`
+	AssetName    string `json:"assetName,omitempty"`
+	SkipCertVerification bool `json:"skipCertVerification,omitempty"`
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
@@ -170,8 +181,8 @@ type AdmissionControllerWebhookCustomizationSpec struct {
 }
 
 type SsoCustomizationSpec struct {
-	Enable     bool   `json:"enable,omitempty"`
-	Provider   string `json:"provider,omitempty"`
+	Enable          bool   `json:"enable,omitempty"`
+	Provider        string `json:"provider,omitempty"`
 	AdminSecretName string `json:"adminSecretName,omitempty"`
 }
 
@@ -331,9 +342,9 @@ type AdmissionControllerWebhookStatus struct {
 
 // Status of the SSO server
 type SsoStatus struct {
-	Configured   string `json:"configured,omitempty"`
-	Ready        string `json:"ready,omitempty"`
-	Message      string `json:"message,omitempty"`
+	Configured string `json:"configured,omitempty"`
+	Ready      string `json:"ready,omitempty"`
+	Message    string `json:"message,omitempty"`
 }
 
 // Kabanero is the Schema for the kabaneros API

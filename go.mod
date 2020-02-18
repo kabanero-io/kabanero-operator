@@ -7,6 +7,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.3.1
+	github.com/google/go-github/v29 v29.0.3
 	github.com/kabanero-io/manifestival v0.0.0-20191230200607-194733cd27d9
 	github.com/knative/pkg v0.0.0-20190817231834-12ee58e32cc8 // indirect
 	github.com/knative/serving-operator v0.0.0-20190702004031-e30377b852ff

@@ -1,0 +1,41 @@
+apiVersion: v2
+stacks:
+- id: java-microprofile
+  name: Eclipse MicroProfile®
+  version: 0.2.21
+  description: Eclipse MicroProfile on Open Liberty & OpenJ9 using Maven
+  license: Apache-2.0
+  language: java
+  maintainers:
+  - name: Emily Jiang
+    email: emijiang6@googlemail.com
+    github-id: Emily-Jiang
+  - name: Neeraj Laad
+    email: neeraj.laad@gmail.com
+    github-id: neeraj-laad
+  - name: Ozzy
+    email: ozzy@ca.ibm.com
+    github-id: BarDweller
+  default-template: default
+  templates:
+  - id: default
+    url: https://github.com/appsody/stacks/releases/download/java-microprofile-v0.2.21/incubator.java-microprofile.v0.2.21.templates.default.tar.gz
+  image: docker.io/appsody/java-microprofile:0.2.21
+- id: nodejs
+  name: Node.js
+  version: 0.3.2
+  description: Runtime for Node.js applications
+  license: Apache-2.0
+  language: nodejs
+  maintainers:
+  - name: Sam Roberts
+    email: vieuxtech@gmail.com
+    github-id: sam-github
+  default-template: simple
+  templates:
+  - id: simple
+    url: https://github.com/appsody/stacks/releases/download/nodejs-v0.3.2/incubator.nodejs.v0.3.2.templates.simple.tar.gz
+  requirements:
+    docker-version: '>= 17.09.0'
+    appsody-version: '>= 0.2.7'
+  image: docker.io/appsody/nodejs:0.3.2
