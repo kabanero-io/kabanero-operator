@@ -6,4 +6,6 @@ channels:
   currentCSV: servicemeshoperator.v1.0.2
 - name: kabanero-0.6
   currentCSV: servicemeshoperator.v1.0.4
-defaultChannel: kabanero-0.6
+- name: kabanero-0.7
+  currentCSV: servicemeshoperator.v1.0.7
+defaultChannel: kabanero-0.7
