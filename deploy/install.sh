@@ -119,19 +119,19 @@ checksub () {
 
 # Removes a resource instance in the specified namespace.
 removeResourceInstance() {
-	if [ `oc get crds $1 --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
+	if [ `oc get $1 $2 $3 --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 
         # Delete an input Kind object in a specific namespace.  
-        oc delete $2 $3 -n $4 --ignore-not-found
+        oc delete $1 $2 -n $3 --ignore-not-found
 
         # Wait for the specified instance to be deleted.
 	echo "Waiting for $2 instance ($3) in the $4 namespace to be deleted...."
     	LOOP_COUNT=0
-   		while [ `oc get $2 -n $4 | wc -l` -gt 0 ]
+   		while [ `oc get $1 -n $3 | wc -l` -gt 0 ]
     	do
         	sleep 5
         	LOOP_COUNT=`expr $LOOP_COUNT + 1`
         	if [ $LOOP_COUNT -gt 10 ] ; then
-           		echo "Timed out waiting for $2 instance ($3) in the $4 namespace to be deleted"
+           		echo "Timed out waiting for $1 instance ($2) in the $3 namespace to be deleted"
            		exit 1
         	fi
     	done
@@ -264,7 +264,7 @@ checksub appsody-operator-certified openshift-operators
 # it must be uninstalled prior to running the kabanero installation script. Furthermore, users 
 # need to be sure to delete any operatorgroups other than kabanero (i.e. kabanero-5pn6b) in 
 # the kabanero namespace that may have been created as result of a manual Eclipse-che installation.
-removeResourceInstance checlusters.org.eclipse.che CheCluster codewind-che kabanero
+removeResourceInstance checlusters.org.eclipse.che codewind-che kabanero
 unsubscribe eclipse-che kabanero
 
 # Codewind is required to run as privileged and as root because it builds container images
@@ -289,11 +289,21 @@ unset TYPE
 until [ "$STATUS" == "True" ] && [ "$TYPE" == "Ready" ]
 do
 	echo "Waiting for KnativeServing knative-serving to be ready."
-	TYPE=$(oc get knativeserving.serving.knative.dev knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].type})
-	STATUS=$(oc get knativeserving.serving.knative.dev knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].status})
+	TYPE=$(oc get knativeserving.operator.knative.dev knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].type})
+	STATUS=$(oc get knativeserving.operator.knative.dev knative-serving -n knative-serving --output=jsonpath={.status.conditions[-1:].status})
 	sleep $SLEEP_SHORT
 done
 
+# Handle upgrade to serverless 1.4.0 from kabanero-0.6 to kabanero-0.7
+# A knativeserving.operator.knative.dev instance with an ownerref will be created for the knativeserving.serving.knative.dev instance, by the operator
+# To migrate, remove ownerReferences from knativeserving.operator.knative.dev and delete knativeserving.serving.knative.dev
+unset OWNERREF
+OWNERREF=$(oc -n knative-serving get knativeserving.operator.knative.dev knative-serving -o=jsonpath='{.metadata.ownerReferences}')
+if [ -n "$OWNERREF" ]
+then
+  oc -n knative-serving patch knativeserving.operator.knative.dev knative-serving --type json -p='[{"op": "remove", "path": "/metadata/ownerReferences"}]'
+  oc -n knative-serving delete knativeserving.serving.knative.dev knative-serving --ignore-not-found
+fi
 
 # Need to wait for knative serving CRDs before installing tekton webhook extension
 until oc get crd services.serving.knative.dev 
