@@ -1,4 +1,4 @@
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero
@@ -11,6 +11,6 @@ spec:
         url: https://github.com/kabanero-io/collections/releases/download/0.6.0-rc.1/kabanero-index.yaml
     pipelines:
     - id: default
-      sha256: 6eb598555a6b0c1d0a7e1a215343145f83cea70820eb99f60ee67f3d3201e441
+      sha256: f244c95ffbeca0554105a9b5a098ea8d0ffbed17cea39f43e078a86b62ff8984
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc2/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc3/default-kabanero-pipelines.tar.gz
