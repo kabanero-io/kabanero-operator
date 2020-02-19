@@ -43,6 +43,7 @@ spec:
       CHE_INFRA_KUBERNETES_WORKSPACE__START__TIMEOUT__MIN: "5"
       CHE_LIMITS_WORKSPACE_IDLE_TIMEOUT: "0"
       CHE_WORKSPACE_PLUGIN__BROKER_WAIT__TIMEOUT__MIN: "15"
+      CHE_INFRA_OPENSHIFT_PROJECT: kabanero
   database:
     # when set to true, the operator skips deploying Postgres, and passes connection details of existing DB to Che server
     # otherwise a Postgres deployment is created
