@@ -178,6 +178,9 @@ spec:
         - kind: Task
           name: ''
           version: v1alpha1
+        - kind: Condition
+          name: ''
+          version: v1alpha1
         - kind: ServiceAccount
           name: ''
           version: v1
