@@ -10,7 +10,8 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
-	mf "github.com/kabanero-io/manifestival"
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -290,7 +291,7 @@ func processCRWYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versi
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
 	if err != nil {
 		return err
 	}
@@ -300,15 +301,15 @@ func processCRWYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versi
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
 	if apply {
-		err = m.ApplyAll()
+		err = m.Apply()
 	} else {
-		err = m.DeleteAll()
+		err = m.Delete()
 	}
 
 	return err

@@ -503,8 +503,6 @@ github.com/jsonnet-bundler/jsonnet-bundler v0.1.0/go.mod h1:YKsSFc9VFhhLITkJS3X2
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
-github.com/kabanero-io/manifestival v0.0.0-20191230200607-194733cd27d9 h1:xjLNYfHbT7XGG/PbAJzbHyFO0zh4f/sBgOj3V5yq+ts=
-github.com/kabanero-io/manifestival v0.0.0-20191230200607-194733cd27d9/go.mod h1:ajnXZ2Z+sYowGF8J6ZxjZW0fqNeOiYS7Pn8+OYMd334=
 github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/karrick/godirwalk v1.7.5/go.mod h1:2c9FRhkDxdIbgkOnCEvnSWs71Bhugbl46shStcFDJ34=
@@ -553,6 +551,10 @@ github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.7.0 h1:aizVhC/NAAcKWb+5QsU1iNOZb4Yws5UO2I+aIprQITM=
 github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
+github.com/manifestival/controller-runtime-client v0.1.1-0.20200218204725-1af9550ddf8f h1:1tes5O5eRVhzX8+4DMKmYHgzSfTG+t3p9SdEMa1/Etg=
+github.com/manifestival/controller-runtime-client v0.1.1-0.20200218204725-1af9550ddf8f/go.mod h1:xK5vtLpVxkFQKIFk4ABGln7fpUKVf2UHybbP9wPWetw=
+github.com/manifestival/manifestival v0.1.1-0.20200219193505-fabb889b98f5 h1:EUT0ZE7jQFR4paHrVSGWnLUSPxCh+HgOtKT1tHjW6lY=
+github.com/manifestival/manifestival v0.1.1-0.20200219193505-fabb889b98f5/go.mod h1:jlYRi+Y1LEGR94OSBXU887tNJ7Y317sHd/DcNAHE2eI=
 github.com/maorfr/helm-plugin-utils v0.0.0-20181205064038-588190cb5e3b/go.mod h1:p3gwmRSFqbWw6plBpR0sKl3n3vpu8kX70gvCJKMvvCA=
 github.com/markbates/inflect v1.0.4/go.mod h1:1fR9+pO2KHEO9ZRtto13gDwwZaAKstQzferVeWqbgNs=
 github.com/marten-seemann/qtls v0.2.3/go.mod h1:xzjG7avBwGGbdZ8dTGxlBnLArsVKLvwmjgmPuiQEcYk=

@@ -11,8 +11,9 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	mf "github.com/kabanero-io/manifestival"
-
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
+	
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -467,23 +468,23 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						for _, manifest := range value.manifests {
 							if asset.Name == manifest.Name {
 								resources := []unstructured.Unstructured{manifest.Yaml}
-								m, err := mf.FromResources(resources, c)
+								mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)))
 
-								log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+								log.Info(fmt.Sprintf("Resources: %v", mOrig.Resources()))
 
 								transforms := []mf.Transformer{
 									transforms.InjectOwnerReference(assetOwner),
 									mf.InjectNamespace(asset.Namespace),
 								}
 
-								err = m.Transform(transforms...)
+								m, err := mOrig.Transform(transforms...)
 								if err != nil {
 									log.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
 									value.ActiveAssets[index].Status = assetStatusFailed
 									value.ActiveAssets[index].Status = err.Error()
 								} else {
-									log.Info(fmt.Sprintf("Applying resources: %v", m.Resources))
-									err = m.ApplyAll()
+									log.Info(fmt.Sprintf("Applying resources: %v", m.Resources()))
+									err = m.Apply()
 									if err != nil {
 										// Update the asset status with the error message
 										log.Error(err, "Error installing the resource", "resource", asset.Name)
