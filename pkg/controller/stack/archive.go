@@ -13,9 +13,11 @@ import (
 	"unicode"
 
 	"github.com/go-logr/logr"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	yml "gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Stack archive manifest.yaml
@@ -38,8 +40,29 @@ type StackAsset struct {
 	Yaml    unstructured.Unstructured
 }
 
-func DownloadToByte(url string) ([]byte, error) {
-	return getFromCache(url, false)
+func DownloadToByte(c client.Client, namespace string, url string, gitRelease kabanerov1alpha2.GitReleaseSpec) ([]byte, error) {
+	var archiveBytes []byte
+	switch {
+	// GIT:
+	case isGitReleaseUsable(gitRelease):
+		bytes, err := getStackIndexUsingGit(c, gitRelease, namespace)
+		if err != nil {
+			return nil, err
+		}
+		archiveBytes = bytes
+	// HTTPS:
+	case len(url) != 0:
+		bytes, err := getFromCache(url, false)
+		if err != nil {
+			return nil, err
+		}
+		archiveBytes = bytes
+	// NOT SUPPORTED:
+	default:
+		return nil, fmt.Errorf("No information was provided to retrieve the stack's index file. Specify a stack repository that includes a HTTP URL location or GitHub release information.")
+	}
+
+	return archiveBytes, nil
 }
 
 // Print something that looks similar to xxd output
@@ -48,7 +71,7 @@ func commTrace(buffer []byte) string {
 	for bytesLeft := len(buffer); bytesLeft > 0; {
 		var bytesThisRound []byte
 		if bytesLeft >= 16 {
-			bytesThisRound = buffer[len(buffer)-bytesLeft:len(buffer)-bytesLeft+16]
+			bytesThisRound = buffer[len(buffer)-bytesLeft : len(buffer)-bytesLeft+16]
 		} else {
 			bytesThisRound = buffer[len(buffer)-bytesLeft:]
 		}
@@ -95,7 +118,7 @@ func readBytesFromReader(size int64, r io.Reader) ([]byte, error) {
 					return nil, fmt.Errorf("EOF received before end of file: %v", err.Error())
 				}
 
-				break;
+				break
 			}
 
 			// Otherwise, just return the error.
@@ -234,7 +257,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 				out = unstructured.Unstructured{}
 				err = decoder.Decode(&out)
 			}
-				
+
 			if (err != nil) && (err != io.EOF) {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
@@ -243,15 +266,15 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 	return manifests, nil
 }
 
-func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
-	b, err := DownloadToByte(url)
+func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
+	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease)
 	if err != nil {
 		return nil, err
 	}
 
 	b_sum := sha256.Sum256(b)
 	var c_sum [32]byte
-	decoded, err := hex.DecodeString(checksum)
+	decoded, err := hex.DecodeString(pipelineStatus.Digest)
 	if err != nil {
 		return nil, err
 	}

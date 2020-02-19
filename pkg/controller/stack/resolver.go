@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,12 +26,12 @@ func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, n
 	switch {
 	// GIT:
 	case isGitReleaseUsable(repoConf.GitRelease):
-		bytes, err := getStackIndexUsingGit(c, repoConf, namespace)
+		bytes, err := getStackIndexUsingGit(c, repoConf.GitRelease, namespace)
 		if err != nil {
 			return nil, err
 		}
 		indexBytes = bytes
-	// HTTP:
+	// HTTPS:
 	case len(repoConf.Https.Url) != 0:
 		bytes, err := getStackIndexUsingHttp(repoConf)
 		if err != nil {
@@ -149,35 +150,35 @@ func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte,
 }
 
 // Retrieves a stack index file content using GitHub APIs
-func getStackIndexUsingGit(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, namespace string) ([]byte, error) {
+func getStackIndexUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string) ([]byte, error) {
 	var indexBytes []byte
 
 	// Get a Github client.
-	gclient, err := getGitClient(c, repoConf.GitRelease, namespace, repoConf.GitRelease.Hostname)
+	gclient, err := getGitClient(c, gitRelease, namespace, gitRelease.Hostname)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the release tagged in Github as repoConf.GitRelease.Release.
-	release, response, err := gclient.Repositories.GetReleaseByTag(context.Background(), repoConf.GitRelease.Organization, repoConf.GitRelease.Project, repoConf.GitRelease.Release)
+	release, response, err := gclient.Repositories.GetReleaseByTag(context.Background(), gitRelease.Organization, gitRelease.Project, gitRelease.Release)
 	if err != nil || response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Unable to retrieve object representing Github repository release %v. Configured GitRelease data: %v. Error: %v", repoConf.GitRelease.Release, repoConf.GitRelease, err)
+		return nil, fmt.Errorf("Unable to retrieve object representing Github repository release %v. Configured GitRelease data: %v. Error: %v", gitRelease.Release, gitRelease, err)
 	}
 	assets := release.Assets
 
 	// Find the asset identified as repoConf.GitRelease.AssetName and download it.
 	for _, asset := range assets {
-		if asset.GetName() == repoConf.GitRelease.AssetName {
+		if asset.GetName() == gitRelease.AssetName {
 			id := asset.GetID()
-			reader, _, err := gclient.Repositories.DownloadReleaseAsset(context.Background(), repoConf.GitRelease.Organization, repoConf.GitRelease.Project, id, http.DefaultClient)
+			reader, _, err := gclient.Repositories.DownloadReleaseAsset(context.Background(), gitRelease.Organization, gitRelease.Project, id, http.DefaultClient)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to download release asset %v. Configured GitRelease data: %v. Error: %v", repoConf.GitRelease.AssetName, repoConf.GitRelease, err)
+				return nil, fmt.Errorf("Unable to download release asset %v. Configured GitRelease data: %v. Error: %v", gitRelease.AssetName, gitRelease, err)
 			}
 			defer reader.Close()
 
 			indexBytes, err = ioutil.ReadAll(reader)
 			if err != nil {
-				return nil, fmt.Errorf(fmt.Sprintf("Unable to read downloaded asset %v from request. Configured GitRelease data: %v. Error: %v", repoConf.GitRelease.AssetName, repoConf.GitRelease, err))
+				return nil, fmt.Errorf(fmt.Sprintf("Unable to read downloaded asset %v from request. Configured GitRelease data: %v. Error: %v", gitRelease.AssetName, gitRelease, err))
 			}
 
 			break
@@ -195,12 +196,20 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 	// Private repository.
 	case len(gitRelease.Hostname) != 0 && gitRelease.Hostname != "github.com":
 		// Search all secrets under the given namespace for the one containing the required hostname.
-		pat, err := getPATFromSecret(c, namespace, hostname)
+		secret, err := cutils.GetMatchingSecret(c, namespace, secretFilter, hostname)
+		if err != nil {
+			return nil, err
+		}
+		if secret == nil {
+			return nil, fmt.Errorf("Unable to build a Git enterprise client. A secret could not be matched. GitRelease: %v. Namespace: %v. Hostname: %v.", gitRelease, namespace, hostname)
+		}
+
+		pat, err := getPATFromSecret(*secret)
 		if err != nil {
 			return nil, err
 		}
 		if pat == nil {
-			return nil, fmt.Errorf("Unable to build a Git enterprise client. Secret security data was not found. Namespace: %v. Hostname: %v.", namespace, hostname)
+			return nil, fmt.Errorf("Unable to build a Git enterprise client. Secret security data was not found. GitRelease: %v. Namespace: %v. Hostname: %v.", gitRelease, namespace, hostname)
 		}
 
 		// Get the http client genereate by the oauth2 API.
@@ -226,31 +235,34 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 	return client, nil
 }
 
-// Get the personal access token (PAT) from a secret resource. If no secret annotation values
-// contain the input hostname a nil value is returned.
-func getPATFromSecret(c client.Client, namespace string, hostname string) ([]byte, error) {
-	secret, err := cutils.GetMatchingSecret(c, namespace, secretFilter, hostname)
-	if err != nil {
-		return nil, err
-	}
-
-	if secret != nil {
-		pat, found := secret.Data["password"]
+// Returns an unencoded bytes representing a personal access token (PAT) found in the input secret resource.
+func getPATFromSecret(secret corev1.Secret) ([]byte, error) {
+	// Data section: base64 encoded PAT.
+	pat, found := secret.Data["password"]
+	if !found {
+		// StringData section: unencoded PAT string.
+		spat, found := secret.StringData["password"]
 		if !found {
-			return nil, fmt.Errorf("secret key (password) not found under the data section of secret: %v.", secret)
+			return nil, fmt.Errorf("Password key not found in secret: %v.", secret)
 		}
-
-		return pat, nil
+		pat = []byte(spat)
+	} else {
+		encodedToken := base64.StdEncoding.EncodeToString([]byte(pat))
+		decodedTokenBytes, err := base64.StdEncoding.DecodeString(encodedToken)
+		if err != nil {
+			return nil, err
+		}
+		pat = decodedTokenBytes
 	}
 
-	return nil, nil
+	return pat, nil
 }
 
 // Custom filter method that allows the retrieval of a secret containing an annotation with a value
 // that has the input filter strings (hostname). If there are multiple matching secrets, the annotation
 // with the lexically lowest value key (kabanero.io/git-*) is used. If no secret matches annotation key
 // kabanero.io/git-*, but there are secrets with an annotation value that matches the hostname, the
-// first one seen is used.
+// first one seen is used. If a secret could not be found, nil is returned.
 func secretFilter(secretList *corev1.SecretList, filterStrings ...string) (*corev1.Secret, error) {
 	var keyMatchingSecret *corev1.Secret = nil
 	var noKeyMatchingSecret *corev1.Secret = nil

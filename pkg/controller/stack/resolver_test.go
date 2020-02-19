@@ -1,15 +1,9 @@
 package stack
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
+	"encoding/base64"
 	"testing"
 
-	"github.com/google/go-github/v29/github"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,106 +51,6 @@ func TestResolveIndexForStacks(t *testing.T) {
 	repoConfig := kabanerov1alpha2.RepositoryConfig{
 		Name:  "openLibertyTest",
 		Https: kabanerov1alpha2.HttpsProtocolFile{Url: "https://github.com/appsody/stacks/releases/download/java-spring-boot2-v0.3.23/incubator-index.yaml"},
-	}
-
-	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
-	triggers := []Trigger{{Id: "testTrigger", Sha256: "0987654321", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.trigger.tar.gz"}}
-	index, err := ResolveIndex(nil, repoConfig, "kabanero", pipelines, triggers, "kabanerobeta")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if index == nil {
-		t.Fatal("The resulting index structure was nil")
-	}
-
-	// Validate pipeline entries.
-	numStacks := len(index.Stacks)
-
-	if len(index.Stacks[numStacks-numStacks].Pipelines) == 0 {
-		t.Fatal("Index.Stacks[0].Pipelines is empty. An entry was expected.")
-	}
-
-	c0p0 := index.Stacks[numStacks-numStacks].Pipelines[0]
-	if c0p0.Id != "testPipeline" {
-		t.Fatal("Expected Index.Stacks[umStacks-numStacks].Pipelines[0] to have a pipeline name of testPipeline. Instead it was: " + c0p0.Id)
-	}
-
-	if len(index.Stacks[numStacks-1].Pipelines) == 0 {
-		t.Fatal("Index.Stacks[numStacks-1].Pipelines is empty. An entry was expected")
-	}
-
-	cLastP0 := index.Stacks[numStacks-1].Pipelines[0]
-	if cLastP0.Id != "testPipeline" {
-		t.Fatal("Expected Index.Stacks[0].Pipelines[0] to have a pipeline name of testPipeline. Instead it was: " + cLastP0.Id)
-	}
-
-	// Validate trigger entry.
-	if len(index.Triggers) == 0 {
-		t.Fatal("Index.Triggers is empty. An entry was expected")
-	}
-	trgr := index.Triggers[0]
-	if trgr.Id != "testTrigger" {
-		t.Fatal("Expected Index.Triggers[0] to have a trigger name of testTrigger. Instead it was: " + trgr.Id)
-	}
-
-	// Validate image entry.
-	if len(index.Stacks[0].Images) == 0 {
-		t.Fatal("index.Stacks[0].Images is empty. An entry was expected")
-	}
-
-	image := index.Stacks[0].Images[0]
-	if len(image.Image) == 0 {
-		t.Fatal("Expected index.Stacks[0].Images[0].Image to have a non-empty value.")
-	}
-
-	if len(image.Id) == 0 {
-		t.Fatal("Expected index.Stacks[0].Images[0].Id to have a non-empty value.")
-	}
-}
-
-// HTTP handler that pretends to be a Github server.
-type githubHandler struct {
-}
-
-func (ch githubHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	// We're capable of retrieving a specific release tag, and a specific
-	// asset within that release.  That's it!
-	fmt.Printf("githubHandler received URL: %v", req.URL.String())
-	if req.URL.String() == "/api/v3/repos/appsody/stacks/releases/tags/java-spring-boot2-v0.3.23" {
-		var id int64 = 64
-		name := "incubator-index.yaml"
-		asset := github.ReleaseAsset{ID: &id, Name: &name}
-		release := github.RepositoryRelease{Assets: []github.ReleaseAsset{asset}}
-		b, _ := json.Marshal(release)
-		rw.Write(b)
-	} else if req.URL.String() == "/api/v3/repos/appsody/stacks/releases/assets/64" {
-		d, err := ioutil.ReadFile("testdata/incubator-index.yaml")
-		if err != nil {
-			rw.WriteHeader(http.StatusNotFound)
-		} else {
-			rw.Write(d)
-		}
-	} else {
-		rw.WriteHeader(http.StatusNotFound)
-	}
-}
-
-// Tests that an index in a Git hub repository is able to be read using the information provided
-// in the under the gitRelease element of the Kabanero CR instance yaml.
-func TestResolveIndexForStacksInPublicGit(t *testing.T) {
-	server := httptest.NewTLSServer(githubHandler{})
-	defer server.Close()
-
-	serverUrl, err := url.Parse(server.URL)
-	if err != nil {
-		t.Fatal(fmt.Sprintf("Unable to parse httptest server URL: %v", err.Error()))
-	}
-
-	repoConfig := kabanerov1alpha2.RepositoryConfig{
-		Name:       "openLibertyTest",
-		GitRelease: kabanerov1alpha2.GitReleaseSpec{Hostname: serverUrl.Host, Organization: "appsody", Project: "stacks", Release: "java-spring-boot2-v0.3.23", AssetName: "incubator-index.yaml", SkipCertVerification: true},
 	}
 
 	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
@@ -284,6 +178,41 @@ func TestSearchStack(t *testing.T) {
 	t.Log(stacks)
 }
 
+// Tests that a Secret.Data.password entry representing a PAT (Personal Access Token) is retrieved successfully from a secret.
+func TestPATRetrievalFromSecretData(t *testing.T) {
+	secret := testSecret.DeepCopy()
+	secret.StringData = nil
+	b64PATBytes, err := base64.StdEncoding.DecodeString("bXlTZWN1cmVUMGtlbiE=")
+	if err != nil {
+		t.Fatal("Error converting a base64 encoded string to bytes. String to convert:", "bXlTZWN1cmVUMGtlbiE=", ". Error: ", err)
+	}
+	secret.Data = map[string][]byte{"password": b64PATBytes}
+
+	pat, err := getPATFromSecret(*secret)
+	if err != nil {
+		t.Fatal("Error retrieving PAT from secret: ", secret, ". Error: ", err)
+	}
+	if string(pat) != "mySecureT0ken!" {
+		t.Fatal("An invalid decoded PAT was retrieved from secret. Invalid PAT:", string(pat), ". Secret:", secret)
+	}
+}
+
+// Tests that a Secret.StringData.password entry representing a PAT (Personal Access Token) is retrieved successfully
+// from a secret if Secret.Data.password was not specified.
+func TestPATRetrievalFromSecretStringData(t *testing.T) {
+	secret := testSecret.DeepCopy()
+	secret.Data = nil
+	secret.StringData = map[string]string{"password": "mySecureT0ken!"}
+
+	pat, err := getPATFromSecret(*secret)
+	if err != nil {
+		t.Fatal("Error retrieving PAT from secret: ", secret, ". Error: ", err)
+	}
+	if string(pat) != "mySecureT0ken!" {
+		t.Fatal("An invalid decoded PAT was retrieved from secret. Invalid PAT:", string(pat), ". Secret:", secret)
+	}
+}
+
 // Tests that a secret is found when a secret contains a valid annotation key kabanero.io/git-* and the
 // annotation value has the desired hostname with no resource path or query string.
 func TestSecretFilterHostWithNoExtraPathInAnnotation(t *testing.T) {
@@ -403,14 +332,14 @@ func TestSecretFilterNoHostFoundNoKeyFoundInAnnotation(t *testing.T) {
 }
 
 // Tests that a secret is found when more than one secret contain a valid annotation key kabanero.io/git-*, and
-// an annotation value with the desired hostname.
+// an annotation value with the desired hostname. The expectation is that the secret with the lowest:
+//test.io/git-* is returned.
 func TestSecretFilterHostFoundInMultipleSecrets(t *testing.T) {
-	hostname := "github.mydomain11.com"
 	secret1 := testSecret.DeepCopy()
 	secret1AnnoMap := map[string]string{
 		"kabanero.io/git-0": "https://github.mydomain1.com/sales",
 		"kabanero.io/git-3": "https://github.mydomain11.com/sales/",
-		"test.io/git-6":     "https://github.mydomain111.com/procurement/"}
+		"test.io/git-6":     "https://github.yourdomain11/procurement/"}
 	secret1.SetAnnotations(secret1AnnoMap)
 
 	secret2 := testSecret.DeepCopy()
@@ -424,8 +353,8 @@ func TestSecretFilterHostFoundInMultipleSecrets(t *testing.T) {
 	secret3 := testSecret.DeepCopy()
 	secret3.SetName("testSecret3")
 	secret3AnnoMap := map[string]string{
-		"kabanero.io/git-0": "https://github.yourdomain1.com",
-		"kabanero.io/git-3": "https://github.yourdomain11.com",
+		"kabanero.io/git-0": "https://github.mydomain1.com",
+		"kabanero.io/git-4": "https://github.yourdomain11.com",
 		"kabanero.io/git-9": "https://github.mydomain11.com/banking/checking/"}
 	secret3.SetAnnotations(secret3AnnoMap)
 
@@ -436,12 +365,34 @@ func TestSecretFilterHostFoundInMultipleSecrets(t *testing.T) {
 	}
 	secret4.SetAnnotations(secret4AnnoMap)
 
+	// Test 1. Random order.
 	secretList := corev1.SecretList{Items: []corev1.Secret{*secret1, *secret2, *secret3, *secret4}}
+	hostname := "github.mydomain11.com"
 	secret, err := secretFilter(&secretList, hostname)
 	if err != nil {
 		t.Fatal("Error retrieving secret associated with hostname:", hostname, ". Error: ", err)
 	}
 	if secret.Name != secret4.Name {
-		t.Fatal("Secret:", secret.Name, " does not contain an annotation with a value that includes hostname: ", hostname)
+		t.Fatal("Secret:", secret.Name, " does not contain an annotation with a value that includes hostname: ", hostname, ". Expected secret: ", secret4.Name)
+	}
+
+	// Test 2. Random order.
+	hostname = "github.yourdomain11.com"
+	secret, err = secretFilter(&secretList, hostname)
+	if err != nil {
+		t.Fatal("Error retrieving secret associated with hostname:", hostname, ". Error: ", err)
+	}
+	if secret.Name != secret2.Name {
+		t.Fatal("Secret:", secret.Name, " does not contain an annotation with a value that includes hostname: ", hostname, ". Expected secret: ", secret2.Name)
+	}
+
+	// Test 3. Multiple annotations with exactly "kabanero.io/git-0": "https://github.mydomain1.com/*
+	hostname = "github.mydomain1.com"
+	secret, err = secretFilter(&secretList, hostname)
+	if err != nil {
+		t.Fatal("Error retrieving secret associated with hostname:", hostname, ". Error: ", err)
+	}
+	if secret.Name != secret1.Name && secret.Name != secret3.Name {
+		t.Fatal("Secret:", secret.Name, " does not contain an annotation with a value that includes hostname:", hostname, ". Expected secrets: ", secret1.Name, "  or ", secret3.Name)
 	}
 }

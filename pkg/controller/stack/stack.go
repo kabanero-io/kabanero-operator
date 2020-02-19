@@ -1,5 +1,7 @@
 package stack
 
+import kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+
 // Stack holds stack specific data.
 type Stack struct {
 	DefaultDashboard string        `yaml:"default-dashboard,omitempty"`
@@ -33,10 +35,11 @@ type Maintainers struct {
 
 // Pipelines holds a stack's associated pipeline data.
 type Pipelines struct {
-	Id     string `yaml:"id,omitempty"`
-	Sha256 string `yaml:"sha256,omitempty"`
-	Url    string `yaml:"url,omitempty"`
-	SkipCertVerification bool `yaml:"skipCertVerification,omitempty"`
+	Id                   string                          `yaml:"id,omitempty"`
+	Sha256               string                          `yaml:"sha256,omitempty"`
+	Url                  string                          `yaml:"url,omitempty"`
+	GitRelease           kabanerov1alpha2.GitReleaseSpec `yaml:"gitRelease,omitempty"`
+	SkipCertVerification bool                            `yaml:"skipCertVerification,omitempty"`
 }
 
 // Templates holds the stack's associated template data.

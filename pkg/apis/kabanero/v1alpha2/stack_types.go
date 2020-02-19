@@ -20,7 +20,7 @@ const (
 // StackSpec defines the desired composition of a Stack
 // +k8s:openapi-gen=true
 type StackSpec struct {
-	Name                 string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 	// +listType=set
 	Versions []StackVersion `json:"versions,omitempty"`
 }
@@ -29,18 +29,19 @@ type StackSpec struct {
 type StackVersion struct {
 	// +listType=set
 	Pipelines            []PipelineSpec `json:"pipelines,omitempty"`
-	Version              string  `json:"version,omitempty"`
-	DesiredState         string  `json:"desiredState,omitempty"`
-	SkipCertVerification bool    `json:"skipCertVerification,omitempty"`
+	Version              string         `json:"version,omitempty"`
+	DesiredState         string         `json:"desiredState,omitempty"`
+	SkipCertVerification bool           `json:"skipCertVerification,omitempty"`
 	// +listType=set
-	Images               []Image `json:"images,omitempty"`
+	Images []Image `json:"images,omitempty"`
 }
 
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
 type PipelineStatus struct {
-	Name   string `json:"name,omitEmpty"`
-	Url    string `json:"url,omitEmpty"`
-	Digest string `json:"digest,omitEmpty"`
+	Name       string         `json:"name,omitEmpty"`
+	Url        string         `json:"url,omitEmpty"`
+	GitRelease GitReleaseSpec `json:"gitRelease,omitEmpty"`
+	Digest     string         `json:"digest,omitEmpty"`
 	// +listType=set
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
@@ -60,7 +61,7 @@ type RepositoryAssetStatus struct {
 // StackStatus defines the observed state of a stack
 // +k8s:openapi-gen=true
 type StackStatus struct {
-	StatusMessage     string      `json:"statusMessage,omitempty"`
+	StatusMessage string `json:"statusMessage,omitempty"`
 	// +listType=set
 	Versions []StackVersionStatus `json:"versions,omitempty"`
 }

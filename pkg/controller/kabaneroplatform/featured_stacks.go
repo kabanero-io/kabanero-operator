@@ -108,7 +108,7 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client) (map[string]
 
 		indexPipelines := []stack.Pipelines{}
 		for _, pipeline := range pipelines {
-			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Https.Url, SkipCertVerification: pipeline.Https.SkipCertVerification})
+			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Https.Url, GitRelease: pipeline.GitRelease, SkipCertVerification: pipeline.Https.SkipCertVerification})
 		}
 
 		index, err := stack.ResolveIndex(cl, r, k.Namespace, indexPipelines, []stack.Trigger{}, "")
@@ -123,7 +123,7 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client) (map[string]
 			pipelines := []kabanerov1alpha2.PipelineSpec{}
 			for _, pipeline := range c.Pipelines {
 				pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: pipeline.Url, SkipCertVerification: pipeline.SkipCertVerification}
-				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl})
+				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl, GitRelease: pipeline.GitRelease})
 			}
 			// The image information will be in the stack.  Today we just support reading the legacy field from the collection hub.
 			images := []kabanerov1alpha2.Image{}
