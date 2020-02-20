@@ -91,7 +91,7 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}

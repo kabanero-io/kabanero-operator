@@ -55,7 +55,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}

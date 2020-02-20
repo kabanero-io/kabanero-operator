@@ -85,7 +85,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 			return err
 		}
 
-		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 
 // Removes the admission webhook server, as well as the resources
 // created by controller-runtime that support the webhook.
-func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Client) error {
+func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 
 	rev, err := resolveSoftwareRevision(k, "admission-webhook", k.Spec.AdmissionControllerWebhook.Version)
 	if err != nil {
@@ -188,7 +188,7 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -199,11 +199,10 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 
+	// Manifestival ignores the "NotFound" error for us.
 	err = m.Delete()
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
-		}
+		return err
 	}
 
 	// The webhook configs are only created by manifestival later than Kabanero 0.4.0.
@@ -218,16 +217,15 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 			return err
 		}
 
-		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 		if err != nil {
 			return err
 		}
 
+		// Manifestival ignores the "NotFound" error for us.
 		err = m.Delete()
 		if err != nil {
-			if !errors.IsNotFound(err) {
-				return err
-			}
+			return err
 		}
 	}
 

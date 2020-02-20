@@ -23,7 +23,7 @@ func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl clien
 
 	// The Events entry was not configured in the spec.  We should disable it.
 	if k.Spec.Events.Enable == false {
-		cleanupEvents(ctx, k, cl)
+		cleanupEvents(ctx, k, cl, reqLogger)
 		return nil
 	}
 
@@ -52,7 +52,7 @@ func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl clien
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl clien
 }
 
 // Remove the events resources
-func cleanupEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client) error {
+func cleanupEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 	rev, err := resolveSoftwareRevision(k, "events", k.Spec.Events.Version)
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func cleanupEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}

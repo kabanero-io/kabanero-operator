@@ -291,7 +291,7 @@ func processCRWYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versi
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(rlog.Log.WithName("manifestival")))
 	if err != nil {
 		return err
 	}

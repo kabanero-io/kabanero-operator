@@ -54,7 +54,7 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha2.Kaba
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha2.Kaba
 		return err
 	}
 
-	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}

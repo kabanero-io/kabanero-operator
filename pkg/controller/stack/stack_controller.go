@@ -468,7 +468,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						for _, manifest := range value.manifests {
 							if asset.Name == manifest.Name {
 								resources := []unstructured.Unstructured{manifest.Yaml}
-								mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)))
+								mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
 
 								log.Info(fmt.Sprintf("Resources: %v", mOrig.Resources()))
 

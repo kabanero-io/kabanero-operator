@@ -411,7 +411,7 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 	}
 
 	// Remove the webhook configurations and friends.
-	err := cleanupAdmissionControllerWebhook(k, client)
+	err := cleanupAdmissionControllerWebhook(k, client, reqLogger)
 	if err != nil {
 		return err
 	}

@@ -53,7 +53,7 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 		return err
 	}
 
-	m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)))
+	m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
