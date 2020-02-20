@@ -220,28 +220,64 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			}
 
 			//Apply the Kabanero yaml directive processor
-			s := &DirectiveProcessor{}
-			b, err = s.Render(b, renderingContext)
-			if err != nil {
-				return nil, fmt.Errorf("Error processing directives %v: %v", header.Name, err.Error())
-			}
-
-			decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(b))
-			out := unstructured.Unstructured{}
-			for err = decoder.Decode(&out); err == nil; {
-				gvk := out.GroupVersionKind()
-				manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
-				out = unstructured.Unstructured{}
-				err = decoder.Decode(&out)
-			}
-				
+			var manifest StackAsset
+			manifest, err = processManifest(b, renderingContext, header.Name, assetSumString)
 			if (err != nil) && (err != io.EOF) {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
+			manifests = append(manifests, manifest)
 		}
 	}
 	return manifests, nil
 }
+
+
+//Apply the Kabanero yaml directive processor
+func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) (StackAsset, error){
+	manifest := StackAsset{}
+	s := &DirectiveProcessor{}
+	rb, err := s.Render(b, renderingContext)
+	if err != nil {
+		return manifest, fmt.Errorf("Error processing directives %v: %v", filename, err.Error())
+	}
+
+	decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(rb))
+	out := unstructured.Unstructured{}
+	for err = decoder.Decode(&out); err == nil; {
+		gvk := out.GroupVersionKind()
+		manifest = StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString}
+		out = unstructured.Unstructured{}
+		err = decoder.Decode(&out)
+	}
+	return manifest, err
+}
+
+
+//Read the manifests from a single yaml file
+func decodeYamlManifests(yamlBytes []byte, renderingContext map[string]interface{}, url string, reqLogger logr.Logger) ([]StackAsset, error) {
+
+	yamlFiles := bytes.Split(yamlBytes, []byte("---"))
+
+	manifests := make([]StackAsset, 0, len(yamlFiles))
+
+	for _, yamlFile := range yamlFiles {
+		// skip empty
+		if bytes.Equal(yamlFile, []byte("\n")) || bytes.Equal(yamlFile, []byte("")) {
+			continue
+		}
+		//Apply the Kabanero yaml directive processor
+		b_sum := sha256.Sum256(yamlFile)
+		assetSumString := string(b_sum[:])
+		manifest, err := processManifest(yamlFile, renderingContext, url, assetSumString)
+		if (err != nil) && (err != io.EOF) {
+			return nil, fmt.Errorf("Error decoding %v: %v", url, err.Error())
+		}
+		manifests = append(manifests, manifest)
+	}
+	return manifests, nil
+}
+
+
 
 func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
 	b, err := DownloadToByte(url)
@@ -257,13 +293,24 @@ func GetManifests(url string, checksum string, renderingContext map[string]inter
 	}
 	copy(c_sum[:], decoded)
 
-	if b_sum != c_sum {
-		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
-	}
+	var manifests []StackAsset
 
-	manifests, err := decodeManifests(b, renderingContext, reqLogger)
+	switch {
+	case strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz"):
+		if b_sum != c_sum {
+			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
+		}
+		manifests, err = decodeManifests(b, renderingContext, reqLogger)
+	case strings.HasSuffix(url, ".yaml") || strings.HasSuffix(url, ".yml"):
+		manifests, err = decodeYamlManifests(b, renderingContext, url, reqLogger)
+	default:
+		return nil, fmt.Errorf("Can not decode file type of file: %v. Must be .tar.gz or .yaml.", url)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return manifests, err
 }
+
+
+
