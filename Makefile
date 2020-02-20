@@ -1,10 +1,21 @@
 # The Docker image in format repository:tag. Repository may contain a remote reference.
-# Override in order to customize
+# Override in order to customize:
+#   DOCKER_ID would be your docker user name
+#   DOCKER_TAG would be the tag you want to use in the repository
+ifdef DOCKER_ID
+DOCKER_TAG ?= latest
+IMAGE = ${DOCKER_ID}/kabanero-operator:${DOCKER_TAG}
+REGISTRY_IMAGE = ${DOCKER_ID}/kabanero-operator-registry:${DOCKER_TAG}
+WEBHOOK_IMAGE = ${DOCKER_ID}/kabanero-operator-admission-webhook:${DOCKER_TAG}
+COLLECTION_CTRLR_IMAGE = ${DOCKER_ID}/kabanero-operator-collection-controller:${DOCKER_TAG}
+STACK_CTRLR_IMAGE = ${DOCKER_ID}/kabanero-operator-stack-controller:${DOCKER_TAG}
+else
 IMAGE ?= kabanero-operator:latest
 REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 WEBHOOK_IMAGE ?= kabanero-operator-admission-webhook:latest
 COLLECTION_CTRLR_IMAGE ?= kabanero-operator-collection-controller:latest
 STACK_CTRLR_IMAGE ?= kabanero-operator-stack-controller:latest
+endif
 
 # For integration testing
 # INTERNAL_REGISTRY: the public facing registry url. Set TRUE to enable and find the default address, or manually set to address itself
