@@ -1,0 +1,1397 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Condition
+metadata:
+  name: StackId-deployment-condition
+spec:
+  check:
+    args:
+    - -ce
+    - |
+      echo $(params.event-type)
+      echo $(params.event-ref)
+      [[ $(params.event-type) == "push" && $(params.event-ref) == "refs/heads/master" ]]
+    command:
+    - /bin/sh
+    image: alpine
+    name: deployment-condition
+  params:
+  - description: The Git event type
+    name: event-type
+    type: string
+  - description: The Git event ref
+    name: event-ref
+    type: string
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: StackId-build-deploy-pl
+spec:
+  params:
+  - description: The event type
+    name: event-type
+    type: string
+  - description: The event ref
+    name: event-ref
+    type: string
+  resources:
+  - name: git-source
+    type: git
+  - name: docker-image
+    type: image
+  tasks:
+  - name: validate-stack-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    taskRef:
+      name: StackId-validate-stack-task
+  - name: build-push-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+      outputs:
+      - name: docker-image
+        resource: docker-image
+      - name: git-source
+        resource: git-source
+    runAfter:
+    - validate-stack-task
+    taskRef:
+      name: StackId-build-push-task
+  - name: image-scan-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+      - name: docker-image
+        resource: docker-image
+    runAfter:
+    - build-push-task
+    taskRef:
+      name: StackId-image-scan-task
+  - conditions:
+    - conditionRef: StackId-deployment-condition
+      params:
+      - name: event-type
+        value: $(params.event-type)
+      - name: event-ref
+        value: $(params.event-ref)
+    name: deploy-task
+    resources:
+      inputs:
+      - from:
+        - build-push-task
+        name: git-source
+        resource: git-source
+      - name: docker-image
+        resource: docker-image
+    runAfter:
+    - image-scan-task
+    taskRef:
+      name: StackId-deploy-task
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: StackId-build-pl
+spec:
+  resources:
+  - name: git-source
+    type: git
+  - name: docker-image
+    type: image
+  tasks:
+  - name: validate-stack-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    taskRef:
+      name: StackId-validate-stack-task
+  - name: build-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+      outputs:
+      - name: docker-image
+        resource: docker-image
+    runAfter:
+    - validate-stack-task
+    taskRef:
+      name: StackId-build-task
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: StackId-build-push-pl
+spec:
+  resources:
+  - name: git-source
+    type: git
+  - name: docker-image
+    type: image
+  tasks:
+  - name: validate-stack-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    taskRef:
+      name: StackId-validate-stack-task
+  - name: build-push-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+      outputs:
+      - name: docker-image
+        resource: docker-image
+      - name: git-source
+        resource: git-source
+    runAfter:
+    - validate-stack-task
+    taskRef:
+      name: StackId-build-push-task
+  - name: image-scan-task
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+      - name: docker-image
+        resource: docker-image
+    runAfter:
+    - build-push-task
+    taskRef:
+      name: StackId-image-scan-task
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: StackId-image-retag-pl
+spec:
+  resources:
+  - name: docker-src-image
+    type: image
+  - name: docker-dest-image
+    type: image
+  tasks:
+  - name: image-retag-task
+    resources:
+      inputs:
+      - name: docker-src-image
+        resource: docker-src-image
+      - name: docker-dest-image
+        resource: docker-dest-image
+      outputs:
+      - name: docker-dest-image
+        resource: docker-dest-image
+    taskRef:
+      name: StackId-image-retag-task
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-build-deploy-task
+spec:
+  inputs:
+    params:
+    - default: app-deploy.yaml
+      name: app-deploy-file-name
+    - default: docker.io
+      name: stack-image-registry-url
+    resources:
+    - name: git-source
+      type: git
+  outputs:
+    resources:
+    - name: docker-image
+      type: image
+  steps:
+  - args:
+    - -c
+    - "#logic to make docker image image_name as lowercase\n#example input docker-image-url=image-registry.openshift-image-registry.svc:5000/kabanero/appsodyMPversion:abcDEF\n#
+      Then output should be = image-registry.openshift-image-registry.svc:5000/kabanero/appsodympversion:abcDEF\n\necho
+      \"OUTPUTS_RESOURCE_DOCKER_IMAGE_URL=\\$( echo \\$(outputs.resources.docker-image.url)
+      ) \" > imageurl_imagename_lowercase.sh\n\n# we cut the string with last occurance
+      of '/' to get image name and tag as secondHalf of URL\necho \"firstHalfURL=\\$(echo
+      \\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL | rev | cut -d\\\"/\\\" -f2- | rev)\"  >>
+      imageurl_imagename_lowercase.sh\necho \"secondHalfURL=\\$(echo \\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL
+      | rev | cut -d\\\"/\\\" -f1 | rev)\" >>  imageurl_imagename_lowercase.sh\n\n#Conditional
+      check if ':' is present in 'secondHalfURL'. \n#for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"if [[ \\$secondHalfURL == *\\\":\\\"* ]]; then\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename=\\$(cut -d ':' -f 1 <<< \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename_lowercase=\\$(echo \\$imagename |  tr '[:upper:]' '[:lower:]')\"
+      >> imageurl_imagename_lowercase.sh\necho \"  tagname=\\$(cut -d ':' -f 2- <<<
+      \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho \"  OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase:\\$tagname\"
+      >> imageurl_imagename_lowercase.sh\n#conditional check for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"else\" >> imageurl_imagename_lowercase.sh\necho \"  imagename=\\$secondHalfURL\"
+      >> imageurl_imagename_lowercase.sh\necho \"  imagename_lowercase=\\$(echo \\$imagename
+      |  tr '[:upper:]' '[:lower:]')\" >> imageurl_imagename_lowercase.sh\necho \"
+      \ OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase\"
+      >> imageurl_imagename_lowercase.sh\necho \"fi\" >> imageurl_imagename_lowercase.sh
+      \necho \"echo \\\"\\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\\\" \" >>  imageurl_imagename_lowercase.sh\n
+      \nchmod 755 imageurl_imagename_lowercase.sh\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: imagename-lowercase
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - args:
+    - -c
+    - "echo \"Configmap value for DEFAULT_STACK_IMAGE_REGISTRY_URL=$DEFAULT_STACK_IMAGE_REGISTRY_URL\"\n\nif
+      [ -z \"$DEFAULT_STACK_IMAGE_REGISTRY_URL\" ]\nthen\n    echo \"DEFAULT_STACK_IMAGE_REGISTRY_URL
+      not configured in a config map.  Look for the stack registry info in the .appsody-cfg
+      file.\"\n    APPSODY_CONFIG=\".appsody-config.yaml\"\n    \n    # Default the
+      stack registry to docker.io\n    STACK_IMAGE_REGISTRY_URL=\"docker.io\"\n\n
+      \   cd /workspace/$gitsource\n    \n    if [ ! -f \"$APPSODY_CONFIG\" ]; then\n
+      \       echo \"$APPSODY_CONFIG is not found in the root of the source directory.\"\n
+      \   else\n        # Find the value for \"stack:\" from the appsody config file
+      and assign it to the variable 'stack'\n        declare $( awk '{if ($1 ~ \"stack:\"){printf
+      \"STACK=\"$2}}'  $APPSODY_CONFIG )\n        if [ -z \"$STACK\" ]; then\n          echo
+      \"$APPSODY_CONFIG does not contain a stack definition.\"\n        fi\n    fi\n\n
+      \   # The stack registry may or may not be in the appsody-cfg.yaml file\n    #
+      If it's there the format should be like registry/project/name:version\n    #
+      It could also just be project/name:version.\n    # Try to determine if the registry
+      is there and if it is, parse it out\n    NUM_SLASHES=$(awk -F\"/\" '{print NF-1}'
+      <<< \"${STACK}\")\n    if [ \"$NUM_SLASHES\" = 1 ]; then\n        echo \"No
+      stack registry specified in $APPSODY_CONFIG. Using docker.io as the stack registry.\"\n
+      \   elif [ \"$NUM_SLASHES\" = 2 ]; then\n        STACK_IMAGE_REGISTRY_URL=\"$(echo
+      $STACK | cut -d'/' -f1)\"\n        echo \"Stack registry specified in $APPSODY_CONFIG
+      as $STACK_IMAGE_REGISTRY_URL.  Using this as the stack registry.\"\n    else\n
+      \       echo \"Unexpeted format for stack in APPSODY_CONFIG. Using docker.io
+      as the stack registry\"\n    fi\nelse\n    echo \"Using stack image registry
+      url setup by user in configmap as $DEFAULT_STACK_IMAGE_REGISTRY_URL\"\n    STACK_IMAGE_REGISTRY_URL=$DEFAULT_STACK_IMAGE_REGISTRY_URL\nfi\n\necho
+      \"Looking for stack registry at $STACK_IMAGE_REGISTRY_URL.\"\n\nif [[ ( -z \"$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME\"
+      ) || ( -z \"$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD\" ) ]]\nthen\n    echo
+      \"DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME or DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      is empty.  Assumption is authentication to the registry is not required.\"\nelse\n
+      \   echo \"Secrets are provided to login to stack registry\"\n    \n    #Creating
+      a cert for authentication of buildah login of the DEFAULT_STACK_IMAGE_REGISTRY_URL
+      registry url\n    echo \"HOST=$STACK_IMAGE_REGISTRY_URL\" > cert-creation.sh\n
+      \   echo \"sudo mkdir -p /etc/docker/certs.d/\\${HOST}\" >> cert-creation.sh\n
+      \   echo \"openssl s_client -connect \\${HOST} -servername \\${HOST} 2>/dev/null
+      </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee
+      -a /etc/docker/certs.d/\\${HOST}/ca.crt\" >> cert-creation.sh\n    echo \"buildah
+      login -u $DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME -p $DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      \\${HOST}\" >> cert-creation.sh\n    \n    echo \"Creating certificates and
+      logging into the registry.\"\n    chmod 755 cert-creation.sh\n    ./cert-creation.sh\nfi\n\ncd
+      /workspace/$gitsource\n\nOUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo
+      $( /workspace/imageurl_imagename_lowercase.sh ) )\necho \"OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\"\n\nappsody
+      build -t \"$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\" --buildah --buildah-options
+      \"--format=docker\" --stack-registry \"$STACK_IMAGE_REGISTRY_URL\"\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_URL
+      valueFrom:
+        configMapKeyRef:
+          key: default-stack-image-registry-url
+          name: stack-image-registry-map
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: default-stack-image-registry-secret
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: default-stack-image-registry-secret
+          optional: true
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: build
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+    - mountPath: /config
+      name: config-volume
+    - mountPath: /etc/secret-volume
+      name: secret-volume
+  - args:
+    - -c
+    - |2
+
+      OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo $( /workspace/imageurl_imagename_lowercase.sh ) )
+      echo "OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+
+      buildah push --tls-verify=false "$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE" "docker://$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: push
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - args:
+    - -c
+    - find /workspace/$gitsource -name ${YAMLFILE} -type f|xargs kubectl apply -f
+    command:
+    - /bin/sh
+    env:
+    - name: gitsource
+      value: git-source
+    - name: YAMLFILE
+      value: $(inputs.params.app-deploy-file-name)
+    image: kabanero/kabanero-utils:0.3.0
+    name: deploy-image
+  volumes:
+  - emptyDir: {}
+    name: varlibcontainers
+  - configMap:
+      name: stack-image-registry-map
+      optional: true
+    name: config-volume
+  - name: secret-volume
+    secret:
+      optional: true
+      secretName: default-stack-image-registry-secret
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-build-push-task
+spec:
+  inputs:
+    resources:
+    - name: git-source
+      type: git
+  outputs:
+    resources:
+    - name: docker-image
+      type: image
+    - name: git-source
+      type: git
+  steps:
+  - args:
+    - -c
+    - "#logic to make docker image image_name as lowercase\n#example input docker-image-url=image-registry.openshift-image-registry.svc:5000/kabanero/appsodyMPversion:abcDEF\n#
+      Then output should be = image-registry.openshift-image-registry.svc:5000/kabanero/appsodympversion:abcDEF\n\necho
+      \"OUTPUTS_RESOURCE_DOCKER_IMAGE_URL=\\$( echo \\$(outputs.resources.docker-image.url)
+      ) \" > imageurl_imagename_lowercase.sh\n\n# we cut the string with last occurance
+      of '/' to get image name and tag as secondHalf of URL\necho \"firstHalfURL=\\$(echo
+      \\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL | rev | cut -d\\\"/\\\" -f2- | rev)\"  >>
+      imageurl_imagename_lowercase.sh\necho \"secondHalfURL=\\$(echo \\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL
+      | rev | cut -d\\\"/\\\" -f1 | rev)\" >>  imageurl_imagename_lowercase.sh\n\n#Conditional
+      check if ':' is present in 'secondHalfURL'. \n#for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"if [[ \\$secondHalfURL == *\\\":\\\"* ]]; then\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename=\\$(cut -d ':' -f 1 <<< \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename_lowercase=\\$(echo \\$imagename |  tr '[:upper:]' '[:lower:]')\"
+      >> imageurl_imagename_lowercase.sh\necho \"  tagname=\\$(cut -d ':' -f 2- <<<
+      \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho \"  OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase:\\$tagname\"
+      >> imageurl_imagename_lowercase.sh\n#conditional check for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"else\" >> imageurl_imagename_lowercase.sh\necho \"  imagename=\\$secondHalfURL\"
+      >> imageurl_imagename_lowercase.sh\necho \"  imagename_lowercase=\\$(echo \\$imagename
+      |  tr '[:upper:]' '[:lower:]')\" >> imageurl_imagename_lowercase.sh\necho \"
+      \ OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase\"
+      >> imageurl_imagename_lowercase.sh\necho \"fi\" >> imageurl_imagename_lowercase.sh
+      \necho \"echo \\\"\\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\\\" \" >>  imageurl_imagename_lowercase.sh\n\nchmod
+      755 imageurl_imagename_lowercase.sh\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: imagename-lowercase
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - args:
+    - -c
+    - "echo \"Configmap value for DEFAULT_STACK_IMAGE_REGISTRY_URL=$DEFAULT_STACK_IMAGE_REGISTRY_URL\"\n\nif
+      [ -z \"$DEFAULT_STACK_IMAGE_REGISTRY_URL\" ]\nthen\n    echo \"DEFAULT_STACK_IMAGE_REGISTRY_URL
+      not configured in a config map.  Look for the stack registry info in the .appsody-cfg
+      file.\"\n    APPSODY_CONFIG=\".appsody-config.yaml\"\n    \n    # Default the
+      stack registry to docker.io\n    STACK_IMAGE_REGISTRY_URL=\"docker.io\"\n\n
+      \   cd /workspace/$gitsource\n    \n    if [ ! -f \"$APPSODY_CONFIG\" ]; then\n
+      \       echo \"$APPSODY_CONFIG is not found in the root of the source directory.\"\n
+      \   else\n        # Find the value for \"stack:\" from the appsody config file
+      and assign it to the variable 'stack'\n        declare $( awk '{if ($1 ~ \"stack:\"){printf
+      \"STACK=\"$2}}'  $APPSODY_CONFIG )\n        if [ -z \"$STACK\" ]; then\n          echo
+      \"$APPSODY_CONFIG does not contain a stack definition.\"\n        fi\n    fi\n\n
+      \   # The stack registry may or may not be in the appsody-cfg.yaml file\n    #
+      If it's there the format should be like registry/project/name:version\n    #
+      It could also just be project/name:version.\n    # Try to determine if the registry
+      is there and if it is, parse it out\n    NUM_SLASHES=$(awk -F\"/\" '{print NF-1}'
+      <<< \"${STACK}\")\n    if [ \"$NUM_SLASHES\" = 1 ]; then\n        echo \"No
+      stack registry specified in $APPSODY_CONFIG. Using docker.io as the stack registry.\"\n
+      \   elif [ \"$NUM_SLASHES\" = 2 ]; then\n        STACK_IMAGE_REGISTRY_URL=\"$(echo
+      $STACK | cut -d'/' -f1)\"\n        echo \"Stack registry specified in $APPSODY_CONFIG
+      as $STACK_IMAGE_REGISTRY_URL.  Using this as the stack registry.\"\n    else\n
+      \       echo \"Unexpeted format for stack in APPSODY_CONFIG. Using docker.io
+      as the stack registry\"\n    fi\nelse\n    echo \"Using stack image registry
+      url setup by user in configmap as $DEFAULT_STACK_IMAGE_REGISTRY_URL\"\n    STACK_IMAGE_REGISTRY_URL=$DEFAULT_STACK_IMAGE_REGISTRY_URL\nfi\n\necho
+      \"Looking for stack registry at $STACK_IMAGE_REGISTRY_URL.\"\n\nif [[ ( -z \"$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME\"
+      ) || ( -z \"$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD\" ) ]]\nthen\n    echo
+      \"DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME or DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      is empty.  Assumption is authentication to the registry is not required.\"\nelse\n
+      \   echo \"Secrets are provided to login to stack registry\"\n    \n    #Creating
+      a cert for authentication of buildah login of the DEFAULT_STACK_IMAGE_REGISTRY_URL
+      registry url\n    echo \"HOST=$STACK_IMAGE_REGISTRY_URL\" > cert-creation.sh\n
+      \   echo \"sudo mkdir -p /etc/docker/certs.d/\\${HOST}\" >> cert-creation.sh\n
+      \   echo \"openssl s_client -connect \\${HOST} -servername \\${HOST} 2>/dev/null
+      </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee
+      -a /etc/docker/certs.d/\\${HOST}/ca.crt\" >> cert-creation.sh\n    echo \"buildah
+      login -u $DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME -p $DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      \\${HOST}\" >> cert-creation.sh\n    \n    echo \"Creating certificates and
+      logging into the registry.\"\n    chmod 755 cert-creation.sh\n    ./cert-creation.sh\nfi\n\ncd
+      /workspace/$gitsource\n\nOUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo
+      $( /workspace/imageurl_imagename_lowercase.sh ) )\necho \"OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\"\n\nappsody
+      build -t \"$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\" --buildah --buildah-options
+      \"--format=docker\" --stack-registry \"$STACK_IMAGE_REGISTRY_URL\"\necho \"Copying
+      the generated app-deploy.yaml file from input to the output to pass the file
+      to the next task when this task is used in deploy pipeline\"\ncp app-deploy.yaml
+      $(outputs.resources.git-source.path)\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_URL
+      valueFrom:
+        configMapKeyRef:
+          key: default-stack-image-registry-url
+          name: stack-image-registry-map
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: default-stack-image-registry-secret
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: default-stack-image-registry-secret
+          optional: true
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: build
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+    - mountPath: /config
+      name: config-volume
+    - mountPath: /etc/secret-volume
+      name: secret-volume
+  - args:
+    - -c
+    - |2
+
+      OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo $( /workspace/imageurl_imagename_lowercase.sh ) )
+      echo "OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+
+      buildah push --tls-verify=false "$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE" "docker://$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: push
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  volumes:
+  - emptyDir: {}
+    name: varlibcontainers
+  - configMap:
+      name: stack-image-registry-map
+      optional: true
+    name: config-volume
+  - name: secret-volume
+    secret:
+      optional: true
+      secretName: default-stack-image-registry-secret
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-build-task
+spec:
+  inputs:
+    params:
+    - default: docker.io
+      name: stack-image-registry-url
+    resources:
+    - name: git-source
+      type: git
+  outputs:
+    resources:
+    - name: docker-image
+      type: image
+  steps:
+  - args:
+    - -c
+    - "#logic to make docker image image_name as lowercase\n#example input docker-image-url=image-registry.openshift-image-registry.svc:5000/kabanero/appsodyMPversion:abcDEF\n#
+      Then output should be = image-registry.openshift-image-registry.svc:5000/kabanero/appsodympversion:abcDEF\n\necho
+      \"OUTPUTS_RESOURCE_DOCKER_IMAGE_URL=\\$( echo \\$(outputs.resources.docker-image.url)
+      ) \" > imageurl_imagename_lowercase.sh\n\n# we cut the string with last occurance
+      of '/' to get image name and tag as secondHalf of URL\necho \"firstHalfURL=\\$(echo
+      \\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL | rev | cut -d\\\"/\\\" -f2- | rev)\"  >>
+      imageurl_imagename_lowercase.sh\necho \"secondHalfURL=\\$(echo \\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL
+      | rev | cut -d\\\"/\\\" -f1 | rev)\" >>  imageurl_imagename_lowercase.sh\n\n#Conditional
+      check if ':' is present in 'secondHalfURL'. \n#for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"if [[ \\$secondHalfURL == *\\\":\\\"* ]]; then\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename=\\$(cut -d ':' -f 1 <<< \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename_lowercase=\\$(echo \\$imagename |  tr '[:upper:]' '[:lower:]')\"
+      >> imageurl_imagename_lowercase.sh\necho \"  tagname=\\$(cut -d ':' -f 2- <<<
+      \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho \"  OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase:\\$tagname\"
+      >> imageurl_imagename_lowercase.sh\n#conditional check for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"else\" >> imageurl_imagename_lowercase.sh\necho \"  imagename=\\$secondHalfURL\"
+      >> imageurl_imagename_lowercase.sh\necho \"  imagename_lowercase=\\$(echo \\$imagename
+      |  tr '[:upper:]' '[:lower:]')\" >> imageurl_imagename_lowercase.sh\necho \"
+      \ OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase\"
+      >> imageurl_imagename_lowercase.sh\necho \"fi\" >> imageurl_imagename_lowercase.sh
+      \necho \"echo \\\"\\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\\\" \" >>  imageurl_imagename_lowercase.sh\n
+      \nchmod 755 imageurl_imagename_lowercase.sh\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: imagename-lowercase
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - args:
+    - -c
+    - "echo \"Configmap value for DEFAULT_STACK_IMAGE_REGISTRY_URL=$DEFAULT_STACK_IMAGE_REGISTRY_URL\"\n\nif
+      [ -z \"$DEFAULT_STACK_IMAGE_REGISTRY_URL\" ]\nthen\n    echo \"DEFAULT_STACK_IMAGE_REGISTRY_URL
+      not configured in a config map.  Look for the stack registry info in the .appsody-cfg
+      file.\"\n    APPSODY_CONFIG=\".appsody-config.yaml\"\n    \n    # Default the
+      stack registry to docker.io\n    STACK_IMAGE_REGISTRY_URL=\"docker.io\"\n\n
+      \   cd /workspace/$gitsource\n    \n    if [ ! -f \"$APPSODY_CONFIG\" ]; then\n
+      \       echo \"$APPSODY_CONFIG is not found in the root of the source directory.\"\n
+      \   else\n        # Find the value for \"stack:\" from the appsody config file
+      and assign it to the variable 'stack'\n        declare $( awk '{if ($1 ~ \"stack:\"){printf
+      \"STACK=\"$2}}'  $APPSODY_CONFIG )\n        if [ -z \"$STACK\" ]; then\n          echo
+      \"$APPSODY_CONFIG does not contain a stack definition.\"\n        fi\n    fi\n\n
+      \   # The stack registry may or may not be in the appsody-cfg.yaml file\n    #
+      If it's there the format should be like registry/project/name:version\n    #
+      It could also just be project/name:version.\n    # Try to determine if the registry
+      is there and if it is, parse it out\n    NUM_SLASHES=$(awk -F\"/\" '{print NF-1}'
+      <<< \"${STACK}\")\n    if [ \"$NUM_SLASHES\" = 1 ]; then\n        echo \"No
+      stack registry specified in $APPSODY_CONFIG. Using docker.io as the stack registry.\"\n
+      \   elif [ \"$NUM_SLASHES\" = 2 ]; then\n        STACK_IMAGE_REGISTRY_URL=\"$(echo
+      $STACK | cut -d'/' -f1)\"\n        echo \"Stack registry specified in $APPSODY_CONFIG
+      as $STACK_IMAGE_REGISTRY_URL.  Using this as the stack registry.\"\n    else\n
+      \       echo \"Unexpeted format for stack in APPSODY_CONFIG. Using docker.io
+      as the stack registry\"\n    fi\nelse\n    echo \"Using stack image registry
+      url setup by user in configmap as $DEFAULT_STACK_IMAGE_REGISTRY_URL\"\n    STACK_IMAGE_REGISTRY_URL=$DEFAULT_STACK_IMAGE_REGISTRY_URL\nfi\n\necho
+      \"Looking for stack registry at $STACK_IMAGE_REGISTRY_URL.\"\n\nif [[ ( -z \"$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME\"
+      ) || ( -z \"$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD\" ) ]]\nthen\n    echo
+      \"DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME or DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      is empty.  Assumption is authentication to the registry is not required.\"\nelse\n
+      \   echo \"Secrets are provided to login to stack registry\"\n    \n    #Creating
+      a cert for authentication of buildah login of the DEFAULT_STACK_IMAGE_REGISTRY_URL
+      registry url\n    echo \"HOST=$STACK_IMAGE_REGISTRY_URL\" > cert-creation.sh\n
+      \   echo \"sudo mkdir -p /etc/docker/certs.d/\\${HOST}\" >> cert-creation.sh\n
+      \   echo \"openssl s_client -connect \\${HOST} -servername \\${HOST} 2>/dev/null
+      </dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee
+      -a /etc/docker/certs.d/\\${HOST}/ca.crt\" >> cert-creation.sh\n    echo \"buildah
+      login -u $DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME -p $DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      \\${HOST}\" >> cert-creation.sh\n    \n    echo \"Creating certificates and
+      logging into the registry.\"\n    chmod 755 cert-creation.sh\n    ./cert-creation.sh\nfi\n\ncd
+      /workspace/$gitsource\n\nOUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo
+      $( /workspace/imageurl_imagename_lowercase.sh ) )\necho \"OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\"\n\nappsody
+      build -t \"$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\" --buildah --buildah-options
+      \"--format=docker\" --stack-registry \"$STACK_IMAGE_REGISTRY_URL\"\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_URL
+      valueFrom:
+        configMapKeyRef:
+          key: default-stack-image-registry-url
+          name: stack-image-registry-map
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: default-stack-image-registry-secret
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: default-stack-image-registry-secret
+          optional: true
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: build
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+    - mountPath: /config
+      name: config-volume
+    - mountPath: /etc/secret-volume
+      name: secret-volume
+  volumes:
+  - emptyDir: {}
+    name: varlibcontainers
+  - configMap:
+      name: stack-image-registry-map
+      optional: true
+    name: config-volume
+  - name: secret-volume
+    secret:
+      optional: true
+      secretName: default-stack-image-registry-secret
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-deploy-task
+spec:
+  inputs:
+    params:
+    - default: StackId
+      name: repository-name
+    - default: app-deploy.yaml
+      name: app-deploy-file-name
+    resources:
+    - name: git-source
+      type: git
+    - name: docker-image
+      type: image
+  steps:
+  - args:
+    - -c
+    - find /workspace/$gitsource -name ${YAMLFILE} -type f|xargs kubectl apply -f
+    command:
+    - /bin/sh
+    env:
+    - name: gitsource
+      value: git-source
+    - name: YAMLFILE
+      value: $(inputs.params.app-deploy-file-name)
+    image: kabanero/kabanero-utils:0.3.0
+    name: deploy-image
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-image-retag-task
+spec:
+  inputs:
+    params:
+    - default: /workspace/extracted/Dockerfile
+      name: pathToDockerFile
+    - default: /workspace/extracted
+      name: pathToContext
+    resources:
+    - name: docker-src-image
+      type: image
+    - name: docker-dest-image
+      type: image
+  outputs:
+    resources:
+    - name: docker-dest-image
+      type: image
+  steps:
+  - command:
+    - buildah
+    - pull
+    - --tls-verify=false
+    - $(inputs.resources.docker-src-image.url)
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: buildah-pull
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - command:
+    - buildah
+    - tag
+    - $(inputs.resources.docker-src-image.url)
+    - $(inputs.resources.docker-dest-image.url)
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: buildah-tag
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - command:
+    - buildah
+    - push
+    - --tls-verify=false
+    - $(outputs.resources.docker-dest-image.url)
+    - docker://$(outputs.resources.docker-dest-image.url)
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: buildah-push
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  volumes:
+  - emptyDir: {}
+    name: varlibcontainers
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-image-scan-task
+spec:
+  inputs:
+    params:
+    - default: oscap-chroot
+      description: The scanner command
+      name: command
+    - default: oval
+      description: Specifies the type of SCAP content to use. For example, oval or
+        xccdf.
+      name: module
+    - default: ""
+      description: Specifies the module operation options and arguments
+      name: options-and-arguments
+    - default: kabanero/scans
+      description: The relative directory to save the scan outputs to
+      name: scansDir
+    - default: /usr/local/share/openscap/cpe/openscap-cpe-oval.xml
+      description: The scanner's XCCDF or OVAL file
+      name: pathToInputFile
+    resources:
+    - name: git-source
+      type: git
+    - name: docker-image
+      type: image
+  steps:
+  - args:
+    - -c
+    - "#logic to make docker image image_name as lowercase\n#example input docker-image-url=image-registry.openshift-image-registry.svc:5000/kabanero/appsodyMPversion:abcDEF\n#
+      Then output should be = image-registry.openshift-image-registry.svc:5000/kabanero/appsodympversion:abcDEF\n\necho
+      \"INPUTS_RESOURCE_DOCKER_IMAGE_URL=\\$( echo \\$(inputs.resources.docker-image.url)
+      ) \" > imageurl_imagename_lowercase.sh\n\n# we cut the string with last occurance
+      of '/' to get image name and tag as secondHalf of URL\necho \"firstHalfURL=\\$(echo
+      \\$INPUTS_RESOURCE_DOCKER_IMAGE_URL | rev | cut -d\\\"/\\\" -f2- | rev)\"  >>
+      imageurl_imagename_lowercase.sh\necho \"secondHalfURL=\\$(echo \\$INPUTS_RESOURCE_DOCKER_IMAGE_URL
+      | rev | cut -d\\\"/\\\" -f1 | rev)\" >>  imageurl_imagename_lowercase.sh\n\n#Conditional
+      check if ':' is present in 'secondHalfURL'. \n#for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"if [[ \\$secondHalfURL == *\\\":\\\"* ]]; then\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename=\\$(cut -d ':' -f 1 <<< \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho
+      \"  imagename_lowercase=\\$(echo \\$imagename |  tr '[:upper:]' '[:lower:]')\"
+      >> imageurl_imagename_lowercase.sh\necho \"  tagname=\\$(cut -d ':' -f 2- <<<
+      \\\"\\$secondHalfURL\\\" )\" >> imageurl_imagename_lowercase.sh\necho \"  OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase:\\$tagname\"
+      >> imageurl_imagename_lowercase.sh\n#conditional check for ex - secondHalfURL=appsodympversion:abcDEF\necho
+      \"else\" >> imageurl_imagename_lowercase.sh\necho \"  imagename=\\$secondHalfURL\"
+      >> imageurl_imagename_lowercase.sh\necho \"  imagename_lowercase=\\$(echo \\$imagename
+      |  tr '[:upper:]' '[:lower:]')\" >> imageurl_imagename_lowercase.sh\necho \"
+      \ OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=\\$firstHalfURL/\\$imagename_lowercase\"
+      >> imageurl_imagename_lowercase.sh\necho \"fi\" >> imageurl_imagename_lowercase.sh
+      \necho \"echo \\\"\\$OUTPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE\\\" \" >>  imageurl_imagename_lowercase.sh\n\nchmod
+      755 imageurl_imagename_lowercase.sh\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.8-buildah1.9.0
+    name: imagename-lowercase
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - args:
+    - -c
+    - |
+      INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo $( /workspace/imageurl_imagename_lowercase.sh ) )
+      echo "INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+
+      echo "Pulling image docker://$INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+      buildah from --tls-verify=false docker://$INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE
+      echo $(buildah mount $(buildah containers -q)) > /var/lib/containers/rootfs.txt
+      mountDir=$(cat /var/lib/containers/rootfs.txt)
+      echo ""
+      echo "Mounted image to $mountDir with contents:"
+      ls -la $mountDir
+      cp -a $mountDir /var/lib/containers
+      echo ""
+      imageDir=/var/lib/containers/merged
+      imageIdFileName=/var/lib/containers/imageid.txt
+      echo "Copied mounted image to $imageDir:"
+      ls -la $imageDir
+      echo $(buildah images -q) > $imageIdFileName
+      echo ""
+      echo "Image ID of the image to scan: $(cat $imageIdFileName)"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    image: appsody/appsody-buildah:0.5.0-buildah1.9.0
+    name: mount-image
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  - args:
+    - -c
+    - |
+      imageid=$(cat /var/lib/containers/imageid.txt)
+      imageDir=/var/lib/containers/merged
+
+      INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$( echo $( /workspace/imageurl_imagename_lowercase.sh ) )
+      echo "INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE=$INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE"
+
+      outputDir=/workspace/scans/$(inputs.params.scansDir)/$INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE/$imageid
+      mkdir -p $outputDir
+      optionsAndArgs="$(inputs.params.options-and-arguments) --results $outputDir/results.xml --report $outputDir/report.html $(inputs.params.pathToInputFile)"
+      scanCommand="$(inputs.params.command) $imageDir $(inputs.params.module) eval $optionsAndArgs"
+
+      echo "Scanning copy of image docker://$INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE with image ID $imageid in $imageDir with contents:"
+      cd $imageDir
+      ls -la
+      echo ""
+      echo "Scanning image with command:"
+      echo $scanCommand
+      $scanCommand
+      echo ""
+      echo "Scanning of copy of image $INPUTS_RESOURCE_DOCKER_IMAGE_URL_LOWERCASE with image ID $imageid in $imageDir complete"
+      echo ""
+
+      #Display contents of the results.xml and report.html files
+      echo "Displaying contents of $outputDir/results.xml"
+      echo "********** START OF results.xml **********"
+      cat $outputDir/results.xml
+      echo "********** END OF results.xml ************"
+      echo ""
+      echo "Displaying contents of $outputDir/report.html"
+      echo "********** START OF report.html **********"
+      cat $outputDir/report.html
+      echo "********** END OF report.html ************"
+    command:
+    - /bin/bash
+    image: kabanero/scanner:1.3.1
+    name: scan-image
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /workspace/scans
+      name: host-save-dir
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  volumes:
+  - hostPath:
+      path: /var/lib
+    name: host-save-dir
+  - emptyDir: {}
+    name: varlibcontainers
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: StackId-validate-stack-task
+spec:
+  inputs:
+    resources:
+    - name: git-source
+      type: git
+  steps:
+  - args:
+    - -c
+    - "# env var gitsource\nGITSOURCE=$gitsource\nAPPSODY_CONFIG=\".appsody-config.yaml\"\nIMAGE_REGISTRY_HOST=$DEFAULT_STACK_IMAGE_REGISTRY_URL\nIMAGE_REGISTRY_USERNAME=$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME\nIMAGE_REGISTRY_PASSWORD=$DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD\n\n\ncd
+      /workspace/$GITSOURCE\nif [ ! -f \"$APPSODY_CONFIG\" ]; then\n   echo $APPSODY_CONFIG\"
+      is not found in the root of the source directory. Unable to validate if the
+      stack is active.\"\n   exit 1\nfi\n\n# Find the value for \"stack:\" from the
+      appsody config file and assign it to the variable 'stack'\ndeclare $( awk '{if
+      ($1 ~ \"stack:\"){printf \"STACK=\"$2}}'  $APPSODY_CONFIG )\nif [ -z \"$STACK\"
+      ]; then\n   echo \"$APPSODY_CONFIG does not contain a stack: definition. Unable
+      to validate if the stack is active.\"\n   exit 1\nfi\n\n# Parse the image value
+      for the repo, project, stackname and version\n# It can be in one of two formats
+      based on appsody CLI used.\n# example 1: appsody/java-microprofile:0.2\n# example
+      2: image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile:0.2\n\n#
+      For version get everything after last `:`\nVERSION=\"${STACK##*:}\"\necho \"In
+      $APPSODY_CONFIG... \"\necho \"VERSION = $VERSION\"\n\n# For project stack get
+      everything before the last `:`\nPROJECT_STACK=\"${STACK%:*}\"\n\n# The stack
+      name could be after the 2nd or 3rd `/` based on appsody version. Check after
+      3rd first\nSTACK_NAME=\"$(echo $PROJECT_STACK | cut -d'/' -f3 )\"\n\nif [ -z
+      \"$STACK_NAME\" ]; then\n    PROJECT=\"$(echo $PROJECT_STACK | cut -d'/' -f1)\"\n
+      \   STACK_NAME=\"$( echo $PROJECT_STACK | cut -d'/' -f2 )\"\nelse\n    STACK_REGISTRY=\"$(echo
+      $PROJECT_STACK | cut -d'/' -f1)\"\n    PROJECT=\"$( echo $PROJECT_STACK | cut
+      -d'/' -f2 )\"\nfi\n\necho \"STACK_REGISTRY = $STACK_REGISTRY\"\necho \"PROJECT
+      = $PROJECT\"\necho \"STACK_NAME = $STACK_NAME\"\n\n# If the host wasn't specified,
+      default to docker.io; if only specified in appsody-cfg.yaml use that\n# If it's
+      in the config map use that and should match with what's in appsody-cfg.yaml\nif
+      [ -z \"$IMAGE_REGISTRY_HOST\" ]; then\n    if [ -z \"$STACK_REGISTRY\" ]; then\n
+      \     IMAGE_REGISTRY_HOST=\"docker.io\"\n    else\n      IMAGE_REGISTRY_HOST=$STACK_REGISTRY\n
+      \   fi\nelse  \n    if [ ! -z \"$STACK_REGISTRY\" ] && [ \"$STACK_REGISTRY\"
+      != \"$IMAGE_REGISTRY_HOST\" ]; then\n        echo \"WARNING - $APPSODY_CONFIG
+      specifies different repository, $STACK_REGISTRY, than what's configured in the
+      config map, $IMAGE_REGISTRY_HOST in the cluster.  They should be in sync.  Config
+      map entry takes priority.  Using $IMAGE_REGISTRY_HOST as the default stack registry.\"\n
+      \   fi\nfi\n\necho \"STACK_IMAGE_REGISTRY_HOST = $IMAGE_REGISTRY_HOST\"\n\n#
+      Check to make sure the stack is active by name first\nkubectl get stack $STACK_NAME
+      -o json > /dev/null 2>&1\nif [ $? -ne 0 ]; then\n   echo \"$APPSODY_CONFIG specifies
+      stack $STACK_NAME , but no versions of $STACK_NAME are active, and cannot be
+      built.\"\n   echo \"Stack messages = $?\"\n   exit 1\nfi\n\n# Check if the project
+      names in the cfg file and active stack match\nCLUSTER_STACK_IMAGE=$( kubectl
+      get stack $STACK_NAME  -o json | jq -r '.status.versions[].images[].image?'
+      ) \necho \"In the cluster...\"\necho \"CLUSTER_STACK_IMAGE is $CLUSTER_STACK_IMAGE\"\n\n#
+      The stack name could be after the 2nd or 3rd `/` based on appsody version. Check
+      after 3rd first\nTHIRD_ENTRY=\"$(echo $CLUSTER_STACK_IMAGE | cut -d'/' -f3 )\"\n\nif
+      [ -z \"$THIRD_ENTRY\" ]; then\n    CLUSTER_PROJECT=\"$(echo $CLUSTER_STACK_IMAGE
+      | cut -d'/' -f1)\"\nelse\n    CLUSTER_STACK_REGISTRY=\"$(echo $CLUSTER_STACK_IMAGE
+      | cut -d'/' -f1)\"\n    CLUSTER_PROJECT=\"$( echo $CLUSTER_STACK_IMAGE | cut
+      -d'/' -f2 )\"\nfi\n\nif [ \"$CLUSTER_PROJECT\" != \"$PROJECT\" ]; then\n    echo
+      \"Project name, $CLUSTER_PROJECT, of active stack in cluster and project name
+      in the stack in $APPSODY_CONFIG, $PROJECT, do not match.\"\n    echo \"Validation
+      failed. Stack cannot be built.\"\n    exit 1\nfi\n\n# TODO add registry validation
+      logic here.  Implictly handled by digest check.\n# But can give a better error
+      message with just a name check\n\n# Get the 3 digit stack values\n# Assumed
+      the version(s) are in the metadata\nSTACK_VERSIONS=$( kubectl get stack $STACK_NAME
+      \ -o json | jq -r '.status.versions[].version?' )    \n\n# Get the target sha256
+      digest from the image registry. Use the proper credentials depending on what
+      was passed to us\nif [ -z \"$IMAGE_REGISTRY_PASSWORD\" ] || [ -z \"$IMAGE_REGISTRY_USERNAME\"
+      ]; then\n   TARGET_DIGEST=$( skopeo inspect --tls-verify=false docker://\"$IMAGE_REGISTRY_HOST\"/\"$PROJECT\"/\"$STACK_NAME\":\"$VERSION\"
+      | jq '.Digest' )\nelse\n   TARGET_DIGEST=$( skopeo inspect --tls-verify=false
+      --creds=\"$IMAGE_REGISTRY_USERNAME\":\"$IMAGE_REGISTRY_PASSWORD\" docker://\"$IMAGE_REGISTRY_HOST\"/\"$PROJECT\"/\"$STACK_NAME\":\"$VERSION\"
+      | jq '.Digest' )\nfi    \n\nif [ -z \"$TARGET_DIGEST\" ]; then\n   echo \"$APPSODY_CONFIG
+      specifies a stack version of $VERSION , but the image registry does not contain
+      a version tagged with $VERSION, and cannot be built.\"\n   exit 1\nfi\n\nfor
+      STACK_VERSION in ${STACK_VERSIONS}\n   do\n      if [ -z \"$IMAGE_REGISTRY_PASSWORD\"
+      ] || [ -z \"$IMAGE_REGISTRY_USERNAME\" ]; then\n         CURRENT_DIGEST=$( skopeo
+      inspect --tls-verify=false docker://\"$IMAGE_REGISTRY_HOST\"/\"$PROJECT\"/\"$STACK_NAME\":\"$STACK_VERSION\"
+      | jq '.Digest' )\n      else\n         CURRENT_DIGEST=$( skopeo inspect --tls-verify=false
+      --creds=\"$IMAGE_REGISTRY_USERNAME\":\"$IMAGE_REGISTRY_PASSWORD\" docker://\"$IMAGE_REGISTRY_HOST\"/\"$PROJECT\"/\"$STACK_NAME\":\"$STACK_VERSION\"
+      | jq '.Digest' )\n      fi    \n\n      if [ \"$TARGET_DIGEST\" =  \"$CURRENT_DIGEST\"
+      ]; then\n         echo \"The Kabanero stack contained in $STACK is active on
+      this system and can be built.\"\n         exit 0\n      else\n         echo
+      \"Version: $STACK_VERSION, Digest: $CURRENT_DIGEST, Target Digest: $TARGET_DIGEST\"\n
+      \     fi\n   done\n\n   echo \"The Kabanero stack contained in \"$STACK\" is
+      not active on this system and contained in the image registry and cannot be
+      built.\"\n   exit 1\n"
+    command:
+    - /bin/bash
+    env:
+    - name: gitsource
+      value: git-source
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_URL
+      valueFrom:
+        configMapKeyRef:
+          key: default-stack-image-registry-url
+          name: stack-image-registry-map
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: default-stack-image-registry-secret
+          optional: true
+    - name: DEFAULT_STACK_IMAGE_REGISTRY_SECRET_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: default-stack-image-registry-secret
+          optional: true
+    image: kabanero/validate-stack:0.6.0
+    name: validate-stack-is-active
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+    - mountPath: /config
+      name: config-volume
+    - mountPath: /etc/secret-volume
+      name: secret-volume
+  volumes:
+  - emptyDir: {}
+    name: varlibcontainers
+  - configMap:
+      name: stack-image-registry-map
+      optional: true
+    name: config-volume
+  - name: secret-volume
+    secret:
+      optional: true
+      secretName: default-stack-image-registry-secret
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: StackId-build-deploy-pl-pullrequest-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.pull_request.head.sha)
+  - name: gitrepositoryurl
+    value: $(body.repository.clone_url)
+  - name: docker-tag
+    value: $(body.repository.name):$(body.pull_request.head.sha)
+  - name: event-type
+    value: $(header.X-Github-Event)
+  - name: webhooks-tekton-git-branch
+    value: $(body.webhooks-tekton-git-branch)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: StackId-build-deploy-pl-push-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head_commit.id)
+  - name: gitrepositoryurl
+    value: $(body.repository.clone_url)
+  - name: docker-tag
+    value: $(body.repository.name):$(body.head_commit.id)
+  - name: event-type
+    value: $(header.X-Github-Event)
+  - name: event-ref
+    value: $(body.ref)
+  - name: webhooks-tekton-git-branch
+    value: $(body.webhooks-tekton-git-branch)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: StackId-build-pl-pullrequest-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.pull_request.head.sha)
+  - name: gitrepositoryurl
+    value: $(body.repository.clone_url)
+  - name: docker-tag
+    value: $(body.repository.name):$(body.pull_request.head.sha)
+  - name: event-type
+    value: $(header.X-Github-Event)
+  - name: webhooks-tekton-git-branch
+    value: $(body.webhooks-tekton-git-branch)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: StackId-build-pl-push-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head_commit.id)
+  - name: gitrepositoryurl
+    value: $(body.repository.clone_url)
+  - name: docker-tag
+    value: $(body.repository.name):$(body.head_commit.id)
+  - name: event-type
+    value: $(header.X-Github-Event)
+  - name: webhooks-tekton-git-branch
+    value: $(body.webhooks-tekton-git-branch)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: StackId-build-push-pl-pullrequest-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.pull_request.head.sha)
+  - name: gitrepositoryurl
+    value: $(body.repository.clone_url)
+  - name: docker-tag
+    value: $(body.repository.name):$(body.pull_request.head.sha)
+  - name: event-type
+    value: $(header.X-Github-Event)
+  - name: webhooks-tekton-git-branch
+    value: $(body.webhooks-tekton-git-branch)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: StackId-build-push-pl-push-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head_commit.id)
+  - name: gitrepositoryurl
+    value: $(body.repository.clone_url)
+  - name: docker-tag
+    value: $(body.repository.name):$(body.head_commit.id)
+  - name: event-type
+    value: $(header.X-Github-Event)
+  - name: webhooks-tekton-git-branch
+    value: $(body.webhooks-tekton-git-branch)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: StackId-build-deploy-pl-template
+  namespace: tekton-pipelines
+spec:
+  params:
+  - default: other
+    name: event-ref
+  - description: The revision of your Git repository
+    name: gitrevision
+  - description: The url of your Git repository
+    name: gitrepositoryurl
+  - description: The server name in the Git url
+    name: webhooks-tekton-git-server
+  - description: The org name in the Git url
+    name: webhooks-tekton-git-org
+  - description: The repository name in the Git url
+    name: webhooks-tekton-git-repo
+  - description: The branch for the Git repository
+    name: webhooks-tekton-git-branch
+  - description: The Git event type
+    name: event-type
+  - description: The image registry
+    name: webhooks-tekton-docker-registry
+  - description: The image tag
+    name: docker-tag
+  - description: The ServiceAccount that the PipelineRun will execute under
+    name: webhooks-tekton-service-account
+  - description: The namespace in which to create this TriggerTemplate's resources
+    name: webhooks-tekton-target-namespace
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: git-source-$(uid)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: revision
+        value: $(params.gitrevision)
+      - name: url
+        value: $(params.gitrepositoryurl)
+      type: git
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: docker-image-$(uid)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: url
+        value: $(params.webhooks-tekton-docker-registry)/$(params.docker-tag)
+      type: image
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineRun
+    metadata:
+      generateName: StackId-build-deploy-pl-run-
+      labels:
+        webhooks.tekton.dev/gitBranch: $(params.webhooks-tekton-git-branch)
+        webhooks.tekton.dev/gitOrg: $(params.webhooks-tekton-git-org)
+        webhooks.tekton.dev/gitRepo: $(params.webhooks-tekton-git-repo)
+        webhooks.tekton.dev/gitServer: $(params.webhooks-tekton-git-server)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: event-type
+        value: $(params.event-type)
+      - name: event-ref
+        value: $(params.event-ref)
+      pipelineRef:
+        name: StackId-build-deploy-pl
+      resources:
+      - name: git-source
+        resourceRef:
+          name: git-source-$(uid)
+      - name: docker-image
+        resourceRef:
+          name: docker-image-$(uid)
+      serviceAccountName: $(params.webhooks-tekton-service-account)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: StackId-build-pl-template
+  namespace: tekton-pipelines
+spec:
+  params:
+  - default: other
+    name: event-ref
+  - description: The revision of your Git repository
+    name: gitrevision
+  - description: The url of your Git repository
+    name: gitrepositoryurl
+  - description: The server name in the Git url
+    name: webhooks-tekton-git-server
+  - description: The org name in the Git url
+    name: webhooks-tekton-git-org
+  - description: The repository name in the Git url
+    name: webhooks-tekton-git-repo
+  - description: The branch for the Git repository
+    name: webhooks-tekton-git-branch
+  - description: The Git event type
+    name: event-type
+  - description: The image registry
+    name: webhooks-tekton-docker-registry
+  - description: The image tag
+    name: docker-tag
+  - description: The ServiceAccount that the PipelineRun will execute under
+    name: webhooks-tekton-service-account
+  - description: The namespace in which to create this TriggerTemplate's resources
+    name: webhooks-tekton-target-namespace
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: git-source-$(uid)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: revision
+        value: $(params.gitrevision)
+      - name: url
+        value: $(params.gitrepositoryurl)
+      type: git
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: docker-image-$(uid)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: url
+        value: $(params.webhooks-tekton-docker-registry)/$(params.docker-tag)
+      type: image
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineRun
+    metadata:
+      generateName: StackId-build-pl-run-
+      labels:
+        webhooks.tekton.dev/gitBranch: $(params.webhooks-tekton-git-branch)
+        webhooks.tekton.dev/gitOrg: $(params.webhooks-tekton-git-org)
+        webhooks.tekton.dev/gitRepo: $(params.webhooks-tekton-git-repo)
+        webhooks.tekton.dev/gitServer: $(params.webhooks-tekton-git-server)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: event-type
+        value: $(params.event-type)
+      pipelineRef:
+        name: StackId-build-pl
+      resources:
+      - name: git-source
+        resourceRef:
+          name: git-source-$(uid)
+      - name: docker-image
+        resourceRef:
+          name: docker-image-$(uid)
+      serviceAccountName: $(params.webhooks-tekton-service-account)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: StackId-build-push-pl-template
+  namespace: tekton-pipelines
+spec:
+  params:
+  - default: other
+    name: event-ref
+  - description: The revision of your Git repository
+    name: gitrevision
+  - description: The url of your Git repository
+    name: gitrepositoryurl
+  - description: The server name in the Git url
+    name: webhooks-tekton-git-server
+  - description: The org name in the Git url
+    name: webhooks-tekton-git-org
+  - description: The repository name in the Git url
+    name: webhooks-tekton-git-repo
+  - description: The branch for the Git repository
+    name: webhooks-tekton-git-branch
+  - description: The Git event type
+    name: event-type
+  - description: The image registry
+    name: webhooks-tekton-docker-registry
+  - description: The image tag
+    name: docker-tag
+  - description: The ServiceAccount that the PipelineRun will execute under
+    name: webhooks-tekton-service-account
+  - description: The namespace in which to create this TriggerTemplate's resources
+    name: webhooks-tekton-target-namespace
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: git-source-$(uid)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: revision
+        value: $(params.gitrevision)
+      - name: url
+        value: $(params.gitrepositoryurl)
+      type: git
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: docker-image-$(uid)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: url
+        value: $(params.webhooks-tekton-docker-registry)/$(params.docker-tag)
+      type: image
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineRun
+    metadata:
+      generateName: StackId-build-push-pl-run-
+      labels:
+        webhooks.tekton.dev/gitBranch: $(params.webhooks-tekton-git-branch)
+        webhooks.tekton.dev/gitOrg: $(params.webhooks-tekton-git-org)
+        webhooks.tekton.dev/gitRepo: $(params.webhooks-tekton-git-repo)
+        webhooks.tekton.dev/gitServer: $(params.webhooks-tekton-git-server)
+      namespace: $(params.webhooks-tekton-target-namespace)
+    spec:
+      params:
+      - name: event-type
+        value: $(params.event-type)
+      pipelineRef:
+        name: StackId-build-push-pl
+      resources:
+      - name: git-source
+        resourceRef:
+          name: git-source-$(uid)
+      - name: docker-image
+        resourceRef:
+          name: docker-image-$(uid)
+      serviceAccountName: $(params.webhooks-tekton-service-account)
