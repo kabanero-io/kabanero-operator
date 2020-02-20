@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -124,13 +123,10 @@ func SearchStack(stackName string, index *Index) ([]Stack, error) {
 	return stackRefs, nil
 }
 
-// Returns true if the user specified values Kabanero.Spec.Stacks.Repositories.GitRelease.
-// Note that Kabanero.Spec.Stacks.Repositories.GitRelease.Hostname is excluded from the check because
-// users may or may not specify it when connecting to a public Git repository.
+// Returns true if the user specified all values in Kabanero.Spec.Stacks.Repositories.GitRelease.
 func isGitReleaseUsable(gitRelease kabanerov1alpha2.GitReleaseSpec) bool {
-	return len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
+	return len(gitRelease.Hostname) != 0 && len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
 		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
-
 }
 
 // Retrieves a stack index file content using HTTP.
@@ -154,7 +150,7 @@ func getStackIndexUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitRelea
 	var indexBytes []byte
 
 	// Get a Github client.
-	gclient, err := getGitClient(c, gitRelease, namespace, gitRelease.Hostname)
+	gclient, err := getGitClient(c, gitRelease, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -189,36 +185,31 @@ func getStackIndexUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitRelea
 }
 
 // Retrieves a Git client.
-func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string, hostname string) (*github.Client, error) {
+func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string) (*github.Client, error) {
 	var client *github.Client
 
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}
+
+	// Search all secrets under the given namespace for the one containing the required hostname.
+	secret, err := cutils.GetMatchingSecret(c, namespace, secretFilter, gitRelease.Hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	var pat []byte
+	if secret != nil {
+		pat, _ = secret.Data["password"]
+	}
+
+	httpClient, err := cutils.GetHTTPClient(pat, transport)
+	if err != nil {
+		return nil, err
+	}
+
 	switch {
-	// Private repository.
-	case len(gitRelease.Hostname) != 0 && gitRelease.Hostname != "github.com":
-		// Search all secrets under the given namespace for the one containing the required hostname.
-		secret, err := cutils.GetMatchingSecret(c, namespace, secretFilter, hostname)
-		if err != nil {
-			return nil, err
-		}
-		if secret == nil {
-			return nil, fmt.Errorf("Unable to build a Git enterprise client. A secret could not be matched. GitRelease: %v. Namespace: %v. Hostname: %v.", gitRelease, namespace, hostname)
-		}
-
-		pat, err := getPATFromSecret(*secret)
-		if err != nil {
-			return nil, err
-		}
-		if pat == nil {
-			return nil, fmt.Errorf("Unable to build a Git enterprise client. Secret security data was not found. GitRelease: %v. Namespace: %v. Hostname: %v.", gitRelease, namespace, hostname)
-		}
-
-		// Get the http client genereate by the oauth2 API.
-		httpClient, err := cutils.GetOauth2HTTPCLient(pat)
-		if err != nil {
-			return nil, err
-		}
-
-		// Get the GHE client. GHE hostnames must be suffixed with /api/v3/ otherwise 406 status codes
+	// GHE.
+	case gitRelease.Hostname != "github.com":
+		// GHE hostnames must be suffixed with /api/v3/ otherwise 406 status codes
 		// will be returned. Using NewEnterpriseClient will do that for us automatically.
 		url := "https://" + gitRelease.Hostname
 		eclient, err := github.NewEnterpriseClient(url, url, httpClient)
@@ -226,36 +217,12 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 			return nil, err
 		}
 		client = eclient
-	// Assume public.
+	// Non GHE.
 	default:
-		httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}}
 		client = github.NewClient(httpClient)
 	}
 
 	return client, nil
-}
-
-// Returns an unencoded bytes representing a personal access token (PAT) found in the input secret resource.
-func getPATFromSecret(secret corev1.Secret) ([]byte, error) {
-	// Data section: base64 encoded PAT.
-	pat, found := secret.Data["password"]
-	if !found {
-		// StringData section: unencoded PAT string.
-		spat, found := secret.StringData["password"]
-		if !found {
-			return nil, fmt.Errorf("Password key not found in secret: %v.", secret)
-		}
-		pat = []byte(spat)
-	} else {
-		encodedToken := base64.StdEncoding.EncodeToString([]byte(pat))
-		decodedTokenBytes, err := base64.StdEncoding.DecodeString(encodedToken)
-		if err != nil {
-			return nil, err
-		}
-		pat = decodedTokenBytes
-	}
-
-	return pat, nil
 }
 
 // Custom filter method that allows the retrieval of a secret containing an annotation with a value

@@ -1,7 +1,6 @@
 package stack
 
 import (
-	"encoding/base64"
 	"testing"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
@@ -176,41 +175,6 @@ func TestSearchStack(t *testing.T) {
 	}
 
 	t.Log(stacks)
-}
-
-// Tests that a Secret.Data.password entry representing a PAT (Personal Access Token) is retrieved successfully from a secret.
-func TestPATRetrievalFromSecretData(t *testing.T) {
-	secret := testSecret.DeepCopy()
-	secret.StringData = nil
-	b64PATBytes, err := base64.StdEncoding.DecodeString("bXlTZWN1cmVUMGtlbiE=")
-	if err != nil {
-		t.Fatal("Error converting a base64 encoded string to bytes. String to convert:", "bXlTZWN1cmVUMGtlbiE=", ". Error: ", err)
-	}
-	secret.Data = map[string][]byte{"password": b64PATBytes}
-
-	pat, err := getPATFromSecret(*secret)
-	if err != nil {
-		t.Fatal("Error retrieving PAT from secret: ", secret, ". Error: ", err)
-	}
-	if string(pat) != "mySecureT0ken!" {
-		t.Fatal("An invalid decoded PAT was retrieved from secret. Invalid PAT:", string(pat), ". Secret:", secret)
-	}
-}
-
-// Tests that a Secret.StringData.password entry representing a PAT (Personal Access Token) is retrieved successfully
-// from a secret if Secret.Data.password was not specified.
-func TestPATRetrievalFromSecretStringData(t *testing.T) {
-	secret := testSecret.DeepCopy()
-	secret.Data = nil
-	secret.StringData = map[string]string{"password": "mySecureT0ken!"}
-
-	pat, err := getPATFromSecret(*secret)
-	if err != nil {
-		t.Fatal("Error retrieving PAT from secret: ", secret, ". Error: ", err)
-	}
-	if string(pat) != "mySecureT0ken!" {
-		t.Fatal("An invalid decoded PAT was retrieved from secret. Invalid PAT:", string(pat), ". Secret:", secret)
-	}
 }
 
 // Tests that a secret is found when a secret contains a valid annotation key kabanero.io/git-* and the
