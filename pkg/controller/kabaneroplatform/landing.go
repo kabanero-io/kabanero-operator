@@ -11,7 +11,8 @@ import (
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	"github.com/go-logr/logr"
-	mf "github.com/kabanero-io/manifestival"
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
 	consolev1 "github.com/openshift/api/console/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +28,7 @@ import (
 var kllog = rlog.Log.WithName("kabanero-landing")
 
 // Deploys resources and customizes to the Openshift web console.
-func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, _ logr.Logger) error {
+func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, logger logr.Logger) error {
 	// if enable is false do not deploy the landing page
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
 		err := cleanupLandingPage(k, c)
@@ -57,18 +58,18 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
 	transforms := []mf.Transformer{mf.InjectOwner(k), mf.InjectNamespace(k.GetNamespace())}
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 		return err
 	}
 
-	m, err = mf.FromReader(strings.NewReader(s), c)
+	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -141,12 +142,12 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 		}
 	}
 
-	err = m.Transform(transforms...)
+	m, err = mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
@@ -203,22 +204,20 @@ func cleanupLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(rlog.Log.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
 	transforms := []mf.Transformer{mf.InjectOwner(k), mf.InjectNamespace(k.GetNamespace())}
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.DeleteAll()
+	err = m.Delete()
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
+		return err
 	}
 
 	return nil

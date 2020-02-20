@@ -11,7 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mf "github.com/kabanero-io/manifestival"
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,7 +85,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -94,12 +95,12 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
@@ -144,12 +145,12 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 			return err
 		}
 
-		m, err := mf.FromReader(strings.NewReader(s), c)
+		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 		if err != nil {
 			return err
 		}
 
-		err = m.ApplyAll()
+		err = m.Apply()
 		if err != nil {
 			return err
 		}
@@ -160,7 +161,7 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 
 // Removes the admission webhook server, as well as the resources
 // created by controller-runtime that support the webhook.
-func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Client) error {
+func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Client, reqLogger logr.Logger) error {
 
 	rev, err := resolveSoftwareRevision(k, "admission-webhook", k.Spec.AdmissionControllerWebhook.Version)
 	if err != nil {
@@ -187,22 +188,21 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
 	transforms := []mf.Transformer{mf.InjectNamespace(k.GetNamespace())}
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.DeleteAll()
+	// Manifestival ignores the "NotFound" error for us.
+	err = m.Delete()
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
-		}
+		return err
 	}
 
 	// The webhook configs are only created by manifestival later than Kabanero 0.4.0.
@@ -217,16 +217,15 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 			return err
 		}
 
-		m, err := mf.FromReader(strings.NewReader(s), c)
+		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 		if err != nil {
 			return err
 		}
 
-		err = m.DeleteAll()
+		// Manifestival ignores the "NotFound" error for us.
+		err = m.Delete()
 		if err != nil {
-			if !errors.IsNotFound(err) {
-				return err
-			}
+			return err
 		}
 	}
 

@@ -11,7 +11,8 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 
-	mf "github.com/kabanero-io/manifestival"
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
 	appsv1 "github.com/openshift/api/apps/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -90,7 +91,7 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -100,12 +101,12 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
@@ -178,7 +179,7 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -187,12 +188,12 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	_ = m.DeleteAll()
+	_ = m.Delete()
 	
 	return nil
 }
