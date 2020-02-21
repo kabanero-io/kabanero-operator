@@ -220,8 +220,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			}
 
 			//Apply the Kabanero yaml directive processor
-			var pmanifests []StackAsset
-			pmanifests, err = processManifest(b, renderingContext, header.Name, assetSumString)
+			pmanifests, err := processManifest(b, renderingContext, header.Name, assetSumString)
 			if (err != nil) && (err != io.EOF) {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
