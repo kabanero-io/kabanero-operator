@@ -81,7 +81,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Create a handler for handling Tekton Pipeline & Task events
 	tH := &handler.EnqueueRequestForOwner{
-		IsController: true,
+		IsController: false,
 		OwnerType:    &kabanerov1alpha2.Stack{},
 	}
 
@@ -110,6 +110,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Task{}}, tH, tPred)
+	if err != nil {
+		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &pipelinev1alpha1.Condition{}}, tH, tPred)
 	if err != nil {
 		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
