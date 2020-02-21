@@ -3,7 +3,6 @@ package stack
 import (
 	"fmt"
 	"testing"
-	"io/ioutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -21,32 +20,15 @@ func TestGetManifests(t *testing.T) {
 }
 
 func TestGetManifestsYaml(t *testing.T) {
-	/*
 	reqLogger := logf.NullLogger{}
-	manifests, err := GetManifests("https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz", sha256, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	sha256 := "3b34de594df82cac3cb67c556a416443f6fafc0bc79101613eaa7ae0d59dd462"
+	manifests, err := GetManifests("https://raw.githubusercontent.com/dacleyra/kabanero-operator/451/pkg/controller/stack/testdata/good-pipeline.yaml", sha256, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	*/
 
-	t.Log("TBD: Test merged yaml when it is published.")
-}
-
-func TestDecodeYamlManifests(t *testing.T) {
-	reqLogger := logf.NullLogger{}
-	file := "testdata/good-pipeline.yaml"
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	//t.Log("Contents of file:", string(b))
-	
-	manifests, err := decodeYamlManifests(b, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, file, reqLogger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(manifests) != 21 {
-		t.Fatal(fmt.Sprintf("Expected 21 manifests in %v, got: %v", file, len(manifests)))
+	for _, manifest := range manifests {
+		t.Log(manifest)
 	}
 }
 

@@ -220,12 +220,12 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			}
 
 			//Apply the Kabanero yaml directive processor
-			var manifest StackAsset
-			manifest, err = processManifest(b, renderingContext, header.Name, assetSumString)
+			var pmanifests []StackAsset
+			pmanifests, err = processManifest(b, renderingContext, header.Name, assetSumString)
 			if (err != nil) && (err != io.EOF) {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
-			manifests = append(manifests, manifest)
+			manifests = append(manifests, pmanifests...)
 		}
 	}
 	return manifests, nil
@@ -233,50 +233,24 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 
 
 //Apply the Kabanero yaml directive processor
-func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) (StackAsset, error){
-	manifest := StackAsset{}
+func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) ([]StackAsset, error){
+	manifests := []StackAsset{}
 	s := &DirectiveProcessor{}
 	rb, err := s.Render(b, renderingContext)
 	if err != nil {
-		return manifest, fmt.Errorf("Error processing directives %v: %v", filename, err.Error())
+		return manifests, fmt.Errorf("Error processing directives %v: %v", filename, err.Error())
 	}
 
 	decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(rb))
 	out := unstructured.Unstructured{}
 	for err = decoder.Decode(&out); err == nil; {
 		gvk := out.GroupVersionKind()
-		manifest = StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString}
+		manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
 		out = unstructured.Unstructured{}
 		err = decoder.Decode(&out)
 	}
-	return manifest, err
+	return manifests, err
 }
-
-
-//Read the manifests from a single yaml file
-func decodeYamlManifests(yamlBytes []byte, renderingContext map[string]interface{}, url string, reqLogger logr.Logger) ([]StackAsset, error) {
-
-	yamlFiles := bytes.Split(yamlBytes, []byte("---"))
-
-	manifests := make([]StackAsset, 0, len(yamlFiles))
-
-	for _, yamlFile := range yamlFiles {
-		// skip empty
-		if bytes.Equal(yamlFile, []byte("\n")) || bytes.Equal(yamlFile, []byte("")) {
-			continue
-		}
-		//Apply the Kabanero yaml directive processor
-		b_sum := sha256.Sum256(yamlFile)
-		assetSumString := string(b_sum[:])
-		manifest, err := processManifest(yamlFile, renderingContext, url, assetSumString)
-		if (err != nil) && (err != io.EOF) {
-			return nil, fmt.Errorf("Error decoding %v: %v", url, err.Error())
-		}
-		manifests = append(manifests, manifest)
-	}
-	return manifests, nil
-}
-
 
 
 func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
@@ -293,23 +267,28 @@ func GetManifests(url string, checksum string, renderingContext map[string]inter
 	}
 	copy(c_sum[:], decoded)
 
-	var manifests []StackAsset
-
 	switch {
 	case strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz"):
 		if b_sum != c_sum {
-			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
+			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x for Pipeline URL: %v", c_sum, b_sum, url)
 		}
-		manifests, err = decodeManifests(b, renderingContext, reqLogger)
+		manifests, err := decodeManifests(b, renderingContext, reqLogger)
+		if err != nil {
+			return nil, err
+		}
+		return manifests, nil
 	case strings.HasSuffix(url, ".yaml") || strings.HasSuffix(url, ".yml"):
-		manifests, err = decodeYamlManifests(b, renderingContext, url, reqLogger)
+		if b_sum != c_sum {
+			reqLogger.Info(fmt.Sprintf("Index checksum: %x not match download checksum: %x for Pipeline URL: %v", c_sum, b_sum, url))
+		}
+		manifests, err := processManifest(b, renderingContext, url, hex.EncodeToString(b_sum[:]))
+		if (err != nil) && (err != io.EOF) {
+			return nil, err
+		}
+		return manifests, nil
 	default:
 		return nil, fmt.Errorf("Can not decode file type of file: %v. Must be .tar.gz or .yaml.", url)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return manifests, err
 }
 
 
