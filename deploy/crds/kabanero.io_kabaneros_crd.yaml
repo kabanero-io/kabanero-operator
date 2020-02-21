@@ -527,6 +527,23 @@ spec:
                       description: PipelineSpec defines the sets of default pipelines
                         for the stacks.
                       properties:
+                        gitRelease:
+                          description: GitReleaseSpec defines customization entries
+                            for a Git release.
+                          properties:
+                            assetName:
+                              type: string
+                            hostname:
+                              type: string
+                            organization:
+                              type: string
+                            project:
+                              type: string
+                            release:
+                              type: string
+                            skipCertVerification:
+                              type: boolean
+                          type: object
                         https:
                           description: HttpsProtocolFile defines how to retrieve a
                             file over https
@@ -580,6 +597,23 @@ spec:
                             description: PipelineSpec defines the sets of default
                               pipelines for the stacks.
                             properties:
+                              gitRelease:
+                                description: GitReleaseSpec defines customization
+                                  entries for a Git release.
+                                properties:
+                                  assetName:
+                                    type: string
+                                  hostname:
+                                    type: string
+                                  organization:
+                                    type: string
+                                  project:
+                                    type: string
+                                  release:
+                                    type: string
+                                  skipCertVerification:
+                                    type: boolean
+                                type: object
                               https:
                                 description: HttpsProtocolFile defines how to retrieve
                                   a file over https
@@ -607,6 +641,23 @@ spec:
                   description: TriggerSpec defines the sets of default triggers for
                     the stacks
                   properties:
+                    gitRelease:
+                      description: GitReleaseSpec defines customization entries for
+                        a Git release.
+                      properties:
+                        assetName:
+                          type: string
+                        hostname:
+                          type: string
+                        organization:
+                          type: string
+                        project:
+                          type: string
+                        release:
+                          type: string
+                        skipCertVerification:
+                          type: boolean
+                      type: object
                     https:
                       description: HttpsProtocolFile defines how to retrieve a file
                         over https

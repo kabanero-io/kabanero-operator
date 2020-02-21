@@ -15,7 +15,7 @@ import (
 
 func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client) error {
 	// Resolve the stacks which are currently featured across the various indexes.
-	stackMap, err := featuredStacks(k)
+	stackMap, err := featuredStacks(k, cl)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 }
 
 // Resolves all stacks for the given Kabanero instance
-func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2.StackVersion, error) {
+func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client) (map[string][]kabanerov1alpha2.StackVersion, error) {
 
 	stackMap := make(map[string][]kabanerov1alpha2.StackVersion)
 	for _, r := range k.Spec.Stacks.Repositories {
@@ -108,10 +108,10 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2
 
 		indexPipelines := []stack.Pipelines{}
 		for _, pipeline := range pipelines {
-			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Https.Url, SkipCertVerification: pipeline.Https.SkipCertVerification})
+			indexPipelines = append(indexPipelines, stack.Pipelines{Id: pipeline.Id, Sha256: pipeline.Sha256, Url: pipeline.Https.Url, GitRelease: pipeline.GitRelease, SkipCertVerification: pipeline.Https.SkipCertVerification})
 		}
 
-		index, err := stack.ResolveIndex(r, indexPipelines, []stack.Trigger{}, "")
+		index, err := stack.ResolveIndex(cl, r, k.Namespace, indexPipelines, []stack.Trigger{}, "")
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +123,7 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero) (map[string][]kabanerov1alpha2
 			pipelines := []kabanerov1alpha2.PipelineSpec{}
 			for _, pipeline := range c.Pipelines {
 				pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: pipeline.Url, SkipCertVerification: pipeline.SkipCertVerification}
-				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl})
+				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl, GitRelease: pipeline.GitRelease})
 			}
 			// The image information will be in the stack.  Today we just support reading the legacy field from the collection hub.
 			images := []kabanerov1alpha2.Image{}

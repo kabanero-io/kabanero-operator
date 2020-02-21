@@ -3,13 +3,19 @@ package stack
 import (
 	"fmt"
 	"testing"
+
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func TestGetManifests(t *testing.T) {
 	reqLogger := logf.NullLogger{}
-	sha256 := "8eacd2a6870c2b7c729ae1441cc58d6f1356bde08a022875f9f50bca8fc66543"
-	manifests, err := GetManifests("https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz", sha256, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	pipelineStatus := kabanerov1alpha2.PipelineStatus{
+		Url:        "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz",
+		Digest:     "8eacd2a6870c2b7c729ae1441cc58d6f1356bde08a022875f9f50bca8fc66543",
+		GitRelease: kabanerov1alpha2.GitReleaseSpec{}}
+
+	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
