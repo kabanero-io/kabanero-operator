@@ -38,7 +38,7 @@ rules:
   verbs: ["*"]
 
 - apiGroups: ["apps", "extensions"]
-  resources: ["deployments"]
+  resources: ["deployments", "deployments/finalizers"]
   verbs: ["watch", "get", "list", "create", "update", "delete", "patch"]
 
 - apiGroups: ["extensions", "apps"]
