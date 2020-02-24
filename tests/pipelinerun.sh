@@ -26,6 +26,9 @@ namespace=kabanero
 oc -n ${namespace} delete pipelinerun ${PIPELINE_RUN} || true
 oc -n ${namespace} delete pipelineresource ${DOCKER_IMAGE_REF} ${GITHUB_SOURCE_REF} || true
 
+# Set registriesSkippingTagResolving for internal registry
+$(dirname "$0")/rstr.sh
+
 # Pipeline Resources: Source repo and destination container image
 cat <<EOF | oc -n ${namespace} apply -f -
 apiVersion: v1
