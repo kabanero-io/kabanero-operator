@@ -34,25 +34,25 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.6.0-rc.4"
+    version: "0.6.0-rc.5"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-collection-controller
-    tag: "0.6.0-rc.4"
+    tag: "0.6.0-rc.5"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-collection-controller:0.6.0-rc.4
+    image: kabanero/kabanero-operator-collection-controller:0.6.0-rc.5
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.6.0-rc.4"
+    version: "0.6.0-rc.5"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-stack-controller
-    tag: "0.6.0-rc.4"
+    tag: "0.6.0-rc.5"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-stack-controller:0.6.0-rc.4
+    image: kabanero/kabanero-operator-stack-controller:0.6.0-rc.5
 
   landing:
     # The landing page is enabled by default. To disable specify false.
@@ -60,14 +60,14 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.6.0-rc.4"
+    version: "0.6.0-rc.5"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator-admission-webhook
-    tag: "0.6.0-rc.4"
+    tag: "0.6.0-rc.5"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-admission-webhook:0.6.0-rc.4
+    image: kabanero/kabanero-operator-admission-webhook:0.6.0-rc.5
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
@@ -105,15 +105,15 @@ spec:
 
   stacks:
     # A list of those repositories which are searched for collections
-    repositories: 
-    - name: incubator
-      https:
-        url: https://github.com/kabanero-io/collections/releases/download/0.6.0-rc.1/kabanero-index.yaml
-    pipelines:
-    - id: default
-      sha256: c27921f25a30fdb4701762d6d1630e3192872ff4284b7731f4c223985bf62802
-      https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.5/default-kabanero-pipelines.tar.gz
+    repositories:
+      - name: incubator
+        https:
+          url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.6.0-rc.2/kabanero-stack-hub-index.yaml
+      pipelines:
+      - id: default
+        sha256: 147455156595e8ad95e71ee712e4066eeb0225903847b3ac04a59e69ba899f60
+        https:
+          url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.6/default-kabanero-pipelines.tar.gz
 
   # The information in the Github section is used by the Kabanero CLI to
   # perform user to role mapping when accessing the collection.
