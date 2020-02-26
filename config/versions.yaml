@@ -13,6 +13,17 @@ default: "0.6.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
+- version: "0.7.0"
+  related-versions: 
+    cli-services: "0.6.0"
+    landing: "0.6.0"
+    events: "0.1.0"
+    collection-controller: "0.7.0-alpha.1"
+    stack-controller: "0.7.0-alpha.1"
+    admission-webhook: "0.7.0-alpha.1"
+    sso: "7.3.2"
+    codeready-workspaces: "0.6.0"
+
 - version: "0.6.0"
   related-versions: 
     cli-services: "0.6.0"
@@ -54,6 +65,11 @@ related-software:
       tag: "0.1"
 
   collection-controller: 
+  - version: "0.7.0-alpha.1"
+    orchestrations: "orchestrations/collection-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-collection-controller"
+      tag: "0.7.0-alpha.1"
   - version: "0.6.0-rc.5"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
@@ -61,6 +77,11 @@ related-software:
       tag: "0.6.0-rc.5"
 
   stack-controller: 
+  - version: "0.7.0-alpha.1"
+    orchestrations: "orchestrations/stack-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-stack-controller"
+      tag: "0.7.0-alpha.1"
   - version: "0.6.0-rc.5"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
@@ -68,6 +89,11 @@ related-software:
       tag: "0.6.0-rc.5"
 
   admission-webhook:
+  - version: "0.7.0-alpha.1"
+    orchestrations: "orchestrations/admission-webhook/0.2"
+    identifiers:
+      repository: "kabanero/kabanero-operator-admission-webhook"
+      tag: "0.7.0-alpha.1"
   - version: "0.6.0-rc.5"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
