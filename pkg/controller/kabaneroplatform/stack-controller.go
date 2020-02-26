@@ -7,7 +7,8 @@ import (
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/go-logr/logr"
-	mf "github.com/kabanero-io/manifestival"
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,7 +53,7 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -62,12 +63,12 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		mf.InjectNamespace(k.GetNamespace()),
 	}
 
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
@@ -88,12 +89,12 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	m, err = mf.FromReader(strings.NewReader(s), c)
+	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = mOrig.Apply()
 	if err != nil {
 		return err
 	}
@@ -160,12 +161,12 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), c)
+	m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
-	err = m.DeleteAll()
+	err = m.Delete()
 	if err != nil {
 		return err
 	}

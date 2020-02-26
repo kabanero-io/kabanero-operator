@@ -102,11 +102,12 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 		}
 
 		for _, pipeline := range version.Pipelines {
-			if len(pipeline.Https.Url) == 0 {
-				reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Https.Url is not set. stack: %v", stack.Spec.Name, version.Version, stack)
+			if len(pipeline.Https.Url) == 0 && pipeline.GitRelease == (kabanerov1alpha2.GitReleaseSpec{}) {
+				reason = fmt.Sprintf("Stack %v %v does not contain a Spec.Versions[].Pipelines[].Https.Url or a populated Spec.Versions[].Pipelines[].GitRelease{}. One of them must be specified. If both are specified, Spec.Versions[].Pipelines[].GitRelease{} takes precedence. Stack: %v", stack.Spec.Name, version.Version, stack)
 				err = fmt.Errorf(reason)
 				return false, reason, err
 			}
+
 			if len(pipeline.Sha256) == 0 {
 				reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Sha256 is not set. stack: %v", stack.Spec.Name, version.Version, stack)
 				err = fmt.Errorf(reason)

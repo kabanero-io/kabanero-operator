@@ -11,8 +11,9 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	mf "github.com/kabanero-io/manifestival"
-
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
+	
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -135,7 +136,7 @@ type ReconcileStack struct {
 	scheme *runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
-	indexResolver func(kabanerov1alpha2.RepositoryConfig, []Pipelines, []Trigger, string) (*Index, error)
+	indexResolver func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string) (*Index, error)
 }
 
 // Reconcile reads that state of the cluster for a Stack object and makes changes based on the state read
@@ -242,8 +243,9 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 
 // A key to the pipeline use count map
 type pipelineUseMapKey struct {
-	url    string
-	digest string
+	url        string
+	gitRelease kabanerov1alpha2.GitReleaseSpec
+	digest     string
 }
 
 // The value in the pipeline use count map
@@ -308,7 +310,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	assetUseMap := make(map[pipelineUseMapKey]*pipelineUseMapValue)
 	for _, curStatus := range stackResource.Status.Versions {
 		for _, pipeline := range curStatus.Pipelines {
-			key := pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}
+			key := pipelineUseMapKey{url: pipeline.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Digest}
 			value := assetUseMap[key]
 			if value == nil {
 				value = &pipelineUseMapValue{}
@@ -325,7 +327,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	assetsToIncrement := make(map[pipelineVersion]bool)
 	for _, curStatus := range stackResource.Status.Versions {
 		for _, pipeline := range curStatus.Pipelines {
-			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, digest: pipeline.Digest}, version: curStatus.Version}
+			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Digest}, version: curStatus.Version}
 			assetsToDecrement[cur] = true
 		}
 	}
@@ -333,7 +335,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	for _, curSpec := range stackResource.Spec.Versions {
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
 			for _, pipeline := range curSpec.Pipelines {
-				cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Https.Url, digest: pipeline.Sha256}, version: curSpec.Version}
+				cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Https.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Sha256}, version: curSpec.Version}
 				if assetsToDecrement[cur] == true {
 					delete(assetsToDecrement, cur)
 				} else {
@@ -357,7 +359,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		value := assetUseMap[cur.pipelineUseMapKey]
 		if value == nil {
 			// Need to add a new entry for this pipeline.
-			value = &pipelineUseMapValue{PipelineStatus: kabanerov1alpha2.PipelineStatus{Url: cur.url, Digest: cur.digest}}
+			value = &pipelineUseMapValue{PipelineStatus: kabanerov1alpha2.PipelineStatus{Url: cur.url, GitRelease: cur.gitRelease, Digest: cur.digest}}
 			assetUseMap[cur.pipelineUseMapKey] = value
 		}
 
@@ -394,9 +396,9 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 				renderingContext["Digest"] = value.Digest[0:8]
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
-				manifests, err := GetManifests(value.Url, value.Digest, renderingContext, log)
+				manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
 				if err != nil {
-					log.Error(err, fmt.Sprintf("Error retrieving manifests at %v", value.Url))
+					log.Error(err, fmt.Sprintf("Error retrieving archive manifests: %v", value))
 					value.manifestError = err
 					continue
 				}
@@ -452,9 +454,9 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 							renderingContext["Digest"] = value.Digest[0:8]
 
 							// Retrieve manifests as unstructured
-							manifests, err := GetManifests(value.Url, value.Digest, renderingContext, log)
+							manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
 							if err != nil {
-								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available at %v", asset.Name, value.Url))
+								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
 								value.ActiveAssets[index].Status = assetStatusFailed
 								value.ActiveAssets[index].StatusMessage = "Manifests are no longer available at specified URL"
 							} else {
@@ -467,23 +469,23 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						for _, manifest := range value.manifests {
 							if asset.Name == manifest.Name {
 								resources := []unstructured.Unstructured{manifest.Yaml}
-								m, err := mf.FromResources(resources, c)
+								mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
 
-								log.Info(fmt.Sprintf("Resources: %v", m.Resources))
+								log.Info(fmt.Sprintf("Resources: %v", mOrig.Resources()))
 
 								transforms := []mf.Transformer{
 									transforms.InjectOwnerReference(assetOwner),
 									mf.InjectNamespace(asset.Namespace),
 								}
 
-								err = m.Transform(transforms...)
+								m, err := mOrig.Transform(transforms...)
 								if err != nil {
 									log.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
 									value.ActiveAssets[index].Status = assetStatusFailed
 									value.ActiveAssets[index].Status = err.Error()
 								} else {
-									log.Info(fmt.Sprintf("Applying resources: %v", m.Resources))
-									err = m.ApplyAll()
+									log.Info(fmt.Sprintf("Applying resources: %v", m.Resources()))
+									err = m.Apply()
 									if err != nil {
 										// Update the asset status with the error message
 										log.Error(err, "Error installing the resource", "resource", asset.Name)
@@ -538,7 +540,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive
 
 			for _, pipeline := range curSpec.Pipelines {
-				key := pipelineUseMapKey{url: pipeline.Https.Url, digest: pipeline.Sha256}
+				key := pipelineUseMapKey{url: pipeline.Https.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Sha256}
 				value := assetUseMap[key]
 				if value == nil {
 					// TODO: ???

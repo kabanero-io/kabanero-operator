@@ -13,9 +13,11 @@ import (
 	"unicode"
 
 	"github.com/go-logr/logr"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	yml "gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Stack archive manifest.yaml
@@ -38,8 +40,29 @@ type StackAsset struct {
 	Yaml    unstructured.Unstructured
 }
 
-func DownloadToByte(url string) ([]byte, error) {
-	return getFromCache(url, false)
+func DownloadToByte(c client.Client, namespace string, url string, gitRelease kabanerov1alpha2.GitReleaseSpec) ([]byte, error) {
+	var archiveBytes []byte
+	switch {
+	// GIT:
+	case isGitReleaseUsable(gitRelease):
+		bytes, err := getStackIndexUsingGit(c, gitRelease, namespace)
+		if err != nil {
+			return nil, err
+		}
+		archiveBytes = bytes
+	// HTTPS:
+	case len(url) != 0:
+		bytes, err := getFromCache(url, false)
+		if err != nil {
+			return nil, err
+		}
+		archiveBytes = bytes
+	// NOT SUPPORTED:
+	default:
+		return nil, fmt.Errorf("No information was provided to retrieve the stack's index file. Specify a stack repository that includes a HTTP URL location or GitHub release information.")
+	}
+
+	return archiveBytes, nil
 }
 
 // Print something that looks similar to xxd output
@@ -95,7 +118,7 @@ func readBytesFromReader(size int64, r io.Reader) ([]byte, error) {
 					return nil, fmt.Errorf("EOF received before end of file: %v", err.Error())
 				}
 
-				break;
+				break
 			}
 
 			// Otherwise, just return the error.
@@ -234,60 +257,78 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 //Apply the Kabanero yaml directive processor
 func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) ([]StackAsset, error){
 	manifests := []StackAsset{}
-	s := &DirectiveProcessor{}
+			s := &DirectiveProcessor{}
 	rb, err := s.Render(b, renderingContext)
-	if err != nil {
+			if err != nil {
 		return manifests, fmt.Errorf("Error processing directives %v: %v", filename, err.Error())
-	}
+			}
 
 	decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(rb))
-	out := unstructured.Unstructured{}
-	for err = decoder.Decode(&out); err == nil; {
-		gvk := out.GroupVersionKind()
-		manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
-		out = unstructured.Unstructured{}
-		err = decoder.Decode(&out)
+			out := unstructured.Unstructured{}
+			for err = decoder.Decode(&out); err == nil; {
+				gvk := out.GroupVersionKind()
+				manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
+				out = unstructured.Unstructured{}
+				err = decoder.Decode(&out)
 	}
 	return manifests, err
 }
 
+type fileType string
+var tarGzType fileType = ".tar.gz"
+var yamlType fileType = ".yaml"
 
-func GetManifests(url string, checksum string, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
-	b, err := DownloadToByte(url)
+func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) fileType {
+	fileName := pipelineStatus.Url
+	if isGitReleaseUsable(pipelineStatus.GitRelease) {
+		fileName = pipelineStatus.GitRelease.AssetName
+	}
+	switch {
+	case strings.HasSuffix(fileName, ".tar.gz") || strings.HasSuffix(fileName, ".tgz"):
+		return tarGzType
+	case strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml"):
+		return yamlType
+	default:
+		return ""
+	}
+}
+
+func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
+	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease)
 	if err != nil {
 		return nil, err
 	}
 
 	b_sum := sha256.Sum256(b)
 	var c_sum [32]byte
-	decoded, err := hex.DecodeString(checksum)
+	decoded, err := hex.DecodeString(pipelineStatus.Digest)
 	if err != nil {
 		return nil, err
 	}
 	copy(c_sum[:], decoded)
 
-	switch {
-	case strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz"):
+	fileType := getPipelineFileType(pipelineStatus)
+	if fileType == tarGzType {
 		if b_sum != c_sum {
-			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x for Pipeline URL: %v", c_sum, b_sum, url)
+			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x for Pipeline Name %v", c_sum, b_sum, pipelineStatus.Name)
 		}
 		manifests, err := decodeManifests(b, renderingContext, reqLogger)
 		if err != nil {
 			return nil, err
 		}
 		return manifests, nil
-	case strings.HasSuffix(url, ".yaml") || strings.HasSuffix(url, ".yml"):
+	} else if fileType == yamlType {
 		if b_sum != c_sum {
-			reqLogger.Info(fmt.Sprintf("Index checksum: %x not match download checksum: %x for Pipeline URL: %v", c_sum, b_sum, url))
+			reqLogger.Info(fmt.Sprintf("Index checksum: %x not match download checksum: %x for Pipeline Name %v", c_sum, b_sum, pipelineStatus.Name))
 		}
-		manifests, err := processManifest(b, renderingContext, url, hex.EncodeToString(b_sum[:]))
+		manifests, err := processManifest(b, renderingContext, pipelineStatus.Name, hex.EncodeToString(b_sum[:]))
 		if (err != nil) && (err != io.EOF) {
 			return nil, err
 		}
 		return manifests, nil
-	default:
-		return nil, fmt.Errorf("Can not decode file type of file: %v. Must be .tar.gz or .yaml.", url)
 	}
+
+	return nil, fmt.Errorf("Can not decode file type of file for Pipeline %v. Must be .tar.gz or .yaml.", pipelineStatus.Name)
 }
 
 

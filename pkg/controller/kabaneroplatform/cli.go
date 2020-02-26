@@ -13,7 +13,8 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	mf "github.com/kabanero-io/manifestival"
+	mf "github.com/manifestival/manifestival"
+	mfc "github.com/manifestival/controller-runtime-client"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -54,7 +55,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
-	m, err := mf.FromReader(strings.NewReader(s), cl)
+	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -114,12 +115,12 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
 	}
 
-	err = m.Transform(transforms...)
+	m, err := mOrig.Transform(transforms...)
 	if err != nil {
 		return err
 	}
 
-	err = m.ApplyAll()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}

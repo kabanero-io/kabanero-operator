@@ -57,9 +57,10 @@ type InstanceStackConfig struct {
 
 // PipelineSpec defines the sets of default pipelines for the stacks.
 type PipelineSpec struct {
-	Id     string            `json:"id,omitempty"`
-	Sha256 string            `json:"sha256,omitempty"`
-	Https  HttpsProtocolFile `json:"https,omitempty"`
+	Id         string            `json:"id,omitempty"`
+	Sha256     string            `json:"sha256,omitempty"`
+	Https      HttpsProtocolFile `json:"https,omitempty"`
+	GitRelease GitReleaseSpec    `json:"gitRelease,omitempty"`
 }
 
 // HttpsProtocolFile defines how to retrieve a file over https
@@ -70,9 +71,10 @@ type HttpsProtocolFile struct {
 
 // TriggerSpec defines the sets of default triggers for the stacks
 type TriggerSpec struct {
-	Id     string            `json:"id,omitempty"`
-	Sha256 string            `json:"sha256,omitempty"`
-	Https  HttpsProtocolFile `json:"https,omitempty"`
+	Id         string            `json:"id,omitempty"`
+	Sha256     string            `json:"sha256,omitempty"`
+	Https      HttpsProtocolFile `json:"https,omitempty"`
+	GitRelease GitReleaseSpec    `json:"gitRelease,omitempty"`
 }
 
 // GithubConfig represents the Github information (public or GHE) where
@@ -97,12 +99,12 @@ type RepositoryConfig struct {
 
 // GitReleaseSpec defines customization entries for a Git release.
 type GitReleaseSpec struct {
-	Hostname     string `json:"hostname,omitempty"`
-	Organization string `json:"organization,omitempty"`
-	Project      string `json:"project,omitempty"`
-	Release      string `json:"release,omitempty"`
-	AssetName    string `json:"assetName,omitempty"`
-	SkipCertVerification bool `json:"skipCertVerification,omitempty"`
+	Hostname             string `json:"hostname,omitempty"`
+	Organization         string `json:"organization,omitempty"`
+	Project              string `json:"project,omitempty"`
+	Release              string `json:"release,omitempty"`
+	AssetName            string `json:"assetName,omitempty"`
+	SkipCertVerification bool   `json:"skipCertVerification,omitempty"`
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
