@@ -143,7 +143,7 @@ func getKnativeServingStatus(k *kabanerov1alpha2.Kabanero, c client.Client, reqL
 	knsInstance := &unstructured.Unstructured{}
 	knsInstance.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    "KnativeServing",
-		Group:   "serving.knative.dev",
+		Group:   "operator.knative.dev",
 		Version: "v1alpha1",
 	})
 
