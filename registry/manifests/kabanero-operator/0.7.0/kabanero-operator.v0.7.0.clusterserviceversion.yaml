@@ -35,9 +35,9 @@ metadata:
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "147455156595e8ad95e71ee712e4066eeb0225903847b3ac04a59e69ba899f60",
+                  "sha256": "db32083d1961ae5a96aed9e3abd87b7b6f9a63c946eee302dd3ad8db299a6618",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.6/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.9/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -66,12 +66,11 @@ metadata:
             "name": "java-microprofile",
             "versions": [
               { "version": "0.2.25",
-                "repositoryUrl": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.6.0-rc.2/kabanero-stack-hub-index.yaml",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "147455156595e8ad95e71ee712e4066eeb0225903847b3ac04a59e69ba899f60",
+                    "sha256": "db32083d1961ae5a96aed9e3abd87b7b6f9a63c946eee302dd3ad8db299a6618",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.6/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.9/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
@@ -86,7 +85,7 @@ metadata:
         }
       ]
 spec:
-  minKubeVersion: 1.14.0
+  minKubeVersion: 1.16.0
   apiservicedefinitions: {}
   maturity: alpha
   version: 0.7.0
