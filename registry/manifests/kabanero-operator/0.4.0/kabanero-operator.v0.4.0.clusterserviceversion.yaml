@@ -7,7 +7,7 @@ metadata:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator:latest
+    containerImage: kabanero/kabanero-operator:0.4.0
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
     olm.skipRange: '>=0.3.1 <0.4.0'
@@ -52,7 +52,7 @@ spec:
   apiservicedefinitions: {}
   maturity: alpha
   version: 0.4.0
-  replaces: kabanero-operator.v0.3.1
+  replaces: kabanero-operator.v0.3.5
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
@@ -230,7 +230,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator:latest
+                image: kabanero/kabanero-operator:0.4.0
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
