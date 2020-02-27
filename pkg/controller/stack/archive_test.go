@@ -25,6 +25,23 @@ func TestGetManifests(t *testing.T) {
 	}
 }
 
+func TestGetManifestsYaml(t *testing.T) {
+	reqLogger := logf.NullLogger{}
+	pipelineStatus := kabanerov1alpha2.PipelineStatus{
+		Url: "https://raw.githubusercontent.com/dacleyra/kabanero-operator/451/pkg/controller/stack/testdata/good-pipeline.yaml",
+		Digest: "3b34de594df82cac3cb67c556a416443f6fafc0bc79101613eaa7ae0d59dd462",
+		GitRelease: kabanerov1alpha2.GitReleaseSpec{}}
+	
+	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, manifest := range manifests {
+		t.Log(manifest)
+	}
+}
+
 func TestCommTraceZero(t *testing.T) {
 	out := commTrace(nil)
 	if out != "" {

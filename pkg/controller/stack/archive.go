@@ -71,7 +71,7 @@ func commTrace(buffer []byte) string {
 	for bytesLeft := len(buffer); bytesLeft > 0; {
 		var bytesThisRound []byte
 		if bytesLeft >= 16 {
-			bytesThisRound = buffer[len(buffer)-bytesLeft : len(buffer)-bytesLeft+16]
+			bytesThisRound = buffer[len(buffer)-bytesLeft:len(buffer)-bytesLeft+16]
 		} else {
 			bytesThisRound = buffer[len(buffer)-bytesLeft:]
 		}
@@ -243,27 +243,54 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			}
 
 			//Apply the Kabanero yaml directive processor
+			pmanifests, err := processManifest(b, renderingContext, header.Name, assetSumString)
+			if (err != nil) && (err != io.EOF) {
+				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
+			}
+			manifests = append(manifests, pmanifests...)
+		}
+	}
+	return manifests, nil
+}
+
+
+//Apply the Kabanero yaml directive processor
+func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) ([]StackAsset, error){
+	manifests := []StackAsset{}
 			s := &DirectiveProcessor{}
-			b, err = s.Render(b, renderingContext)
+	rb, err := s.Render(b, renderingContext)
 			if err != nil {
-				return nil, fmt.Errorf("Error processing directives %v: %v", header.Name, err.Error())
+		return manifests, fmt.Errorf("Error processing directives %v: %v", filename, err.Error())
 			}
 
-			decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(b))
+	decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(rb))
 			out := unstructured.Unstructured{}
 			for err = decoder.Decode(&out); err == nil; {
 				gvk := out.GroupVersionKind()
 				manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
 				out = unstructured.Unstructured{}
 				err = decoder.Decode(&out)
-			}
-
-			if (err != nil) && (err != io.EOF) {
-				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
-			}
-		}
 	}
-	return manifests, nil
+	return manifests, err
+}
+
+type fileType string
+var tarGzType fileType = ".tar.gz"
+var yamlType fileType = ".yaml"
+
+func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) fileType {
+	fileName := pipelineStatus.Url
+	if isGitReleaseUsable(pipelineStatus.GitRelease) {
+		fileName = pipelineStatus.GitRelease.AssetName
+	}
+	switch {
+	case strings.HasSuffix(fileName, ".tar.gz") || strings.HasSuffix(fileName, ".tgz"):
+		return tarGzType
+	case strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml"):
+		return yamlType
+	default:
+		return ""
+	}
 }
 
 func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
@@ -280,13 +307,29 @@ func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1al
 	}
 	copy(c_sum[:], decoded)
 
-	if b_sum != c_sum {
-		return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x", c_sum, b_sum)
+	fileType := getPipelineFileType(pipelineStatus)
+	if fileType == tarGzType {
+		if b_sum != c_sum {
+			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x for Pipeline Name %v", c_sum, b_sum, pipelineStatus.Name)
+		}
+		manifests, err := decodeManifests(b, renderingContext, reqLogger)
+		if err != nil {
+			return nil, err
+		}
+		return manifests, nil
+	} else if fileType == yamlType {
+		if b_sum != c_sum {
+			reqLogger.Info(fmt.Sprintf("Index checksum: %x not match download checksum: %x for Pipeline Name %v", c_sum, b_sum, pipelineStatus.Name))
+		}
+		manifests, err := processManifest(b, renderingContext, pipelineStatus.Name, hex.EncodeToString(b_sum[:]))
+		if (err != nil) && (err != io.EOF) {
+			return nil, err
+		}
+		return manifests, nil
 	}
 
-	manifests, err := decodeManifests(b, renderingContext, reqLogger)
-	if err != nil {
-		return nil, err
-	}
-	return manifests, err
+	return nil, fmt.Errorf("Can not decode file type of file for Pipeline %v. Must be .tar.gz or .yaml.", pipelineStatus.Name)
 }
+
+
+
