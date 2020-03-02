@@ -121,6 +121,9 @@ type KabaneroCliServicesCustomizationSpec struct {
 type KabaneroLandingCustomizationSpec struct {
 	Enable  *bool  `json:"enable,omitempty"`
 	Version string `json:"version,omitempty"`
+	Image                    string `json:"image,omitempty"`
+	Repository               string `json:"repository,omitempty"`
+	Tag                      string `json:"tag,omitempty"`
 }
 
 // CRWCustomizationSpec defines customization entries for codeready-workspaces.

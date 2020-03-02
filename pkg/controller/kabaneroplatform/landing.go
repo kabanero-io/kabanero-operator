@@ -42,7 +42,7 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 	//The context which will be used to render any templates
 	templateContext := rev.Identifiers
 
-	image, err := imageUriWithOverrides("", "", "", rev)
+	image, err := imageUriWithOverrides(k.Spec.Landing.Repository, k.Spec.Landing.Tag, k.Spec.Landing.Image, rev)
 	if err != nil {
 		return err
 	}
