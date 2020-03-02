@@ -7,7 +7,7 @@ metadata:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator:0.6.0-rc.6
+    containerImage: kabanero/kabanero-operator:0.6.0
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
     olm.skipRange: '>=0.5.0 <0.6.0'
@@ -28,16 +28,16 @@ metadata:
                 {
                   "name": "incubator",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.6.0-rc.2/kabanero-stack-hub-index.yaml"
+                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.6.0/kabanero-stack-hub-index.yaml"
                   }
                 }
               ],
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "db32083d1961ae5a96aed9e3abd87b7b6f9a63c946eee302dd3ad8db299a6618",
+                  "sha256": "abbc2ed0e19349aa5e23b511b75449fb1a515cfd6a548b05b6516fb7c6de1aba",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.9/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -68,9 +68,9 @@ metadata:
               { "version": "0.2.25",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "db32083d1961ae5a96aed9e3abd87b7b6f9a63c946eee302dd3ad8db299a6618",
+                    "sha256": "abbc2ed0e19349aa5e23b511b75449fb1a515cfd6a548b05b6516fb7c6de1aba",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.9/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
@@ -296,7 +296,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator:0.6.0-rc.6
+                image: kabanero/kabanero-operator:0.6.0
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
