@@ -21,10 +21,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.6.0-rc.4"
+    tag: "0.6.0"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.6.0-rc.4
+    image: kabanero/kabanero-command-line-services:0.6.0
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -57,6 +57,16 @@ spec:
   landing:
     # The landing page is enabled by default. To disable specify false.
     enable: true
+
+    # Overrides the setting for version on this component
+    version: "0.6.0"
+
+    # Overrides the image as a separate repository or tag
+    repository: kabanero/landing
+    tag: "0.6.0"
+
+    # Overrides the image uri
+    image: kabanero/landing:0.6.0
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
@@ -105,15 +115,15 @@ spec:
 
   stacks:
     # A list of those repositories which are searched for collections
-    repositories:
-      - name: incubator
-        https:
-          url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.6.0-rc.2/kabanero-stack-hub-index.yaml
-      pipelines:
-      - id: default
-        sha256: db32083d1961ae5a96aed9e3abd87b7b6f9a63c946eee302dd3ad8db299a6618
-        https:
-          url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0-rc.9/default-kabanero-pipelines.tar.gz
+    repositories: 
+    - name: incubator
+      https:
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.6.0/kabanero-stack-hub-index.yaml
+    pipelines:
+    - id: default
+      sha256: abbc2ed0e19349aa5e23b511b75449fb1a515cfd6a548b05b6516fb7c6de1aba
+      https:
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0/default-kabanero-pipelines.tar.gz
 
   # The information in the Github section is used by the Kabanero CLI to
   # perform user to role mapping when accessing the collection.
