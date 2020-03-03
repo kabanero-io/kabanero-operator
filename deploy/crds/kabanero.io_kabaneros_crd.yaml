@@ -493,6 +493,12 @@ spec:
                 properties:
                   enable:
                     type: boolean
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
                   version:
                     type: string
                 type: object
