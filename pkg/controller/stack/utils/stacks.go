@@ -2,8 +2,9 @@ package utils
 
 import (
 	"fmt"
-	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"strings"
+
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 )
 
 // Removes the tag portion of all images associated with the input stack version.
@@ -19,13 +20,18 @@ func RemoveTagFromStackImages(stack *kabanerov1alpha2.StackVersion, stackName st
 	return nil
 }
 
-// Retrieves the repository part of input image. An error is returned if the image input is empty.
-// If the image does not contain a tag, the  input value is returned.
+// Retrieves the repository part of input image that contains both a repo path and tag.
+// An error is returned if the image input is empty.
 func GetImageRepository(image string) (string, error) {
 	if len(image) == 0 {
 		return "", fmt.Errorf("The input image is empty.")
 	}
 
-	imageParts := strings.Split(image, ":")
-	return imageParts[0], nil
+	repo := image
+	tagIndex := strings.LastIndex(image, ":")
+	if tagIndex >= 0 {
+		repo = image[0:tagIndex]
+	}
+
+	return repo, nil
 }
