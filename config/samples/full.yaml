@@ -114,7 +114,7 @@ spec:
         openShiftOAuth: false
 
   stacks:
-    # A list of those repositories which are searched for collections
+    # A list of those repositories which are searched for stacks
     repositories: 
     - name: incubator
       https:
@@ -125,19 +125,19 @@ spec:
       https:
         url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.6.0/default-kabanero-pipelines.tar.gz
 
-  # The information in the Github section is used by the Kabanero CLI to
-  # perform user to role mapping when accessing the collection.
+  # The information in the 'github' section is used by the Kabanero CLI and Console to
+  # help access and manage the stacks.
   github:
-    # The API URL refers to the Github instance (or GHE instance) that
-    # contains the organization where the collection was cloned.  The
-    # CLI will use this URL to interact with Github (or GHE).
+    # The API URL refers to the GitHub instance (or GHE instance) that
+    # contains the organization where the stack hub was forked.  The
+    # CLI will use this URL to interact with GitHub (or GHE).
     apiUrl: https://api.github.com
-    # The Github organization contains the repository where the
-    # collection was cloned.
+    # The GitHub organization contains the repository where the
+    # stack hub was forked.
     organization: kabanero-io
     # The list of teams which should have admin authority to the
-    # collection.  Each team must be defined in the Github
+    # stack.  Each team must be defined in the GitHub
     # organization.  Members of the teams will be able to login to the
-    # Kabanero CLI and administer the collection.
+    # Kabanero CLI and Console to administer the stack.
     teams:
     - adminTeam
