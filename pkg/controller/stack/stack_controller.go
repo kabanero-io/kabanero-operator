@@ -206,6 +206,15 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	return false
 }
 
+// Check to see if the status contains any assets that are failed
+func stackSummary(status kabanerov1alpha2.StackStatus) string {
+	var summary = make([]string, len(status.Versions))
+	for i, version := range status.Versions {
+		summary[i] = fmt.Sprintf("%v: %v", version.Version, version.Status)
+	}
+	return fmt.Sprintf("[ %v ]", strings.Join(summary, ", "))
+}
+
 // Used internally by ReconcileStack to store matching stacks
 // Could be less cumbersome to just use kabanerov1alpha2.Stack
 type resolvedStack struct {
@@ -576,6 +585,8 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		log.Info(fmt.Sprintf("Updated stack status: %#v", newStackVersionStatus))
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
+	
+	newStackStatus.Summary = stackSummary(newStackStatus)
 
 	stackResource.Status = newStackStatus
 
