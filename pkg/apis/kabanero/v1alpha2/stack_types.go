@@ -64,6 +64,7 @@ type StackStatus struct {
 	StatusMessage string `json:"statusMessage,omitempty"`
 	// +listType=set
 	Versions []StackVersionStatus `json:"versions,omitempty"`
+	Summary string `json:"summary,omitempty"`
 }
 
 // StackVersionStatus defines the observed state of a specific stack version.
@@ -90,7 +91,7 @@ type Image struct {
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations."
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="Stack status."
+// +kubebuilder:printcolumn:name="Summary",type="string",JSONPath=".status.summary",description="Stack summary."
 // +kubebuilder:resource:path=stacks,scope=Namespaced
 type Stack struct {
 	metav1.TypeMeta   `json:",inline"`
