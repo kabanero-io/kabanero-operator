@@ -12,6 +12,7 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,7 +35,7 @@ var ctrlr controller.Controller
 type reconcileFunc func(context.Context, *kabanerov1alpha2.Kabanero, client.Client, logr.Logger) error
 
 type reconcileFuncType struct {
-	name string
+	name     string
 	function reconcileFunc
 }
 
@@ -77,24 +78,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Create a handler
-	tH := &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &kabanerov1alpha2.Kabanero{},
-	}
-
-	// Create predicate
-	tPred := predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Returning true only when the metadata generation has changed,
-			// allows us to ignore events where only the object status has changed,
-			// since the generation is not incremented when only the status changes
-			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
-		},
-	}
-
 	// Watch Stacks
-	err = c.Watch(&source.Kind{Type: &kabanerov1alpha2.Stack{}}, tH, tPred)
+	err = c.Watch(&source.Kind{Type: &kabanerov1alpha2.Stack{}}, getWatchHandlerForKabaneroOwner(), getWatchPredicateFunc())
+	if err != nil {
+		return err
+	}
+
+	// Watch Kabanero owned deployments.
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, getWatchHandlerForKabaneroOwner(), getWatchPredicateFunc())
 	if err != nil {
 		return err
 	}
@@ -105,8 +96,28 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
+}
+
+// Returns a watch handler.
+func getWatchHandlerForKabaneroOwner() *handler.EnqueueRequestForOwner {
+	return &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &kabanerov1alpha2.Kabanero{},
+	}
+}
+
+// Returns a watch predicate.
+func getWatchPredicateFunc() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Returning true only when the metadata generation has changed,
+			// allows us to ignore events where only the object status has changed,
+			// since the generation is not incremented when only the status changes
+			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+		},
+	}
 }
 
 var _ reconcile.Reconciler = &ReconcileKabanero{}
@@ -179,7 +190,7 @@ func (r *ReconcileKabanero) convertTo_v1alpha2(kabInstanceUnstructured *unstruct
 	data, err := kabInstanceUnstructured.MarshalJSON()
 	if err != nil {
 		reqLogger.Error(err, "Error marshalling unstructured data: ")
-		return 
+		return
 	}
 
 	kabInstanceV1 := &kabanerov1alpha1.Kabanero{}
@@ -257,7 +268,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			return reconcile.Result{}, nil // Will run again since we changed the object
 		}
 	}
-	
+
 	// Fetch the Kabanero instance
 	instance := &kabanerov1alpha2.Kabanero{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -299,7 +310,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		processStatus(ctx, request, instance, r.client, reqLogger)
 		return reconcile.Result{Requeue: true, RequeueAfter: 10 * time.Second}, nil
 	}
-	
+
 	// Iterate the components and try to reconcile.  If something goes wrong,
 	// update the status and try again later.
 	for _, component := range reconcileFuncs {
@@ -321,7 +332,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	// things worked reset requeue data
 	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
-	
+
 	// Determine the status of the kabanero operator instance and set it.
 	isReady, err := processStatus(ctx, request, instance, r.client, reqLogger)
 	if err != nil {
@@ -470,7 +481,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
-	
+
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
 		isStackControllerReady &&
