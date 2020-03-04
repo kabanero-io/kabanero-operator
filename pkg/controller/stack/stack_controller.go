@@ -206,7 +206,7 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	return false
 }
 
-// Check to see if the status contains any assets that are failed
+// Create a stack status summary string
 func stackSummary(status kabanerov1alpha2.StackStatus) string {
 	var summary = make([]string, len(status.Versions))
 	for i, version := range status.Versions {
