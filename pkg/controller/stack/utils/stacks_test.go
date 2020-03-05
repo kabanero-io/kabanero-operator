@@ -48,6 +48,7 @@ func TestRemoveTagFromStackImages(t *testing.T) {
 
 // Tests that GetImageRepository removes the tag from the input image.  .
 func TestGetImageRepository(t *testing.T) {
+	// Test external repository:tag
 	image := "kabanero/kabanero-image:1.2.3"
 	repo, err := GetImageRepository(image)
 	if err != nil {
@@ -58,6 +59,18 @@ func TestGetImageRepository(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
 	}
 
+	// Test external repository with no tag.
+	image = "kabanero/kabanero-image"
+	repo, err = GetImageRepository(image)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
+	}
+	expectedRepo = "kabanero/kabanero-image"
+	if repo != expectedRepo {
+		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
+	}
+
+	// Test internal respository (with port) and tag
 	image = "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile:1.2.3"
 	repo, err = GetImageRepository(image)
 	if err != nil {
@@ -65,6 +78,42 @@ func TestGetImageRepository(t *testing.T) {
 	}
 
 	expectedRepo = "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile"
+	if repo != expectedRepo {
+		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
+	}
+
+	// Test internal respository (with port) and no tag
+	image = "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile"
+	repo, err = GetImageRepository(image)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
+	}
+
+	expectedRepo = "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile"
+	if repo != expectedRepo {
+		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
+	}
+
+	// Test default (?) repository and tag
+	image = "java-microprofile:1.2.3"
+	repo, err = GetImageRepository(image)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
+	}
+
+	expectedRepo = "java-microprofile"
+	if repo != expectedRepo {
+		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
+	}
+
+	// Test default (?) repository and no tag
+	image = "java-microprofile"
+	repo, err = GetImageRepository(image)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
+	}
+
+	expectedRepo = "java-microprofile"
 	if repo != expectedRepo {
 		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
 	}
