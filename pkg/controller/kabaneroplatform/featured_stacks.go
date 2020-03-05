@@ -20,6 +20,12 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 		return err
 	}
 
+	// Clean existing stacks based on the stacks read from the repository index(es).
+	err = preProcessCurrentStacks(ctx, k, cl, stackMap)
+	if err != nil {
+		return err
+	}
+
 	// Each key is a stack id.  Get that Stack CR instance and see if the versions are set correctly.
 	for key, value := range stackMap {
 		updateStack := utils.Update
@@ -28,10 +34,12 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 			Namespace: k.GetNamespace(),
 		}
 
+		alreadyDeployed := true
 		stackResource := &kabanerov1alpha2.Stack{}
 		err := cl.Get(ctx, name, stackResource)
 		if err != nil {
 			if errors.IsNotFound(err) {
+				alreadyDeployed = false
 				// Not found. Need to create it.
 				updateStack = utils.Create
 				ownerIsController := true
@@ -72,10 +80,13 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 			for j, stackVersion := range stackResource.Spec.Versions {
 				if stackVersion.Version == stack.Version {
 					foundVersion = true
-					stackVersion.Pipelines = stack.Pipelines
-					stackVersion.SkipCertVerification = stack.SkipCertVerification
-					stackVersion.Images = stack.Images
-					stackResource.Spec.Versions[j] = stackVersion
+					// Per the new defintion of active, do not update any existing stacks with matching names and versions.
+					if !(alreadyDeployed && stackVersion.DesiredState == "active") {
+						stackVersion.Pipelines = stack.Pipelines
+						stackVersion.SkipCertVerification = stack.SkipCertVerification
+						stackVersion.Images = stack.Images
+						stackResource.Spec.Versions[j] = stackVersion
+					}
 				}
 			}
 
@@ -96,7 +107,6 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 
 // Resolves all stacks for the given Kabanero instance
 func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client) (map[string][]kabanerov1alpha2.StackVersion, error) {
-
 	stackMap := make(map[string][]kabanerov1alpha2.StackVersion)
 	for _, r := range k.Spec.Stacks.Repositories {
 		// Figure out what set of pipelines to use.  The Kabanero instance defines a default
@@ -136,4 +146,54 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client) (map[string]
 	}
 
 	return stackMap, nil
+}
+
+// Cleans up current stacks based on desired state. Current stack versions with the active state must be preserved.
+func preProcessCurrentStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, indexStackMap map[string][]kabanerov1alpha2.StackVersion) error {
+	deployedStacks := &kabanerov1alpha2.StackList{}
+	err := cl.List(ctx, deployedStacks, client.InNamespace(k.GetNamespace()))
+	if err != nil {
+		return err
+	}
+
+	// Compare the list of currently deployed stacks and the stacks in the index.
+	for _, deployedStack := range deployedStacks.Items {
+		iStackList, _ := indexStackMap[deployedStack.GetName()]
+		newStackVersions := []kabanerov1alpha2.StackVersion{}
+		for _, dStackVersion := range deployedStack.Spec.Versions {
+			deployedStackVersionMatchIndex := false
+			// Keep the stacks with matching versions. The caller will do the updates if necessary.
+			for _, iStack := range iStackList {
+				if dStackVersion.Version == iStack.Version {
+					deployedStackVersionMatchIndex = true
+					newStackVersions = append(newStackVersions, dStackVersion)
+					break
+				}
+			}
+
+			// Keep any stack versions that have a desired state of active.
+			if !deployedStackVersionMatchIndex && dStackVersion.DesiredState == kabanerov1alpha2.StackDesiredStateActive {
+				newStackVersions = append(newStackVersions, dStackVersion)
+				continue
+			}
+		}
+
+		// If there were no indications that the stack should be kept around, delete it.
+		if len(newStackVersions) == 0 {
+			err := cl.Delete(ctx, &deployedStack)
+			if err != nil {
+				return err
+			}
+			break
+		}
+
+		// If there were differences between the deployed list of versions and the list of deployed versions that need to be kept,
+		// update the current stack.
+		if len(deployedStack.Spec.Versions) != len(newStackVersions) {
+			deployedStack.Spec.Versions = newStackVersions
+			cl.Update(ctx, &deployedStack)
+		}
+	}
+
+	return nil
 }
