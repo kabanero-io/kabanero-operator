@@ -6,7 +6,7 @@
 #
 
 # -----------------------------------------------------------------------
-# KAppNav 0.6.0
+# KAppNav 0.7.0
 # -----------------------------------------------------------------------
 apiVersion: v1
 kind: Namespace
@@ -104,7 +104,7 @@ spec:
       containers:
         - name: kappnav-operator
           # Replace this with the built image name
-          image: kappnav/operator:0.6.0
+          image: kappnav/operator:0.7.0
           command:
           - kappnav-operator
           imagePullPolicy: Always
@@ -137,7 +137,7 @@ spec:
 
   appNavAPI:
     repository: kappnav/apis
-    tag: 0.6.0
+    tag: 0.7.0
 
   ###############################################################################
   ## kAppNav Controller variables
@@ -145,7 +145,7 @@ spec:
 
   appNavController:
     repository: kappnav/controller
-    tag: 0.6.0
+    tag: 0.7.0
 
   ###############################################################################
   ## kAppNav UI variables
@@ -153,7 +153,7 @@ spec:
 
   appNavUI:
     repository: kappnav/ui
-    tag: 0.6.0
+    tag: 0.7.0
 
   ###############################################################################
   ## Environmental variables
