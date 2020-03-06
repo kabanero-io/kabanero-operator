@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -93,7 +94,12 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 			return false, reason, err
 		} else {
 			for _, image := range version.Images {
-				if strings.Contains(image.Image, ":") {
+				repository, err := utils.GetImageRepository(image.Image)
+				if err != nil {
+					reason = fmt.Sprintf("Could not parse Image %v associated with Stack %v %v: %v", image.Image, stack.Spec.Name, version.Version, err.Error())
+					return false, reason, err
+				}
+				if repository != image.Image {
 					reason = fmt.Sprintf("Image %v associated with Stack %v %v should not contain an image tag. Stack: %v", image.Image, stack.Spec.Name, version.Version, stack)
 					err = fmt.Errorf(reason)
 					return false, reason, err
