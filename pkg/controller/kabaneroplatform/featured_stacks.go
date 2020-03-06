@@ -81,8 +81,9 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 			for j, stackVersion := range stackResource.Spec.Versions {
 				if stackVersion.Version == stack.Version {
 					foundVersion = true
-					// Per the new defintion of active, do not update any existing stacks with matching names and versions.
-					if !(alreadyDeployed && stackVersion.DesiredState == "active") {
+					// Per the new defintion of desired state, do not update any existing stacks if the desired state is set
+					// to an allowed value.
+					if !(alreadyDeployed && len(stackVersion.DesiredState) > 0) {
 						stackVersion.Pipelines = stack.Pipelines
 						stackVersion.SkipCertVerification = stack.SkipCertVerification
 						stackVersion.Images = stack.Images
@@ -149,7 +150,7 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger lo
 	return stackMap, nil
 }
 
-// Cleans up current stacks based on desired state. Current stack versions with the active state must be preserved.
+// Cleans up currently deployed stacks based on desired state. Stack versions with an non-empty state must be preserved and not modified.
 func preProcessCurrentStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, indexStackMap map[string][]kabanerov1alpha2.StackVersion) error {
 	deployedStacks := &kabanerov1alpha2.StackList{}
 	err := cl.List(ctx, deployedStacks, client.InNamespace(k.GetNamespace()))
@@ -172,8 +173,8 @@ func preProcessCurrentStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 				}
 			}
 
-			// Keep any stack versions that have a desired state of active.
-			if !deployedStackVersionMatchIndex && dStackVersion.DesiredState == kabanerov1alpha2.StackDesiredStateActive {
+			// Keep any stack versions that have a desired state that is not empty.
+			if !deployedStackVersionMatchIndex && len(dStackVersion.DesiredState) > 0 {
 				newStackVersions = append(newStackVersions, dStackVersion)
 				continue
 			}

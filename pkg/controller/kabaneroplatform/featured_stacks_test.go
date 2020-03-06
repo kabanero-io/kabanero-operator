@@ -569,14 +569,12 @@ func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 	}
 }
 
-// Tests that if an existing stack version with an non-active desired state matches the name/version of a stack in the index, the
-// data associated with the index version overrides the existing version.
-// Tests that a stack version with an unset desired state is removed if it is not found in the index being deployed.
-// Tests that if an existing stack version with an active state is not found in the index being deployed, the existing version
-// remains untouched.
-func TestResolveFeaturedStacksCleanupMatchingStackVersionWithNonActiveState(t *testing.T) {
+// Tests that if an existing stack version has desired state defined (any allowed string), it should not be deleted or modified.
+// Tests that if an existing stack version has no desired state defined and it matches the version in the index, the existing
+// stack's values are overriden by the ones in the index.
+func TestResolveFeaturedStacksCleanup1(t *testing.T) {
 	stack := stackResource.DeepCopy()
-	stack.Spec.Versions[0].DesiredState = "NotAValidState"
+	stack.Spec.Versions[0].DesiredState = "inactive"
 	stack.Spec.Versions[1].DesiredState = kabanerov1alpha2.StackDesiredStateActive
 
 	deployedStacks := make(map[string]*kabanerov1alpha2.Stack)
@@ -607,9 +605,9 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithNonActiveState(t *t
 		t.Fatal("Could not resolve the java-microprofile stack", err)
 	}
 
-	// Only two nodejs versions are expected to be available.
-	if len(nodejsStack.Spec.Versions) != 2 {
-		t.Fatal(fmt.Sprintf("The nodejs stack did not have the number of expected versions: 2. It has: %v. Stack: %v", len(nodejsStack.Spec.Versions), nodejsStack))
+	// Three nodejs versions are expected to be available.
+	if len(nodejsStack.Spec.Versions) != 3 {
+		t.Fatal(fmt.Sprintf("The nodejs stack did not have the number of expected versions: 3. It has: %v. Stack: %v", len(nodejsStack.Spec.Versions), nodejsStack))
 	}
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
@@ -622,7 +620,7 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithNonActiveState(t *t
 			}
 		}
 
-		// Existing version 0.2.5 does exist in the new index. However it's desired state is set to active; therefore, this version must remain unchanged.
+		// Existing version 0.2.5 does exist in the new index. However it's desired state is set (active); therefore, this version must remain unchanged.
 		if njVersion.Version == "0.2.5" {
 			if njVersion.Pipelines[0].Https.Url != "https://pipelines/default/0.2.5" {
 				t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.5 did not contain the expected Url. Url found: %v. Stack version: %v", njVersion.Pipelines[0].Https.Url, njVersion))
@@ -632,19 +630,25 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithNonActiveState(t *t
 			}
 		}
 
-		// Existing version 0.2.4 should have been deleted because it is not in the new index and its current desired state was not set.
+		// Existing version 0.2.4 should should not have been removed or modified. It defines a non-empty desired state, which under the new definition of a desired state, it
+		// is equivalent to saying do not delete/modify the resource.
 		if njVersion.Version == "0.2.4" {
-			t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.4 should have been deleted. Stack: %v", nodejsStack))
+			if njVersion.Pipelines[0].Https.Url != "https://pipelines/default/0.2.4" {
+				t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.4 did not contain the expected Url. Url found: %v. Stack version: %v", njVersion.Pipelines[0].Https.Url, njVersion))
+			}
+			if njVersion.DesiredState != "inactive" {
+				t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.4 did not contain the expected desired state of inactive. Desired state found: %v. Stack version: %v", njVersion.DesiredState, njVersion))
+			}
 		}
 	}
 }
 
-// Tests that if an existing stack version with an active desired state matches the name/version of a stack in the index, the
+// Tests that if an existing stack version with a set desired state matches the name/version of a stack in the index, the
 // data associated with the index version is ignored.
-// Tests that if an existing stack version with an active desired state does not match the name/version of a stack in the index, but
-// the existing stack version defines a desire state of active, the existing stack version is kept.
-// Tests that a stack versions with an unset/not-active desired states are removed if they are not found in the index being deployed.
-func TestResolveFeaturedStacksCleanupMatchingStackVersionWithActiveState(t *testing.T) {
+// Tests that if an existing stack version with a set desired state (any string), the existing stack is not deleted/changed;
+// even though, the existing/index stack versions do not match.
+// Tests that a stack versions with an unset desired states are removed if they are not found in the index being deployed.
+func TestResolveFeaturedStacksCleanup2(t *testing.T) {
 	stack := stackResource.DeepCopy()
 	stack.Spec.Versions[0].DesiredState = kabanerov1alpha2.StackDesiredStateActive
 	stack.Spec.Versions[1].DesiredState = ""
@@ -685,7 +689,7 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithActiveState(t *test
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
 	for _, njVersion := range nodejsStack.Spec.Versions {
-		// Existing version 0.2.4 does not what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.4 does not what is in the index; however, the existing version has a set desired state (active).
 		// This means that the existing version 0.2.4 should be kept.
 		if njVersion.Version == "0.2.4" {
 			if njVersion.Pipelines[0].Https.Url != "https://pipelines/default/0.2.4" {
@@ -701,7 +705,7 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithActiveState(t *test
 			t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.5 should have been deleted. Stack: %v", nodejsStack))
 		}
 
-		// Existing version 0.2.6 matches what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.6 matches what is in the index; however, the existing version has a set desired state (active).
 		// This means that the existing 0.2.6 values should not be overriden by the contents of the index.
 		if njVersion.Version == "0.2.6" {
 			if njVersion.Pipelines[0].Https.Url != "https://pipelines/default/0.2.6" {
@@ -715,8 +719,8 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithActiveState(t *test
 }
 
 // Tests that an existing stack is not deleted if the index does not have a matching stack and there is at least one existing stack version that defines
-// an active satate. Furthermore, any other versions of the existing stack that do not define an active desired state, should be deleted.
-func TestResolveFeaturedStacksCleanupUnmatchingStacksOneActiveVersion(t *testing.T) {
+// a desired state. Furthermore, any other versions of the existing stack that do not define a desired state, should be deleted.
+func TestResolveFeaturedStacksCleanup3(t *testing.T) {
 	stack := stackResource.DeepCopy()
 	stack.Spec.Name = "cleanuptest"
 	stack.ObjectMeta.Name = "cleanuptest"
@@ -752,7 +756,7 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksOneActiveVersion(t *testing
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
 	for _, jmVersion := range javaMicroprofileStack.Spec.Versions {
-		// Existing version 0.2.19 matches what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.19 matches what is in the index; however, the existing version has a set desired state (active).
 		// This means that the existing values should not be overriden by the contents of the index.
 		if jmVersion.Version == "0.2.19" {
 			if jmVersion.Pipelines[0].Https.Url != "https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz" {
@@ -774,7 +778,7 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksOneActiveVersion(t *testing
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
 	for _, njVersion := range nodejsStack.Spec.Versions {
-		// Existing version 0.2.6 matches what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.6 matches what is in the index; however, the existing version has a set desired state (active).
 		// This means that the existing values should not be overriden by the contents of the index.
 		if njVersion.Version == "0.2.6" {
 			if njVersion.Pipelines[0].Https.Url != "https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz" {
@@ -796,17 +800,17 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksOneActiveVersion(t *testing
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
 	for _, ctVersion := range cleanuptestStack.Spec.Versions {
-		// Existing version 0.2.4 should have been deleted because it is not in the new index and its current desired state set to something other than active.
+		// Existing version 0.2.4 should have been deleted because it is not in the new index and its current desired state is not set.
 		if ctVersion.Version == "0.2.4" {
 			t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.4 should have been deleted. Stack: %v", cleanuptestStack))
 		}
 
-		// Existing version 0.2.6 should have been deleted because it is not in the new index and its current desired state was not set.
+		// Existing version 0.2.6 should have been deleted because it is not in the new index and its current desired state is not set.
 		if ctVersion.Version == "0.2.6" {
 			t.Fatal(fmt.Sprintf("Nodejs stack version 0.2.6 should have been deleted. Stack: %v", cleanuptestStack))
 		}
 
-		// Existing version 0.2.5 matches what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.5 matches what is in the index; however, the existing version has a desired state set (active).
 		// This means that the existing values should not be overriden by the contents of the index.
 		if ctVersion.Version == "0.2.5" {
 			if ctVersion.Pipelines[0].Https.Url != "https://pipelines/default/0.2.5" {
@@ -820,8 +824,8 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksOneActiveVersion(t *testing
 }
 
 // Tests that an existing stack is deleted if the index does not have a matching stack and the existing stack's versions
-// do not specify an active desired state.
-func TestResolveFeaturedStacksCleanupUnmatchingStacksNoActiveVersion(t *testing.T) {
+// do not define a desired state.
+func TestResolveFeaturedStacksCleanup4(t *testing.T) {
 	stack := stackResource.DeepCopy()
 	stack.Spec.Name = "cleanuptest"
 	stack.ObjectMeta.Name = "cleanuptest"
@@ -856,7 +860,7 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksNoActiveVersion(t *testing.
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
 	for _, jmVersion := range javaMicroprofileStack.Spec.Versions {
-		// Existing version 0.2.19 matches what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.19 matches what is in the index; however, the existing version has a set desired state (active).
 		// This means that the existing values should not be overriden by the contents of the index.
 		if jmVersion.Version == "0.2.19" {
 			if jmVersion.Pipelines[0].Https.Url != "https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz" {
@@ -878,7 +882,7 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksNoActiveVersion(t *testing.
 
 	// Iterate and validate that the expected versions and content match what we expect them to be.
 	for _, njVersion := range nodejsStack.Spec.Versions {
-		// Existing version 0.2.6 matches what is in the index; however, the existing version has a desired state of active.
+		// Existing version 0.2.6 matches what is in the index; however, the existing version has a set desired state (active).
 		// This means that the existing values should not be overriden by the contents of the index.
 		if njVersion.Version == "0.2.6" {
 			if njVersion.Pipelines[0].Https.Url != "https://github.com/kabanero-io/collections/releases/download/0.4.0/incubator.common.pipeline.default.tar.gz" {
