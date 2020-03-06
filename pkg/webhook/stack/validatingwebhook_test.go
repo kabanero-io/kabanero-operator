@@ -291,3 +291,45 @@ func TestValidatingWebhook12(t *testing.T) {
 		t.Fatal("Validation failed. An error was expected: ", err)
 	}
 }
+
+// Spec.Versions[].Images[].Image contains a port, not a tag
+func TestValidatingWebhook13(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Images[0].Image = "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if !allowed {
+		t.Fatal("Validation should not have failed because the stack's image has no tag. The stack update/create was incorrectly denied.")
+	}
+
+	if len(msg) != 0 {
+		t.Fatal("Validation passed. A message was not expected: ", msg)
+	}
+
+	if err != nil {
+		t.Fatal("Validation passed. An error was not expected: ", err)
+	}
+}
+
+// Spec.Versions[].Images[].Image has a port and tag
+func TestValidatingWebhook14(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Images[0].Image = "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile:latest"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed because the stack's image has a tag. The stack update/create was incorrectly allowed.")
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}
