@@ -47,7 +47,6 @@ related-software:
     identifiers:
       repository: "kabanero/landing"
       tag: "0.6.0"
-      
 
   cli-services: 
   - version: "0.6.0"
