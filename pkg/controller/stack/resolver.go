@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-github/v29/github"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
@@ -19,13 +20,13 @@ import (
 )
 
 // ResolveIndex returns a structure representation of the yaml file represented by the index.
-func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, namespace string, pipelines []Pipelines, triggers []Trigger, imagePrefix string) (*Index, error) {
+func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, namespace string, pipelines []Pipelines, triggers []Trigger, imagePrefix string, reqLogger logr.Logger) (*Index, error) {
 	var indexBytes []byte
 
 	switch {
 	// GIT:
 	case isGitReleaseUsable(repoConf.GitRelease):
-		bytes, err := getStackIndexUsingGit(c, repoConf.GitRelease, namespace)
+		bytes, err := getStackDataUsingGit(c, repoConf.GitRelease, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -146,11 +147,11 @@ func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte,
 }
 
 // Retrieves a stack index file content using GitHub APIs
-func getStackIndexUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string) ([]byte, error) {
+func getStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string, reqLogger logr.Logger) ([]byte, error) {
 	var indexBytes []byte
 
 	// Get a Github client.
-	gclient, err := getGitClient(c, gitRelease, namespace)
+	gclient, err := getGitClient(c, gitRelease, namespace, reqLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +186,7 @@ func getStackIndexUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitRelea
 }
 
 // Retrieves a Git client.
-func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string) (*github.Client, error) {
+func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string, reqLogger logr.Logger) (*github.Client, error) {
 	var client *github.Client
 
 	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}
@@ -198,6 +199,7 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 
 	var pat []byte
 	if secret != nil {
+		reqLogger.Info(fmt.Sprintf("Secret used for secured GIT client requests: %v. Secret annotations: %v", secret.GetName(), secret.Annotations))
 		pat, _ = secret.Data["password"]
 	}
 

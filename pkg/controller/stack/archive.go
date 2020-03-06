@@ -40,12 +40,12 @@ type StackAsset struct {
 	Yaml    unstructured.Unstructured
 }
 
-func DownloadToByte(c client.Client, namespace string, url string, gitRelease kabanerov1alpha2.GitReleaseSpec) ([]byte, error) {
+func DownloadToByte(c client.Client, namespace string, url string, gitRelease kabanerov1alpha2.GitReleaseSpec, reqLogger logr.Logger) ([]byte, error) {
 	var archiveBytes []byte
 	switch {
 	// GIT:
 	case isGitReleaseUsable(gitRelease):
-		bytes, err := getStackIndexUsingGit(c, gitRelease, namespace)
+		bytes, err := getStackDataUsingGit(c, gitRelease, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +71,7 @@ func commTrace(buffer []byte) string {
 	for bytesLeft := len(buffer); bytesLeft > 0; {
 		var bytesThisRound []byte
 		if bytesLeft >= 16 {
-			bytesThisRound = buffer[len(buffer)-bytesLeft:len(buffer)-bytesLeft+16]
+			bytesThisRound = buffer[len(buffer)-bytesLeft : len(buffer)-bytesLeft+16]
 		} else {
 			bytesThisRound = buffer[len(buffer)-bytesLeft:]
 		}
@@ -253,28 +253,28 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 	return manifests, nil
 }
 
-
 //Apply the Kabanero yaml directive processor
-func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) ([]StackAsset, error){
+func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) ([]StackAsset, error) {
 	manifests := []StackAsset{}
-			s := &DirectiveProcessor{}
+	s := &DirectiveProcessor{}
 	rb, err := s.Render(b, renderingContext)
-			if err != nil {
+	if err != nil {
 		return manifests, fmt.Errorf("Error processing directives %v: %v", filename, err.Error())
-			}
+	}
 
 	decoder := yaml.NewYAMLToJSONDecoder(bytes.NewReader(rb))
-			out := unstructured.Unstructured{}
-			for err = decoder.Decode(&out); err == nil; {
-				gvk := out.GroupVersionKind()
-				manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
-				out = unstructured.Unstructured{}
-				err = decoder.Decode(&out)
+	out := unstructured.Unstructured{}
+	for err = decoder.Decode(&out); err == nil; {
+		gvk := out.GroupVersionKind()
+		manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
+		out = unstructured.Unstructured{}
+		err = decoder.Decode(&out)
 	}
 	return manifests, err
 }
 
 type fileType string
+
 var tarGzType fileType = ".tar.gz"
 var yamlType fileType = ".yaml"
 
@@ -294,7 +294,7 @@ func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) fileTyp
 }
 
 func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
-	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease)
+	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease, reqLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -330,6 +330,3 @@ func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1al
 
 	return nil, fmt.Errorf("Can not decode file type of file for Pipeline %v. Must be .tar.gz or .yaml.", pipelineStatus.Name)
 }
-
-
-

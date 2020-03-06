@@ -3,10 +3,13 @@ package stack
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var resolverTestLogger logr.Logger = log.WithValues("Request.Namespace", "test", "Request.Name", "resolver_test")
 
 var testSecret corev1.Secret = corev1.Secret{
 	ObjectMeta: metav1.ObjectMeta{
@@ -32,7 +35,7 @@ func TestResolveIndex(t *testing.T) {
 		},
 	}
 
-	index, err := ResolveIndex(nil, repoConfig, "kabanero", []Pipelines{}, []Trigger{}, "")
+	index, err := ResolveIndex(nil, repoConfig, "kabanero", []Pipelines{}, []Trigger{}, "", resolverTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +57,7 @@ func TestResolveIndexForStacks(t *testing.T) {
 
 	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
 	triggers := []Trigger{{Id: "testTrigger", Sha256: "0987654321", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.trigger.tar.gz"}}
-	index, err := ResolveIndex(nil, repoConfig, "kabanero", pipelines, triggers, "kabanerobeta")
+	index, err := ResolveIndex(nil, repoConfig, "kabanero", pipelines, triggers, "kabanerobeta", resolverTestLogger)
 
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +121,7 @@ func TestResolveIndexForStacksInPublicGitFailure1(t *testing.T) {
 
 	pipelines := []Pipelines{{Id: "testPipeline", Sha256: "1234567890", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.common.pipeline.default.tar.gz"}}
 	triggers := []Trigger{{Id: "testTrigger", Sha256: "0987654321", Url: "https://github.com/kabanero-io/collections/releases/download/0.5.0-rc.2/incubator.trigger.tar.gz"}}
-	index, err := ResolveIndex(nil, repoConfig, "kabanero", pipelines, triggers, "kabanerobeta")
+	index, err := ResolveIndex(nil, repoConfig, "kabanero", pipelines, triggers, "kabanerobeta", resolverTestLogger)
 
 	if err == nil {
 		t.Fatal("No Git release or Http url were specified. An error was expected. Index: ", index)

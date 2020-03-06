@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -136,6 +137,7 @@ var defaultIndexPipeline = "https://github.com/kabanero-io/collections/releases/
 var defaultIndexPipelineDigest = "0123456789012345678901234567890123456789012345678901234567890123"
 var secondIndexPipeline = "https://github.com/kabanero-io/collections/releases/download/0.6.0/incubator.common.pipeline.default.tar.gz"
 var secondIndexPipelineDigest = "1234567890123456789012345678901234567890123456789012345678901234"
+var featuredTestLogger logr.Logger = log.WithValues("Request.Namespace", "test", "Request.Name", "featured_stacks_test")
 
 var stackResource kabanerov1alpha2.Stack = kabanerov1alpha2.Stack{
 	ObjectMeta: metav1.ObjectMeta{Name: "nodejs", UID: "myuid", Namespace: "kabanero"},
@@ -210,7 +212,7 @@ func TestReconcileFeaturedStacks(t *testing.T) {
 	stackUrl := server.URL + defaultIndexName
 	k := createKabanero(stackUrl)
 
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +287,7 @@ func TestReconcileFeaturedStacksTwoRepositories(t *testing.T) {
 	k := createKabanero(stackUrl)
 	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stackUrlTwo}})
 
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +368,7 @@ func TestReconcileAppsodyStacksCustomPipelines(t *testing.T) {
 	customPipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: secondIndexPipeline}
 	k.Spec.Stacks.Repositories[0].Pipelines = append(k.Spec.Stacks.Repositories[0].Pipelines, kabanerov1alpha2.PipelineSpec{Id: "custom", Sha256: secondIndexPipelineDigest, Https: customPipelineUrl})
 
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +436,7 @@ func TestReconcileAppsodyStacksDefaultPipelines(t *testing.T) {
 	pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: defaultIndexPipeline}
 	k.Spec.Stacks.Pipelines = append(k.Spec.Stacks.Pipelines, kabanerov1alpha2.PipelineSpec{Id: "default", Sha256: defaultIndexPipelineDigest, Https: pipelineUrl})
 
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,7 +498,7 @@ func TestResolveFeaturedStacks(t *testing.T) {
 	stack_index_url := server.URL + defaultIndexName
 	k := createKabanero(stack_index_url)
 
-	stacks, err := featuredStacks(k, nil)
+	stacks, err := featuredStacks(k, nil, featuredTestLogger)
 	if err != nil {
 		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}
@@ -537,7 +539,7 @@ func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 	k := createKabanero(stack_index_url)
 	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stack_index_url_two}})
 
-	stacks, err := featuredStacks(k, nil)
+	stacks, err := featuredStacks(k, nil, featuredTestLogger)
 	if err != nil {
 		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}
@@ -587,7 +589,7 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithNonActiveState(t *t
 	k := createKabanero(stackUrl)
 
 	ctx := context.Background()
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -658,7 +660,7 @@ func TestResolveFeaturedStacksCleanupMatchingStackVersionWithActiveState(t *test
 	k := createKabanero(stackUrl)
 
 	ctx := context.Background()
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -730,7 +732,7 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksOneActiveVersion(t *testing
 	k := createKabanero(stackUrl)
 
 	ctx := context.Background()
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -834,7 +836,7 @@ func TestResolveFeaturedStacksCleanupUnmatchingStacksNoActiveVersion(t *testing.
 	k := createKabanero(stackUrl)
 
 	ctx := context.Background()
-	err := reconcileFeaturedStacks(ctx, k, cl)
+	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
