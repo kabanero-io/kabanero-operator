@@ -16,7 +16,7 @@ kabanero:
 - version: "0.7.0"
   related-versions: 
     cli-services: "0.6.0"
-    landing: "0.6.0"
+    landing: "0.7.0-rc.1"
     events: "0.1.0"
     collection-controller: "0.7.0-alpha.1"
     stack-controller: "0.7.0-alpha.1"
@@ -37,6 +37,11 @@ kabanero:
 
 related-software:
   landing:
+  - version: "0.7.0-rc.1"
+    orchestrations: "orchestrations/landing/0.1"
+    identifiers:
+      repository: "kabanero/landing"
+      tag: "0.7.0-rc.1"
   - version: "0.6.0"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
