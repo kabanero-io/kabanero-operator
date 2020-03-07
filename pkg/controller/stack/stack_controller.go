@@ -11,9 +11,9 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	mf "github.com/manifestival/manifestival"
 	mfc "github.com/manifestival/controller-runtime-client"
-	
+	mf "github.com/manifestival/manifestival"
+
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -136,7 +136,7 @@ type ReconcileStack struct {
 	scheme *runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
-	indexResolver func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string) (*Index, error)
+	indexResolver func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string, logr.Logger) (*Index, error)
 }
 
 // Reconcile reads that state of the cluster for a Stack object and makes changes based on the state read
@@ -585,7 +585,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		log.Info(fmt.Sprintf("Updated stack status: %#v", newStackVersionStatus))
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
-	
+
 	newStackStatus.Summary = stackSummary(newStackStatus)
 
 	stackResource.Status = newStackStatus

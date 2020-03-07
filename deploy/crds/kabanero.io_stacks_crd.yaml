@@ -10,9 +10,9 @@ spec:
       across separate operations.
     name: Age
     type: date
-  - JSONPath: .status.status
-    description: Stack status.
-    name: Status
+  - JSONPath: .status.summary
+    description: Stack summary.
+    name: Summary
     type: string
   group: kabanero.io
   names:
@@ -109,6 +109,8 @@ spec:
           description: StackStatus defines the observed state of a stack
           properties:
             statusMessage:
+              type: string
+            summary:
               type: string
             versions:
               items:

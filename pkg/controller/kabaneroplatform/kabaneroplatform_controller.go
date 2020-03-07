@@ -323,7 +323,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// Deploy feature collection resources.
-	err = reconcileFeaturedStacks(ctx, instance, r.client)
+	err = reconcileFeaturedStacks(ctx, instance, r.client, reqLogger)
 	if err != nil {
 		reqLogger.Error(err, "Error reconciling featured stacks.")
 		processStatus(ctx, request, instance, r.client, reqLogger)
