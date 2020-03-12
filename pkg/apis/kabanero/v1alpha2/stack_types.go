@@ -64,7 +64,7 @@ type StackStatus struct {
 	StatusMessage string `json:"statusMessage,omitempty"`
 	// +listType=set
 	Versions []StackVersionStatus `json:"versions,omitempty"`
-	Summary string `json:"summary,omitempty"`
+	Summary  string               `json:"summary,omitempty"`
 }
 
 // StackVersionStatus defines the observed state of a specific stack version.
@@ -81,8 +81,15 @@ type StackVersionStatus struct {
 
 // Image defines a container image used by a stack
 type Image struct {
-	Id    string `json:"id,omitempty"`
-	Image string `json:"image,omitempty"`
+	Id     string      `json:"id,omitempty"`
+	Image  string      `json:"image,omitempty"`
+	Digest ImageDigest `json:"digest,omitempty"`
+}
+
+// ImageDigest defines a container image digest used by a stack
+type ImageDigest struct {
+	Digest  string `json:"digest,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

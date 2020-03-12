@@ -7,6 +7,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.3.1
+	github.com/google/go-containerregistry v0.0.0-20200115214256-379933c9c22b
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v29 v29.0.3
 	github.com/knative/pkg v0.0.0-20190817231834-12ee58e32cc8 // indirect
@@ -27,6 +28,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.0.0
 	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible
+	k8s.io/helm v2.16.1+incompatible
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	sigs.k8s.io/controller-runtime v0.4.0
 )

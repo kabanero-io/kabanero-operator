@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 )
 
@@ -45,7 +47,7 @@ func GetImageRepository(image string) (string, error) {
 	// Reference (docker-specific, but should apply to others):
 	//   https://github.com/docker/distribution/blob/release/2.7/reference/reference.go
 	//   https://docs.docker.com/engine/reference/commandline/tag/
-	
+
 	repo := image
 	tagIndex := strings.LastIndex(image, ":")
 	slashIndex := strings.LastIndex(image, "/")
@@ -54,4 +56,24 @@ func GetImageRepository(image string) (string, error) {
 	}
 
 	return repo, nil
+}
+
+// Retrieves the input image digest from the hosting repository.
+func RetrieveImageDigest(image string) (string, error) {
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return "", err
+	}
+
+	img, err := remote.Image(ref)
+	if err != nil {
+		return "", err
+	}
+
+	h, err := img.Digest()
+	if err != nil {
+		return "", err
+	}
+
+	return h.Hex, nil
 }

@@ -577,6 +577,18 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 			// Update the status of the Stack object to reflect the images used
 			newStackVersionStatus.Images = curSpec.Images
+
+			for j, image := range newStackVersionStatus.Images {
+				img := image.Image + ":" + curSpec.Version
+				digest, err := sutils.RetrieveImageDigest(img)
+				if err != nil {
+					msg := fmt.Sprintf("Unable to retrieve digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+					image.Digest.Message = msg
+				} else {
+					image.Digest.Digest = digest
+				}
+				newStackVersionStatus.Images[j] = image
+			}
 		} else {
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateInactive
 			newStackVersionStatus.StatusMessage = "The stack has been deactivated."
