@@ -1,6 +1,5 @@
 # The Docker image in format repository:tag. Repository may contain a remote reference.
 # Override in order to customize:
-
 #   ARCH would be the target architecture (amd64, ppc64le, s390x)
 #   DOCKER_ID would be your docker user name
 #   DOCKER_TAG would be the tag you want to use in the repository
