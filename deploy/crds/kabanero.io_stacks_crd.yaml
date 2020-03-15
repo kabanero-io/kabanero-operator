@@ -55,15 +55,6 @@ spec:
                     items:
                       description: Image defines a container image used by a stack
                       properties:
-                        digest:
-                          description: ImageDigest defines a container image digest
-                            used by a stack
-                          properties:
-                            digest:
-                              type: string
-                            message:
-                              type: string
-                          type: object
                         id:
                           type: string
                         image:
@@ -128,13 +119,14 @@ spec:
                 properties:
                   images:
                     items:
-                      description: Image defines a container image used by a stack
+                      description: ImageStatus defines a container image status used
+                        by a stack
                       properties:
                         digest:
                           description: ImageDigest defines a container image digest
                             used by a stack
                           properties:
-                            digest:
+                            activation:
                               type: string
                             message:
                               type: string

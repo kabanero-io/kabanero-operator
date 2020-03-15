@@ -15,6 +15,18 @@ const (
 	// StackDesiredStateInactive represents a desired stack inactive state.
 	// It indicates that the stack needs to be deactivated.
 	StackDesiredStateInactive = "inactive"
+
+	// Stack digest policy: strict.
+	StackPolicyStrictDigest = "strictDigest"
+
+	// Stack digest policy: active.
+	StackPolicyActiveDigest = "activeDigest"
+
+	// Stack digest policy: ignore.
+	StackPolicyIgnoreDigest = "ignoreDigest"
+
+	// Stack digest policy: none.
+	StackPolicyNone = "none"
 )
 
 // StackSpec defines the desired composition of a Stack
@@ -76,11 +88,17 @@ type StackVersionStatus struct {
 	Status        string           `json:"status,omitempty"`
 	StatusMessage string           `json:"statusMessage,omitempty"`
 	// +listType=set
-	Images []Image `json:"images,omitempty"`
+	Images []ImageStatus `json:"images,omitempty"`
 }
 
 // Image defines a container image used by a stack
 type Image struct {
+	Id    string `json:"id,omitempty"`
+	Image string `json:"image,omitempty"`
+}
+
+// ImageStatus defines a container image status used by a stack
+type ImageStatus struct {
 	Id     string      `json:"id,omitempty"`
 	Image  string      `json:"image,omitempty"`
 	Digest ImageDigest `json:"digest,omitempty"`
@@ -88,8 +106,8 @@ type Image struct {
 
 // ImageDigest defines a container image digest used by a stack
 type ImageDigest struct {
-	Digest  string `json:"digest,omitempty"`
-	Message string `json:"message,omitempty"`
+	Activation string `json:"activation,omitempty"`
+	Message    string `json:"message,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

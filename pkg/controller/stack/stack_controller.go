@@ -576,18 +576,28 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			stackResource.Spec.Versions[i] = curSpec
 
 			// Update the status of the Stack object to reflect the images used
-			newStackVersionStatus.Images = curSpec.Images
+			for _, img := range curSpec.Images {
+				newStackVersionStatus.Images = append(newStackVersionStatus.Images, kabanerov1alpha2.ImageStatus{Id: img.Id, Image: img.Image})
+			}
 
+			// Retrieve stack image version activation digests. As such, it should only be done once during activation.
+			// If there is an error during first retrieval, a subsequent successful retry may set the current digest and
+			// not the activation digest. More precisely, the digest may not necessarily be the initial activation digest
+			// because we allow stack activation despite there being a failure when retrieving the digest and the
+			// image/digest may have changed before the next successful retry.
 			for j, image := range newStackVersionStatus.Images {
-				img := image.Image + ":" + curSpec.Version
-				digest, err := sutils.RetrieveImageDigest(img)
-				if err != nil {
-					msg := fmt.Sprintf("Unable to retrieve digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
-					image.Digest.Message = msg
-				} else {
-					image.Digest.Digest = digest
+				if len(image.Digest.Activation) == 0 {
+					img := image.Image + ":" + curSpec.Version
+					digest, err := sutils.RetrieveImageDigest(img)
+					if err != nil {
+						msg := fmt.Sprintf("Unable to retrieve stack activation digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+						image.Digest.Message = msg
+					} else {
+						image.Digest.Message = ""
+						image.Digest.Activation = digest
+					}
+					newStackVersionStatus.Images[j] = image
 				}
-				newStackVersionStatus.Images[j] = image
 			}
 		} else {
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateInactive
