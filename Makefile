@@ -8,15 +8,9 @@ ifdef DOCKER_ID
 DOCKER_TAG ?= latest
 IMAGE = ${DOCKER_ID}/kabanero-operator:${DOCKER_TAG}
 REGISTRY_IMAGE = ${DOCKER_ID}/kabanero-operator-registry:${DOCKER_TAG}
-WEBHOOK_IMAGE = ${DOCKER_ID}/kabanero-operator-admission-webhook:${DOCKER_TAG}
-COLLECTION_CTRLR_IMAGE = ${DOCKER_ID}/kabanero-operator-collection-controller:${DOCKER_TAG}
-STACK_CTRLR_IMAGE = ${DOCKER_ID}/kabanero-operator-stack-controller:${DOCKER_TAG}
 else
 IMAGE ?= kabanero-operator:latest
 REGISTRY_IMAGE ?= kabanero-operator-registry:latest
-WEBHOOK_IMAGE ?= kabanero-operator-admission-webhook:latest
-COLLECTION_CTRLR_IMAGE ?= kabanero-operator-collection-controller:latest
-STACK_CTRLR_IMAGE ?= kabanero-operator-stack-controller:latest
 endif
 
 # For integration testing
@@ -33,15 +27,9 @@ endif
 # Public registry references
 IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator:latest
 REGISTRY_IMAGE=${INTERNAL_REGISTRY}/openshift-marketplace/kabanero-operator-registry:latest
-WEBHOOK_IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator-admission-webhook:latest
-COLLECTION_CTRLR_IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator-collection-controller:latest
-STACK_CTRLR_IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator-stack-controller:latest
 # Internal service registry references
 IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator:latest
 REGISTRY_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/openshift-marketplace/kabanero-operator-registry:latest
-WEBHOOK_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator-admission-webhook:latest
-COLLECTION_CTRLR_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator-collection-controller:latest
-STACK_CTRLR_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator-stack-controller:latest
 endif
 endif
 
@@ -49,10 +37,6 @@ endif
 # Computed repository name (no tag) including repository host/path reference
 REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
-WEBHOOK_REPOSITORY=$(firstword $(subst :, ,${WEBHOOK_IMAGE}))
-COLLECTION_CTRLR_REPOSITORY=$(firstword $(subst :, ,${COLLECTION_CTRLR_IMAGE}))
-STACK_CTRLR_REPOSITORY=$(firstword $(subst :, ,${STACK_CTRLR_IMAGE}))
-
 
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.7.0
@@ -86,15 +70,6 @@ build-image: generate
 	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
 
 	docker build -f build/Dockerfile -t ${IMAGE} .
-
-  # Build the Kananero collection controller image.
-	docker build -f build/Dockerfile-collection-controller -t ${COLLECTION_CTRLR_IMAGE} .
-
-	# Build the Kananero stack controller image.
-	docker build -f build/Dockerfile-stack-controller -t ${STACK_CTRLR_IMAGE} .
-
-  # Build the admission webhook.
-	docker build -f build/Dockerfile-webhook -t ${WEBHOOK_IMAGE} .
 
   # Build an OLM private registry for Kabanero
 	mkdir -p build/registry
@@ -130,35 +105,20 @@ ifneq "$(IMAGE)" "kabanero-operator:latest"
   # Default push.  Make sure the namespace is there in case using local registry
 	kubectl create namespace kabanero || true
 	docker push $(IMAGE)
-	docker push $(COLLECTION_CTRLR_IMAGE)
-	docker push $(STACK_CTRLR_IMAGE)
 	docker push $(REGISTRY_IMAGE)
-	docker push $(WEBHOOK_IMAGE)
 
 ifdef TRAVIS_TAG
   # This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REPOSITORY):$(TRAVIS_TAG)
-	docker tag $(WEBHOOK_IMAGE) $(WEBHOOK_REPOSITORY):$(TRAVIS_TAG)
-	docker push $(WEBHOOK_REPOSITORY):$(TRAVIS_TAG)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_TAG)
-	docker tag $(COLLECTION_CTRLR_IMAGE) $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_TAG)
-	docker push $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_TAG)
-	docker tag $(STACK_CTRLR_IMAGE) $(STACK_CTRLR_REPOSITORY):$(TRAVIS_TAG)
-	docker push $(STACK_CTRLR_REPOSITORY):$(TRAVIS_TAG)
 endif
 
 ifdef TRAVIS_BRANCH
   # This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
 	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
-	docker tag $(WEBHOOK_IMAGE) $(WEBHOOK_REPOSITORY):$(TRAVIS_BRANCH)
-	docker push $(WEBHOOK_REPOSITORY):$(TRAVIS_BRANCH)
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
-	docker tag $(COLLECTION_CTRLR_IMAGE) $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_BRANCH)
-	docker push $(COLLECTION_CTRLR_REPOSITORY):$(TRAVIS_BRANCH)
-	docker tag $(STACK_CTRLR_IMAGE) $(STACK_CTRLR_REPOSITORY):$(TRAVIS_BRANCH)
-	docker push $(STACK_CTRLR_REPOSITORY):$(TRAVIS_BRANCH)
 endif
 endif
 
@@ -246,9 +206,9 @@ int-config:
 # Update config to correct image
 # Update config to correct image
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE_SVC}!; s!image: kabanero/kabanero-operator-stack-controller:.*!image: ${STACK_CTRLR_IMAGE_SVC}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
+	sed -e "s!image: kabanero/kabanero-operator:.*!image: ${IMAGE_SVC}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 else
-	sed -e "s!image: kabanero/kabanero-operator-admission-webhook:.*!image: ${WEBHOOK_IMAGE}!; s!image: kabanero/kabanero-operator-collection-controller:.*!image: ${COLLECTION_CTRLR_IMAGE}!; s!image: kabanero/kabanero-operator-stack-controller:.*!image: ${STACK_CTRLR_IMAGE}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
+	sed -e "s!image: kabanero/kabanero-operator:.*!image: ${IMAGE}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 endif
 
 # Uninstall Test
