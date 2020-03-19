@@ -89,8 +89,8 @@ related-software:
   - version: "0.7.0-rc.1"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
-      repository: "kabanero/kabanero-operator-collection-controller"
-      tag: "0.7.0-rc.1"
+      repository: "FROM_POD"
+      tag: "FROM_POD"
   - version: "0.6.1-rc.3"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
@@ -106,8 +106,8 @@ related-software:
   - version: "0.7.0-rc.1"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
-      repository: "kabanero/kabanero-operator-stack-controller"
-      tag: "0.7.0-rc.1"
+      repository: "FROM_POD"
+      tag: "FROM_POD"
   - version: "0.6.1-rc.3"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
@@ -123,8 +123,8 @@ related-software:
   - version: "0.7.0-rc.1"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
-      repository: "kabanero/kabanero-operator-admission-webhook"
-      tag: "0.7.0-rc.1"
+      repository: "FROM_POD"
+      tag: "FROM_POD"
   - version: "0.6.1-rc.3"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:

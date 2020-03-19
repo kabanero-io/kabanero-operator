@@ -46,16 +46,39 @@ func customImageUriWithOverrides(repositoryOverride string, tagOverride string, 
 		}
 	}
 
-	// Next consider repository/tag from the Kabanero resource
-	if repositoryOverride != "" {
-		r = repositoryOverride
-	}
-	if tagOverride != "" {
-		t = tagOverride
+	// TODO:
+	// If r or t is "FROM_POD", then need to make sure that they are both "FROM_POD".
+	// If "FROM_POD", make sure repositoryOverride and tagOverride are both set, or none are set.
+	// Otherwise, business as usual.
+
+	if ((r == "FROM_POD") || (t == "FROM_POD")) && (r != t) {
+		return "", fmt.Errorf("Both repository and tag must be taken from the pod definition together")
 	}
 
-	//repository/tag are now merged into image
-	i = r + ":" + t
+	if (r == "FROM_POD") {
+		if bothZero(repositoryOverride, tagOverride) {
+			if len(operatorContainerImage) == 0 { // defined in kabaneroplatform_controller.go
+				return "", fmt.Errorf("This component cannot take its container image from the kabanero-operator pod because the kabanero-operator container image was not found")
+			}
+			
+			i = operatorContainerImage
+		} else if neitherZero(repositoryOverride, tagOverride) {
+			i = repositoryOverride + ":" + tagOverride
+		} else {
+			return "", fmt.Errorf("This component requires both a repository and tag override.  Only one was provided")
+		}	
+  } else {
+		// Next consider repository/tag from the Kabanero resource
+		if repositoryOverride != "" {
+			r = repositoryOverride
+		}
+		if tagOverride != "" {
+			t = tagOverride
+		}
+
+		//repository/tag are now merged into image
+		i = r + ":" + t
+	}
 
 	// Finally consider the image
 	if imageOverride != "" {
@@ -117,5 +140,13 @@ func resolveKabaneroVersion(k *kabanerov1alpha2.Kabanero) (versioning.VersionDoc
 	if kabaneroVersion == "" {
 		kabaneroVersion = v.DefaultKabaneroRevision
 	}
-	return v, kabaneroVersion
+  return v, kabaneroVersion
+}
+
+func bothZero(string1 string, string2 string) bool {
+	return (len(string1) == 0) && (len(string2) == 0)
+}
+
+func neitherZero(string1 string, string2 string) bool {
+	return (len(string1) > 0) && (len(string2) > 0)
 }
