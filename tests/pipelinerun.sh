@@ -8,7 +8,7 @@ SLEEP_LONG="${SLEEP_LONG:-15}"
 SLEEP_SHORT="${SLEEP_SHORT:-2}"
 
 # Resultant Appsody container image #
-DOCKER_IMAGE="${DOCKER_IMAGE:-image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile}"
+DOCKER_IMAGE="${DOCKER_IMAGE:-image-registry.openshift-image-registry.svc:5000/kabanero}"
 
 # Appsody project GitHub repository #
 APP_REPO="${APP_REPO:-https://github.com/kabanero-io/sample-java-microprofile/}"
@@ -70,6 +70,10 @@ spec:
     value: push
   - name: event-ref
     value: refs/heads/master
+  - name: docker-imagename
+    value: ${APP}
+  - name: docker-imagetag
+    value: latest  
   pipelineRef:
     name: ${PIPELINE_REF}
   resources:

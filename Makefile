@@ -39,7 +39,7 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.7.0
+CURRENT_RELEASE=0.8.0
 
 # OS detection
 ifeq ($(OS),Windows_NT)
@@ -178,7 +178,7 @@ ifndef GITHUB_TOKEN
 endif
 	mkdir -p build/bin
 	curl -L https://github.com/mitchellh/golicense/releases/download/v0.2.0/golicense_0.2.0_$(detected_OS)_x86_64.tar.gz | tar -C build/bin -xzf - golicense
-	build/bin/golicense -plain ./license-rules.json build/_output/bin/admission-webhook build/_output/bin/kabanero-operator build/_output/bin/kabanero-operator-collection-controller build/_output/bin/kabanero-operator-stack-controller > 3RD_PARTY || true
+	build/bin/golicense -plain ./license-rules.json build/_output/bin/admission-webhook build/_output/bin/kabanero-operator build/_output/bin/kabanero-operator-collection-controller build/_output/bin/kabanero-operator-stack-controller | sort > 3RD_PARTY || true
 	rm build/bin/golicense
 
 # Integration Tests
