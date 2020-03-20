@@ -4,7 +4,7 @@ set -Eeuox pipefail
 
 STACK="java-microprofile"
 APP="sample-java-microprofile" \
-DOCKER_IMAGE="image-registry.openshift-image-registry.svc:5000/kabanero/${APP}" \
+DOCKER_IMAGE="image-registry.openshift-image-registry.svc:5000/kabanero" \
 APP_REPO="https://github.com/kabanero-io/${APP}/" \
 PIPELINE_RUN="${APP}-build-deploy-pl-run-kabanero" \
 PIPELINE_REF="${STACK}-build-deploy-pl" \
