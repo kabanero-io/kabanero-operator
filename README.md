@@ -4,7 +4,9 @@ The following README pertains to kabanero-operator development.  If you are tryi
 # Status
 [![Build Status](https://travis-ci.org/kabanero-io/kabanero-operator.svg?branch=master)](https://travis-ci.org/kabanero-io/kabanero-operator)
 
-The Kabanero operator is developed using `operator-sdk` version 0.15.1.
+The Kabanero operator is developed using:
+* `operator-sdk` version 0.15.1.
+* `go` version 1.13.x
 
 ## Clone the Kabanero operator
 
