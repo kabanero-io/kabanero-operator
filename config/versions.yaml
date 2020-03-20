@@ -13,6 +13,17 @@ default: "0.7.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
+- version: "0.8.0"
+  related-versions: 
+    cli-services: "0.7.0"
+    landing: "0.7.0"
+    events: "0.1.0"
+    collection-controller: "0.7.0"
+    stack-controller: "0.7.0"
+    admission-webhook: "0.7.0"
+    sso: "7.3.2"
+    codeready-workspaces: "0.6.0"
+
 - version: "0.7.0"
   related-versions: 
     cli-services: "0.7.0"

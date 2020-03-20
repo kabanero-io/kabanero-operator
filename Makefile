@@ -55,7 +55,7 @@ STACK_CTRLR_REPOSITORY=$(firstword $(subst :, ,${STACK_CTRLR_IMAGE}))
 
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.7.0
+CURRENT_RELEASE=0.8.0
 
 # OS detection
 ifeq ($(OS),Windows_NT)
