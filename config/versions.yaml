@@ -18,9 +18,9 @@ kabanero:
     cli-services: "0.7.0"
     landing: "0.7.0"
     events: "0.1.0"
-    collection-controller: "0.7.0"
-    stack-controller: "0.7.0"
-    admission-webhook: "0.7.0"
+    collection-controller: "0.8.0"
+    stack-controller: "0.8.0"
+    admission-webhook: "0.8.0"
     sso: "7.3.2"
     codeready-workspaces: "0.6.0"
 
@@ -97,6 +97,11 @@ related-software:
       tag: "0.1"
 
   collection-controller: 
+  - version: "0.8.0"
+    orchestrations: "orchestrations/collection-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-collection-controller"
+      tag: "0.8.0-alpha.1"
   - version: "0.7.0"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
@@ -114,6 +119,11 @@ related-software:
       tag: "0.6.0"
 
   stack-controller: 
+  - version: "0.8.0"
+    orchestrations: "orchestrations/stack-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator-stack-controller"
+      tag: "0.8.0-alpha.1"
   - version: "0.7.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
@@ -131,6 +141,11 @@ related-software:
       tag: "0.6.0"
 
   admission-webhook:
+  - version: "0.8.0"
+    orchestrations: "orchestrations/admission-webhook/0.2"
+    identifiers:
+      repository: "kabanero/kabanero-operator-admission-webhook"
+      tag: "0.8.0-alpha.1"
   - version: "0.7.0"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
