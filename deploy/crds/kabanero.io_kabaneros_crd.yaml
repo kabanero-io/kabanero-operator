@@ -487,6 +487,13 @@ spec:
                       type: string
                     type: array
                 type: object
+              governancePolicy:
+                description: GovernancePolicyConfig defines customization entries
+                  for governance policies.
+                properties:
+                  stackPolicy:
+                    type: string
+                type: object
               landing:
                 description: KabaneroLandingCustomizationSpec defines customization
                   entries for Kabanero landing page.

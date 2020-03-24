@@ -125,6 +125,11 @@ spec:
       https:
         url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.7.0/default-kabanero-pipelines.tar.gz
 
+  governancePolicy:
+    # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
+    # strictDigest, activeDigest, ignoreDigest, and none. If a stack policy is not specified, activeDigest is used. 
+    stackPolicy: activeDigest
+
   # The information in the 'github' section is used by the Kabanero CLI and Console to
   # help access and manage the stacks.
   github:

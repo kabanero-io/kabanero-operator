@@ -24,6 +24,8 @@ type KabaneroSpec struct {
 
 	Github GithubConfig `json:"github,omitempty"`
 
+	GovernacePolicy GovernancePolicyConfig `json:"governancePolicy,omitempty"`
+
 	Stacks InstanceStackConfig `json:"stacks,omitempty"`
 
 	// +listType=set
@@ -88,6 +90,11 @@ type GithubConfig struct {
 	ApiUrl string   `json:"apiUrl,omitempty"`
 }
 
+// GovernancePolicyConfig defines customization entries for governance policies.
+type GovernancePolicyConfig struct {
+	StackPolicy string `json:"stackPolicy,omitempty"`
+}
+
 // RepositoryConfig defines customization entries for a stack.
 type RepositoryConfig struct {
 	Name string `json:"name,omitempty"`
@@ -119,11 +126,11 @@ type KabaneroCliServicesCustomizationSpec struct {
 
 // KabaneroLandingCustomizationSpec defines customization entries for Kabanero landing page.
 type KabaneroLandingCustomizationSpec struct {
-	Enable  *bool  `json:"enable,omitempty"`
-	Version string `json:"version,omitempty"`
-	Image                    string `json:"image,omitempty"`
-	Repository               string `json:"repository,omitempty"`
-	Tag                      string `json:"tag,omitempty"`
+	Enable     *bool  `json:"enable,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
 }
 
 // CRWCustomizationSpec defines customization entries for codeready-workspaces.
