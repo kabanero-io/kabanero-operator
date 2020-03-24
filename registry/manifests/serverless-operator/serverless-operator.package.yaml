@@ -10,4 +10,6 @@ channels:
   currentCSV: serverless-operator.v1.4.1
 - name: kabanero-0.7
   currentCSV: serverless-operator.v1.4.1
-defaultChannel: kabanero-0.7
+- name: kabanero-0.8
+  currentCSV: serverless-operator.v1.5.0
+defaultChannel: kabanero-0.8
