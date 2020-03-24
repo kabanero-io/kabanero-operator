@@ -40,6 +40,8 @@ func init() {
 	logf.SetLogger(testLogger{})
 }
 
+var sctlog = logf.Log.WithName("stack_controller_test")
+
 func TestReconcileStack(t *testing.T) {
 	r := &ReconcileStack{indexResolver: func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string, logr.Logger) (*Index, error) {
 		return &Index{
@@ -138,6 +140,60 @@ func TestNoFailedAssetsEmptyStatus(t *testing.T) {
 
 	if failedAssets(status) {
 		t.Fatal("Should be no failed asset in the status")
+	}
+}
+
+func TestIsActivationDigestPresent(t *testing.T) {
+	testStack := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec:       kabanerov1alpha2.StackSpec{},
+		Status: kabanerov1alpha2.StackStatus{
+			Versions: []kabanerov1alpha2.StackVersionStatus{{
+				Version: "0.2.6",
+				Images: []kabanerov1alpha2.ImageStatus{{
+					Image: "docker.io/kabanero/java-microprofile-2",
+				}},
+			}, {
+				Version: "0.2.5",
+				Images: []kabanerov1alpha2.ImageStatus{{
+					Image:  "docker.io/kabanero/java-microprofile-1",
+					Digest: kabanerov1alpha2.ImageDigest{Activation: "12345"},
+				}},
+			}, {
+				Version: "0.2.4",
+				Images: []kabanerov1alpha2.ImageStatus{{
+					Image:  "docker.io/kabanero/java-microprofile-3",
+					Digest: kabanerov1alpha2.ImageDigest{Message: "Something Happened."},
+				}},
+			}},
+		},
+	}
+
+	// Test 1.
+	stack := testStack.DeepCopy()
+	stackVersion := kabanerov1alpha2.StackVersion{Version: "0.2.6"}
+	stackImgStatusPreDigest := kabanerov1alpha2.ImageStatus{Id: "default-2", Image: "docker.io/kabanero/java-microprofile-2"}
+	activationDigestPresent := isActivationDigestPresent(&testStack, stackVersion, stackImgStatusPreDigest)
+	if activationDigestPresent {
+		t.Fatal(fmt.Sprintf("A false answer was expected. The digest value should not be present. Stack: %v. StackVersion: %v. stackImgStatusPreDigest: %v", stack, stackVersion, stackImgStatusPreDigest))
+	}
+
+	// Test 2.
+	stack = testStack.DeepCopy()
+	stackVersion = kabanerov1alpha2.StackVersion{Version: "0.2.5"}
+	stackImgStatusPreDigest = kabanerov1alpha2.ImageStatus{Id: "default-1", Image: "docker.io/kabanero/java-microprofile-1"}
+	activationDigestPresent = isActivationDigestPresent(&testStack, stackVersion, stackImgStatusPreDigest)
+	if !activationDigestPresent {
+		t.Fatal(fmt.Sprintf("A true answer was expected. The digest value should have been present. Stack: %v. StackVersion: %v. stackImgStatusPreDigest: %v", stack, stackVersion, stackImgStatusPreDigest))
+	}
+
+	// Test 2.
+	stack = testStack.DeepCopy()
+	stackVersion = kabanerov1alpha2.StackVersion{Version: "0.2.4"}
+	stackImgStatusPreDigest = kabanerov1alpha2.ImageStatus{Id: "default-1", Image: "docker.io/kabanero/java-microprofile-3"}
+	activationDigestPresent = isActivationDigestPresent(&testStack, stackVersion, stackImgStatusPreDigest)
+	if activationDigestPresent {
+		t.Fatal(fmt.Sprintf("A false answer was expected. The digest value should not be present. Stack: %v. StackVersion: %v. stackImgStatusPreDigest: %v", stack, stackVersion, stackImgStatusPreDigest))
 	}
 }
 
@@ -299,7 +355,7 @@ func TestStackIDValidation(t *testing.T) {
 	invalidID := "java-microprofile-"
 	stackResource.Spec.Name = invalidID
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -312,7 +368,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id containing an upper case char.
 	invalidID = "java-Microprofile"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -325,7 +381,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id staritng with a number.
 	invalidID = "0-java-microprofile"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -338,7 +394,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id staritng with a dot char.
 	invalidID = "java-microprofile.1-0"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -351,7 +407,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id starting with invalid chars.
 	invalidID = "java#-microprofile@1-0"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -364,7 +420,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id containing a single '-'.
 	invalidID = "-"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -377,7 +433,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id containing a single number.
 	invalidID = "9"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -390,7 +446,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test invalid id with a length greater than 68 characters.
 	invalidID = "abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-abcdefghij-69c"
 	stackResource.Spec.Name = invalidID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err == nil {
 		t.Fatal(fmt.Sprintf("An error was expected because stack id %v is invalid. No error was issued.", invalidID))
@@ -403,7 +459,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test a valid id containing multiple [a-z0-9-] chars.
 	validID := "j-m-1-2-3"
 	stackResource.Spec.Name = validID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
@@ -412,7 +468,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test a valid id containing several '-' chars.
 	validID = "n---0"
 	stackResource.Spec.Name = validID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
@@ -421,7 +477,7 @@ func TestStackIDValidation(t *testing.T) {
 	// Test a valid id containing only one valid char.
 	validID = "x"
 	stackResource.Spec.Name = validID
-	err = reconcileActiveVersions(&stackResource, client)
+	err = reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
@@ -461,7 +517,7 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -609,7 +665,7 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-old-asset", Namespace: "kabanero"}:      []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -753,7 +809,7 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -834,7 +890,7 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: otheruid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -951,7 +1007,7 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: otheruid}, {UID: myuid}},
 		client.ObjectKey{Name: "java-microprofile-build-pipeline", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: otheruid}, {UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1041,7 +1097,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1153,7 +1209,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{
 		client.ObjectKey{Name: "java-microprofile-build-task", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1259,7 +1315,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1365,7 +1421,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1548,7 +1604,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1677,7 +1733,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 
 	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1818,7 +1874,7 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 		client.ObjectKey{Name: "build-task-c3f28ffc", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-pipeline-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
@@ -1963,7 +2019,7 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 		client.ObjectKey{Name: "build-task-c3f28ffc", Namespace: "kabanero"}:     []metav1.OwnerReference{{UID: myuid}},
 		client.ObjectKey{Name: "build-pipeline-c3f28ffc", Namespace: "kabanero"}: []metav1.OwnerReference{{UID: myuid}}}}
 
-	err := reconcileActiveVersions(&stackResource, client)
+	err := reconcileActiveVersions(&stackResource, client, sctlog)
 
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())

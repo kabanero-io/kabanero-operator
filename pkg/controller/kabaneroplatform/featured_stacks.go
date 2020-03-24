@@ -2,10 +2,12 @@ package kabaneroplatform
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
+	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/stack"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +17,12 @@ import (
 )
 
 func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) error {
+	// Before we attempt to read the stacks, validate that the stack policy, if defined, is supported.
+	valid, reason, err := cutils.ValidateGovernanceStackPolicy(k)
+	if !valid {
+		return fmt.Errorf(reason)
+	}
+
 	// Resolve the stacks which are currently featured across the various indexes.
 	stackMap, err := featuredStacks(k, cl, reqLogger)
 	if err != nil {

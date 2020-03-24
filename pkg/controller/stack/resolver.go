@@ -6,16 +6,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"regexp"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-github/v29/github"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -192,9 +190,11 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}
 
 	// Search all secrets under the given namespace for the one containing the required hostname.
-	secret, err := cutils.GetMatchingSecret(c, namespace, secretFilter, gitRelease.Hostname)
+	annotationKey := "kabanero.io/git-"
+	secret, err := cutils.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, gitRelease.Hostname, annotationKey)
 	if err != nil {
-		return nil, err
+		newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, gitRelease.Hostname, namespace, err)
+		return nil, newError
 	}
 
 	var pat []byte
@@ -225,58 +225,4 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 	}
 
 	return client, nil
-}
-
-// Custom filter method that allows the retrieval of a secret containing an annotation with a value
-// that has the input filter strings (hostname). If there are multiple matching secrets, the annotation
-// with the lexically lowest value key (kabanero.io/git-*) is used. If no secret matches annotation key
-// kabanero.io/git-*, but there are secrets with an annotation value that matches the hostname, the
-// first one seen is used. If a secret could not be found, nil is returned.
-func secretFilter(secretList *corev1.SecretList, filterStrings ...string) (*corev1.Secret, error) {
-	var keyMatchingSecret *corev1.Secret = nil
-	var noKeyMatchingSecret *corev1.Secret = nil
-	kabKey := ""
-	for _, secret := range secretList.Items {
-		annotations := secret.GetAnnotations()
-		for key, value := range annotations {
-			matchedUrl, err := regexp.MatchString("^https?://", value)
-			if err != nil {
-				return nil, err
-			}
-			if matchedUrl {
-				surl, err := url.Parse(value)
-				if err != nil {
-					fmt.Println("Unable to parse secret annotation value URL: ", surl, ". Secret: ", secret)
-				}
-
-				if surl.Hostname() == filterStrings[0] {
-					if strings.HasPrefix(key, "kabanero.io/git-") {
-						if len(kabKey) == 0 {
-							kabKey = key
-							keyMatchingSecret = secret.DeepCopy()
-						} else {
-							if kabKey > key {
-								kabKey = key
-								keyMatchingSecret = secret.DeepCopy()
-							}
-						}
-					} else {
-						// Save the first secret we see matching the hostname.
-						if noKeyMatchingSecret == nil {
-							noKeyMatchingSecret = secret.DeepCopy()
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if keyMatchingSecret != nil {
-		return keyMatchingSecret, nil
-	}
-	if noKeyMatchingSecret != nil {
-		return noKeyMatchingSecret, nil
-	}
-
-	return nil, nil
 }

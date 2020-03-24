@@ -9,9 +9,10 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
+	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
-	mf "github.com/manifestival/manifestival"
 	mfc "github.com/manifestival/controller-runtime-client"
+	mf "github.com/manifestival/manifestival"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -327,7 +328,7 @@ func isCRWCRDActive() (bool, error) {
 		return false, err
 	}
 
-	err = kutils.Retry(12, 5*time.Second, func() (bool, error) {
+	err = cutils.Retry(12, 5*time.Second, func() (bool, error) {
 		active := false
 		crd, err := extClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get("checlusters.org.eclipse.che", metav1.GetOptions{})
 		if err != nil {
@@ -484,7 +485,7 @@ func deleteCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev ve
 	}
 
 	// Make sure the instance is down. This may take a while. Wait for 2 minutes.
-	err = kutils.Retry(24, 5*time.Second, func() (bool, error) {
+	err = cutils.Retry(24, 5*time.Second, func() (bool, error) {
 		deployed, err := isCRWInstanceDeployed(ctx, k, c)
 
 		if err != nil {

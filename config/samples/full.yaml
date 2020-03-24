@@ -34,25 +34,25 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.7.0"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-collection-controller
-    tag: "0.7.0"
+    tag: "0.8.0-alpha.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-collection-controller:0.7.0
+    image: kabanero/kabanero-operator-collection-controller:0.8.0-alpha.1
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.7.0"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-stack-controller
-    tag: "0.7.0"
+    tag: "0.8.0-alpha.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-stack-controller:0.7.0
+    image: kabanero/kabanero-operator-stack-controller:0.8.0-alpha.1
 
   landing:
     # The landing page is enabled by default. To disable specify false.
@@ -70,14 +70,14 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.7.0"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator-admission-webhook
-    tag: "0.7.0"
+    tag: "0.8.0-alpha.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-admission-webhook:0.7.0
+    image: kabanero/kabanero-operator-admission-webhook:0.8.0-alpha.1
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
@@ -124,6 +124,11 @@ spec:
       sha256: e6ebc6aeaf21540f0d0dac8caf0a2d805e8d90f174cb912a31831f700d049bb1
       https:
         url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.7.0/default-kabanero-pipelines.tar.gz
+
+  governancePolicy:
+    # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
+    # strictDigest, activeDigest, ignoreDigest, and none. If a stack policy is not specified, activeDigest is used. 
+    stackPolicy: activeDigest
 
   # The information in the 'github' section is used by the Kabanero CLI and Console to
   # help access and manage the stacks.

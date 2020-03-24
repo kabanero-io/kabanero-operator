@@ -10,6 +10,7 @@ import (
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 
+	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -46,34 +47,18 @@ func (v *kabaneroValidator) Handle(ctx context.Context, req admission.Request) a
 	return admission.ValidationResponse(allowed, reason)
 }
 
-func (v *kabaneroValidator) validatekabaneroFn(ctx context.Context, pod *kabanerov1alpha2.Kabanero) (bool, string, error) {
-	name := pod.ObjectMeta.Name
-	namespace := pod.ObjectMeta.Namespace
-	kabaneroList := &kabanerov1alpha2.KabaneroList{}
-	options := []client.ListOption{client.InNamespace(namespace)}
-	err := v.client.List(ctx, kabaneroList, options...)
-	if err != nil {
-		return false, fmt.Sprintf("Failed to list Kabaneros in namespace: %s", namespace), err
+func (v *kabaneroValidator) validatekabaneroFn(ctx context.Context, kab *kabanerov1alpha2.Kabanero) (bool, string, error) {
+	allowed, reason, err := isKabaneroInstanceAllowed(v.client, ctx, kab)
+	if !allowed {
+		return allowed, reason, err
 	}
 
-	// If there is a Kabanero in this namespace other than a named match (update), reject.
-	// Do not allow more than 1 Kabanero per namespace.
-	allow := true
-	for _, kabanero := range kabaneroList.Items {
-		if name == kabanero.Name {
-			// Matching name, allow Update
-			break
-		} else {
-			// This is an additional instance, reject
-			allow = false
-		}
+	allowed, reason, err = kutils.ValidateGovernanceStackPolicy(kab)
+	if !allowed {
+		return allowed, reason, err
 	}
 
-	if allow {
-		return true, fmt.Sprintf("Kabanero %s in namespace %s approved", name, namespace), nil
-	} else {
-		return false, fmt.Sprintf("Rejecting additional Kabanero instance: %s in namespace: %s. Multiple Kabanero instances are not allowed.", name, namespace), nil
-	}
+	return true, "", nil
 }
 
 // InjectClient injects the client.
@@ -86,4 +71,28 @@ func (v *kabaneroValidator) InjectClient(c client.Client) error {
 func (v *kabaneroValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
+}
+
+// Validates that no more than one kabanero instance in a given namespace is allowed.
+func isKabaneroInstanceAllowed(cl client.Client, ctx context.Context, kab *kabanerov1alpha2.Kabanero) (bool, string, error) {
+	name := kab.ObjectMeta.Name
+	namespace := kab.ObjectMeta.Namespace
+	kabaneroList := &kabanerov1alpha2.KabaneroList{}
+	options := []client.ListOption{client.InNamespace(namespace)}
+	err := cl.List(ctx, kabaneroList, options...)
+	if err != nil {
+		return false, fmt.Sprintf("Failed to list Kabaneros in namespace: %s", namespace), err
+	}
+
+	for _, kabanero := range kabaneroList.Items {
+		if name == kabanero.Name {
+			// Matching name, allow Update
+			break
+		} else {
+			// This is an additional instance. Reject it.
+			return false, fmt.Sprintf("Rejecting additional Kabanero instance: %s in namespace: %s. Multiple Kabanero instances are not allowed.", name, namespace), nil
+		}
+	}
+
+	return true, "", nil
 }

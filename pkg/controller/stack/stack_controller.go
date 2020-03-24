@@ -2,15 +2,22 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
+	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 
@@ -19,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	k8runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -133,7 +140,7 @@ type ReconcileStack struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
-	scheme *runtime.Scheme
+	scheme *k8runtime.Scheme
 
 	//The indexResolver which will be used during reconciliation
 	indexResolver func(client.Client, kabanerov1alpha2.RepositoryConfig, string, []Pipelines, []Trigger, string, logr.Logger) (*Index, error)
@@ -241,7 +248,7 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 	r_log = r_log.WithValues("Stack.Name", stackName)
 
 	// Process the versions array and activate (or deactivate) the desired versions.
-	err := reconcileActiveVersions(c, r.client)
+	err := reconcileActiveVersions(c, r.client, r_log)
 	if err != nil {
 		// TODO - what is useful to print?
 		log.Error(err, fmt.Sprintf("Error during reconcileActiveVersions"))
@@ -284,7 +291,7 @@ func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string
 	return defaultNamespace
 }
 
-func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Client) error {
+func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
 
 	// Gather the known stack asset (*-tasks, *-pipeline) substitution data.
 	renderingContext := make(map[string]interface{})
@@ -576,13 +583,41 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			stackResource.Spec.Versions[i] = curSpec
 
 			// Update the status of the Stack object to reflect the images used
-			newStackVersionStatus.Images = curSpec.Images
+			for _, img := range curSpec.Images {
+				newStackVersionStatus.Images = append(newStackVersionStatus.Images, kabanerov1alpha2.ImageStatus{Id: img.Id, Image: img.Image})
+			}
+
+			// Retrieve stack image version activation digests. As such, it should only be done once during activation.
+			// If there is an error during first retrieval, a subsequent successful retry may set the current digest and
+			// not the activation digest. More precisely, the digest may not necessarily be the initial activation digest
+			// because we allow stack activation despite there being a failure when retrieving the digest and the
+			// image/digest may have changed before the next successful retry.
+			for j, image := range newStackVersionStatus.Images {
+				activationDigestExists := isActivationDigestPresent(stackResource, curSpec, image)
+
+				if !activationDigestExists {
+					image.Digest.Message = ""
+					img := image.Image + ":" + curSpec.Version
+					registry, err := sutils.GetImageRegistry(img)
+					if err != nil {
+						image.Digest.Message = fmt.Sprintf("Unable to parse registry from image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+					} else {
+						digest, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, logger, img)
+						if err != nil {
+							image.Digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+						} else {
+							image.Digest.Activation = digest
+						}
+					}
+					newStackVersionStatus.Images[j] = image
+				}
+			}
 		} else {
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateInactive
 			newStackVersionStatus.StatusMessage = "The stack has been deactivated."
 		}
 
-		log.Info(fmt.Sprintf("Updated stack status: %#v", newStackVersionStatus))
+		log.Info(fmt.Sprintf("Updated stack status: %v", newStackVersionStatus))
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
 
@@ -600,6 +635,83 @@ func getStackForSpecVersion(spec kabanerov1alpha2.StackVersion, stacks []resolve
 		}
 	}
 	return nil
+}
+
+// Returns true if the input stack resource has the activation digest present in its status.
+func isActivationDigestPresent(stackResource *kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, image kabanerov1alpha2.ImageStatus) bool {
+	for _, ssv := range stackResource.Status.Versions {
+		if ssv.Version == curSpec.Version {
+			for _, ssvi := range ssv.Images {
+				if image.Image == ssvi.Image && len(ssvi.Digest.Activation) != 0 {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// Retrieves the input image digest from the hosting repository.
+func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, logr logr.Logger, image string) (string, error) {
+	// Search all secrets under the given namespace for the one containing the required hostname.
+	annotationKey := "kabanero.io/docker-"
+	secret, err := cutils.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistry, annotationKey)
+	if err != nil {
+		newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, imgRegistry, namespace, err)
+		return "", newError
+	}
+
+	// If a secret was found, retrieve the needed information from it.
+	var password []byte
+	var username []byte
+	if secret != nil {
+		logr.Info(fmt.Sprintf("Secret used for image registry access: %v. Secret annotations: %v", secret.GetName(), secret.Annotations))
+		username, _ = secret.Data["username"]
+		password, _ = secret.Data["password"]
+	}
+
+	// Create the authenticator mechanism to use for authentication.
+	authenticator := authn.Anonymous
+	if len(username) != 0 && len(password) != 0 {
+		encodedPwd := base64.StdEncoding.EncodeToString([]byte(password))
+		decodedPwdBytes, err := base64.StdEncoding.DecodeString(encodedPwd)
+		if err != nil {
+			return "", err
+		}
+
+		encodedUname := base64.StdEncoding.EncodeToString([]byte(username))
+		decodedUnameBytes, err := base64.StdEncoding.DecodeString(encodedUname)
+		if err != nil {
+			return "", err
+		}
+
+		authenticator = authn.FromConfig(authn.AuthConfig{
+			Username: string(decodedUnameBytes),
+			Password: string(decodedPwdBytes)})
+	}
+
+	// Retrieve the image manifest.
+	ref, err := name.ParseReference(image, name.WeakValidation)
+	if err != nil {
+		return "", err
+	}
+
+	img, err := remote.Image(ref,
+		remote.WithPlatform(v1.Platform{Architecture: runtime.GOARCH, OS: runtime.GOOS}),
+		remote.WithAuth(authenticator))
+	if err != nil {
+		return "", err
+	}
+
+	// Get the image's Digest (i.e sha256:8f095a6e...)
+	h, err := img.Digest()
+	if err != nil {
+		return "", err
+	}
+
+	// Return the actual digest part only.
+	return h.Hex, nil
 }
 
 // Drives stack instance deletion processing. This includes creating a finalizer, handling
