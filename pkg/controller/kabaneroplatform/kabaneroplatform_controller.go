@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
@@ -94,6 +95,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// some fields that should not be changed by the user.
 	err = watchCRWInstance(c)
 	if err != nil {
+		return err
+	}
+	
+	// Index Rolebindings by name
+	if err := mgr.GetFieldIndexer().IndexField(&rbacv1.RoleBinding{}, "metadata.name", func(rawObj runtime.Object) []string {
+		rolebinding := rawObj.(*rbacv1.RoleBinding)
+		return []string{rolebinding.ObjectMeta.Name}
+	}); err != nil {
 		return err
 	}
 
@@ -320,6 +329,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			processStatus(ctx, request, instance, r.client, reqLogger)
 			return reconcile.Result{}, err
 		}
+	}
+
+	// Reconcile the targetNamespaces
+	err = reconcileTargetNamespaces(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling targetNamespaces")
+		return reconcile.Result{}, err
 	}
 
 	// Deploy feature collection resources.
