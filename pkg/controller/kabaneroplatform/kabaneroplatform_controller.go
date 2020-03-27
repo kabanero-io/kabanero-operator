@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
@@ -97,7 +96,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-	
+
+/* Useful if RoleBindingList is changed to use Structured instead of Unstructured
 	// Index Rolebindings by name
 	if err := mgr.GetFieldIndexer().IndexField(&rbacv1.RoleBinding{}, "metadata.name", func(rawObj runtime.Object) []string {
 		rolebinding := rawObj.(*rbacv1.RoleBinding)
@@ -105,6 +105,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}); err != nil {
 		return err
 	}
+*/
 
 	return nil
 }

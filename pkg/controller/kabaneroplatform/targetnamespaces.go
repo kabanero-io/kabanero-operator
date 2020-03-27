@@ -32,9 +32,9 @@ func reconcileTargetNamespaces(ctx context.Context, k *kabanerov1alpha2.Kabanero
 		},
 		Subjects: []rbacv1.Subject{
 			rbacv1.Subject{
-				Kind: "User",
+				Kind: "ServiceAccount",
 				Name: "kabanero-pipeline",
-				APIGroup: "rbac.authorization.k8s.io",
+				Namespace: "kabanero",
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
