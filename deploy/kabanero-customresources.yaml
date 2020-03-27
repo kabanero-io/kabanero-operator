@@ -286,6 +286,7 @@ rules:
   resources:
   - triggerbindings
   - triggertemplates
+  - eventlisteners
   verbs:
   - get
   - list
