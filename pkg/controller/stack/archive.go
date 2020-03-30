@@ -268,11 +268,11 @@ func processManifest(b []byte, renderingContext map[string]interface{}, filename
 		gvk := out.GroupVersionKind()
 		if gvk.Group == "tekton.dev" {
 			manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
-			out = unstructured.Unstructured{}
-			err = decoder.Decode(&out)
 		} else {
 			reqLogger.Info(fmt.Sprintf("File %v contained a rejected manifest with a Group not equal to tekton.dev", filename))
 		}
+		out = unstructured.Unstructured{}
+		err = decoder.Decode(&out)
 	}
 	return manifests, err
 }
