@@ -243,7 +243,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 			}
 
 			//Apply the Kabanero yaml directive processor
-			pmanifests, err := processManifest(b, renderingContext, header.Name, assetSumString)
+			pmanifests, err := processManifest(b, renderingContext, header.Name, assetSumString, reqLogger)
 			if (err != nil) && (err != io.EOF) {
 				return nil, fmt.Errorf("Error decoding %v: %v", header.Name, err.Error())
 			}
@@ -254,7 +254,7 @@ func decodeManifests(archive []byte, renderingContext map[string]interface{}, re
 }
 
 //Apply the Kabanero yaml directive processor
-func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string) ([]StackAsset, error) {
+func processManifest(b []byte, renderingContext map[string]interface{}, filename string, assetSumString string, reqLogger logr.Logger) ([]StackAsset, error) {
 	manifests := []StackAsset{}
 	s := &DirectiveProcessor{}
 	rb, err := s.Render(b, renderingContext)
@@ -266,9 +266,13 @@ func processManifest(b []byte, renderingContext map[string]interface{}, filename
 	out := unstructured.Unstructured{}
 	for err = decoder.Decode(&out); err == nil; {
 		gvk := out.GroupVersionKind()
-		manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
-		out = unstructured.Unstructured{}
-		err = decoder.Decode(&out)
+		if gvk.Group == "tekton.dev" {
+			manifests = append(manifests, StackAsset{Name: out.GetName(), Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind, Yaml: out, Sha256: assetSumString})
+			out = unstructured.Unstructured{}
+			err = decoder.Decode(&out)
+		} else {
+			reqLogger.Info(fmt.Sprintf("File %v contained a rejected manifest with a Group not equal to tekton.dev", filename))
+		}
 	}
 	return manifests, err
 }
@@ -321,7 +325,7 @@ func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1al
 		if b_sum != c_sum {
 			reqLogger.Info(fmt.Sprintf("Index checksum: %x not match download checksum: %x for Pipeline Name %v", c_sum, b_sum, pipelineStatus.Name))
 		}
-		manifests, err := processManifest(b, renderingContext, pipelineStatus.Name, hex.EncodeToString(b_sum[:]))
+		manifests, err := processManifest(b, renderingContext, pipelineStatus.Name, hex.EncodeToString(b_sum[:]), reqLogger)
 		if (err != nil) && (err != io.EOF) {
 			return nil, err
 		}
