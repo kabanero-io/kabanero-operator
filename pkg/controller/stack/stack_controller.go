@@ -282,9 +282,14 @@ type pipelineVersion struct {
 func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string) string {
 	kind := u.GetKind()
 
-	// Presently, TriggerBinding and TriggerTemplate objects are created
+	// Presently, TriggerBinding, TriggerTemplate and EventListener objects are created
 	// in the tekton-pipelines namespace.
-	if (kind == "TriggerBinding") || (kind == "TriggerTemplate") {
+	//
+	// TODO (future): Kabanero Eventing will likely want to create these objects in the
+	//                kabanero namespace, since they are not interacting with the Tekton
+	//                Webhook Extension anymore.  We'll need to make this selectable
+	//                somehow, perhaps just using the namespace in the yaml.
+	if (kind == "TriggerBinding") || (kind == "TriggerTemplate") || (kind == "EventListener") {
 		return "tekton-pipelines"
 	}
 
