@@ -231,18 +231,6 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - appsody.dev
-  resources:
-  - appsodyapplications
-  verbs:
-  - get
-  - list
-  - create
-  - update
-  - delete
-  - patch
-  - watch
-- apiGroups:
   - ""
   - image.openshift.io
   resources:
@@ -272,6 +260,27 @@ subjects:
 - kind: ServiceAccount
   name: kabanero-pipeline
   namespace: kabanero
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kabanero-pipeline-deploy-role 
+  namespace: kabanero
+  labels:
+    kabanero.io/install: 24-pipeline-sa  
+rules:
+- apiGroups:
+  - appsody.dev
+  resources:
+  - appsodyapplications
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
