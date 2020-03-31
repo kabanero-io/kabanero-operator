@@ -6,48 +6,22 @@ set -Eeox pipefail
 
 namespace=kabanero
 
-ORIGYAML=$(oc get -n ${namespace} kabanero kabanero --export -o=json)
+ORIGYAML=$(oc get -n ${namespace} stack java-microprofile --export -o=json)
 
-# Update kabanero
-oc patch -n ${namespace} kabanero kabanero --type merge --patch "$(cat $(dirname "$0")/23-merge.yaml)"
+oc -n ${namespace} patch stack java-microprofile --type='json' -p='[{"op": "replace", "path": "/spec/versions/0/desiredState", "value":"inactive"}]'
 
-sleep 5
-
-# Delete stack
-oc delete -n ${namespace} stack java-microprofile
-
-
-echo "Checking stack java-microprofile is created but not activated by reconciler"
+echo "Waiting for java-microprofile stack to deactivate"
 LOOP_COUNT=0
-until oc get -n ${namespace} stack java-microprofile
+until [ "$STATUS" == "inactive" ] 
 do
+  STATUS=$(oc -n ${namespace} get stack java-microprofile -o jsonpath='{.status.versions[0].status}')
   sleep 5
   LOOP_COUNT=`expr $LOOP_COUNT + 1`
   if [ $LOOP_COUNT -gt 10 ] ; then
-    echo "stack java-microprofile was not recreated in time"
-    exit 1
-  fi
-done
-
-
-LOOP_COUNT=0
-until [ "$STATUS" == "inactive" ]
-do
-  sleep 5
-  LOOP_COUNT=`expr $LOOP_COUNT + 1`
-  if [ $LOOP_COUNT -gt 10 ] ; then
-    echo "stack java-microprofile did not reconcile to inactive state"
-    exit 1
-  fi
-  STATUS=$(oc -n ${namespace} get stack java-microprofile -o jsonpath='{.status.status}')
-done
-
-
-if oc -n ${namespace} get pipeline java-microprofile-build-pl; then
-  echo "inactive stack java-microprofile should not have active pipeline java-microprofile-build-pl"
+    echo "Timed out waiting for java-microprofile stack to deactivate"
   exit 1
-fi
-
+ fi
+done
 
 # Reset 
 echo $ORIGYAML | oc apply -f -
