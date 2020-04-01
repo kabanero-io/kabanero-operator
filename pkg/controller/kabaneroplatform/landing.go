@@ -76,9 +76,12 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 		return err
 	}
 
-	err = addTLSConfigToLandingRoute(k, c, rev)
-	if err != nil {
-		return err
+	// Only 0.2+ orchestrations support landing page with reencypt tls termination.
+	if !strings.HasSuffix(rev.OrchestrationPath, "0.1") {
+		err = addTLSConfigToLandingRoute(k, c, rev)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Retrieve the kabanero landing URL.

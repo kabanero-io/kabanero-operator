@@ -19,35 +19,5 @@ spec:
           ports:
             - containerPort: 9443
               protocol: TCP
-          volumeMounts:
-            - name: kabanero-landing-keystores
-              mountPath: /etc/tls/secrets/java.io/landingpage/keystores
-              readOnly: true
-            - name: kabanero-landing-cert-secret
-              mountPath: /etc/tls/secrets/openshift.io/landingpage/certs
-              readOnly: true
       serviceAccountName: kabanero-landing
-      initContainers:
-        - name: init-kabanero-landing
-          image: {{ .image }}
-          env:
-            - name: keyfile
-              value: /etc/tls/secrets/openshift.io/landingpage/certs/tls.key
-            - name: crtfile
-              value: /etc/tls/secrets/openshift.io/landingpage/certs/tls.crt
-            - name: keystore_pkcs12
-              value: /etc/tls/secrets/java.io/landingpage/keystores/keystore.p12
-            - name: password
-              value: changeit
-          command: ['/bin/bash']
-          args: ['-c', "openssl pkcs12 -export -inkey $keyfile -in $crtfile -out $keystore_pkcs12 -password pass:$password"]
-          volumeMounts:
-            - name: kabanero-landing-keystores
-              mountPath: /etc/tls/secrets/java.io/landingpage/keystores
-            - name: kabanero-landing-cert-secret
-              mountPath: /etc/tls/secrets/openshift.io/landingpage/certs
-      volumes:
-      - name: kabanero-landing-keystores
-      - name: kabanero-landing-cert-secret
-        secret:
-          secretName: kabanero-landing-service-cert-secret
+
