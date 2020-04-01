@@ -67,7 +67,7 @@ ifeq ($(detected_OS),Darwin)
 endif
 endif
 
-.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle
+.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle int-master-install pull-master-image
 
 build: generate
 	GO111MODULE=on go install ./cmd/manager
@@ -229,6 +229,11 @@ endif
 # Install Test
 int-test-install: creds build-image push-image int-install int-config
 
+int-master-install: creds  pull-master-image int-install int-config
+
+pull-master-image:
+	docker pull ${IMAGE}
+	docker tag ${IMAGE} ${IMAGE_SVC}
 creds:
 	tests/00-credentials.sh
 
