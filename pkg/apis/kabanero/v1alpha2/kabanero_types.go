@@ -50,6 +50,8 @@ type KabaneroSpec struct {
 
 // InstanceStackConfig defines the customization entries for a set of stacks.
 type InstanceStackConfig struct {
+	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
+
 	// +listType=set
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 
