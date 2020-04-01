@@ -490,31 +490,44 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						for _, manifest := range value.manifests {
 							if asset.Name == manifest.Name {
 								resources := []unstructured.Unstructured{manifest.Yaml}
-								mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
-
-								log.Info(fmt.Sprintf("Resources: %v", mOrig.Resources()))
-
-								transforms := []mf.Transformer{
-									transforms.InjectOwnerReference(assetOwner),
-									mf.InjectNamespace(asset.Namespace),
-								}
-
-								m, err := mOrig.Transform(transforms...)
-								if err != nil {
-									log.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
-									value.ActiveAssets[index].Status = assetStatusFailed
-									value.ActiveAssets[index].Status = err.Error()
-								} else {
-									log.Info(fmt.Sprintf("Applying resources: %v", m.Resources()))
-									err = m.Apply()
-									if err != nil {
-										// Update the asset status with the error message
-										log.Error(err, "Error installing the resource", "resource", asset.Name)
+								
+								// Only allow Group: tekton.dev
+								allowed := true
+								for _, resource := range resources {
+									if resource.GroupVersionKind().Group != "tekton.dev" {
 										value.ActiveAssets[index].Status = assetStatusFailed
-										value.ActiveAssets[index].StatusMessage = err.Error()
+										value.ActiveAssets[index].StatusMessage = "Manifest rejected: contains a Group not equal to tekton.dev"
+										allowed = false
+									}
+								}
+								
+								if allowed == true {
+									mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
+
+									log.Info(fmt.Sprintf("Resources: %v", mOrig.Resources()))
+
+									transforms := []mf.Transformer{
+										transforms.InjectOwnerReference(assetOwner),
+										mf.InjectNamespace(asset.Namespace),
+									}
+
+									m, err := mOrig.Transform(transforms...)
+									if err != nil {
+										log.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
+										value.ActiveAssets[index].Status = assetStatusFailed
+										value.ActiveAssets[index].Status = err.Error()
 									} else {
-										value.ActiveAssets[index].Status = assetStatusActive
-										value.ActiveAssets[index].StatusMessage = ""
+										log.Info(fmt.Sprintf("Applying resources: %v", m.Resources()))
+										err = m.Apply()
+										if err != nil {
+											// Update the asset status with the error message
+											log.Error(err, "Error installing the resource", "resource", asset.Name)
+											value.ActiveAssets[index].Status = assetStatusFailed
+											value.ActiveAssets[index].StatusMessage = err.Error()
+										} else {
+											value.ActiveAssets[index].Status = assetStatusActive
+											value.ActiveAssets[index].StatusMessage = ""
+										}
 									}
 								}
 							}
