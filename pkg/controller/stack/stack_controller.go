@@ -247,24 +247,10 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 
 	r_log = r_log.WithValues("Stack.Name", stackName)
 	
-	ctx := context.Background()
-	
 	// Ensure PipelinesNamespace exists
-	namespace := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Namespace",
-			"metadata": map[string]interface{}{
-				"name": c.Spec.PipelinesNamespace,
-			},
-		},
-	}
-	
-	err := r.client.Get(ctx, client.ObjectKey{Namespace: c.Spec.PipelinesNamespace, Name: c.Spec.PipelinesNamespace,}, namespace)
-	if err == nil {
-		if errors.IsNotFound(err) {
-			r.client.Create(ctx, namespace)
-		}
+	err := reconcilePipelinesNamespace(c, r.client, r_log)
+	if err != nil {
+		log.Error(err, fmt.Sprintf("Error during reconcilePipelinesNamespace"))
 	}
 
 	// Process the versions array and activate (or deactivate) the desired versions.
@@ -320,6 +306,8 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 	// Gather the known stack asset (*-tasks, *-pipeline) substitution data.
 	renderingContext := make(map[string]interface{})
+	
+	pipelinesNamespace := pipelinesNamespace(stackResource)
 
 	// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
 	// Appsody stack creation namimg constrains the length to 68 characters:
@@ -416,7 +404,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			for _, asset := range value.ActiveAssets {
 				// Old assets may not have a namespace set - correct that now.
 				if len(asset.Namespace) == 0 {
-					asset.Namespace = stackResource.Spec.PipelinesNamespace
+					asset.Namespace = pipelinesNamespace
 				}
 
 				deleteAsset(c, asset, assetOwner)
@@ -437,7 +425,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 				renderingContext["Digest"] = value.Digest[0:8]
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
-				manifests, err := GetManifests(c, stackResource.Spec.PipelinesNamespace, value.PipelineStatus, renderingContext, log)
+				manifests, err := GetManifests(c, pipelinesNamespace, value.PipelineStatus, renderingContext, log)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("Error retrieving archive manifests: %v", value))
 					value.manifestError = err
@@ -452,7 +440,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					// Figure out what namespace we should create the object in.
 					value.ActiveAssets = append(value.ActiveAssets, kabanerov1alpha2.RepositoryAssetStatus{
 						Name:          asset.Name,
-						Namespace:     getNamespaceForObject(&asset.Yaml, stackResource.Spec.PipelinesNamespace),
+						Namespace:     getNamespaceForObject(&asset.Yaml, pipelinesNamespace),
 						Group:         asset.Group,
 						Version:       asset.Version,
 						Kind:          asset.Kind,
@@ -467,7 +455,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			for index, asset := range value.ActiveAssets {
 				// Old assets may not have a namespace set - correct that now.
 				if len(asset.Namespace) == 0 {
-					asset.Namespace = stackResource.Spec.PipelinesNamespace
+					asset.Namespace = pipelinesNamespace
 					value.ActiveAssets[index].Namespace = asset.Namespace
 				}
 
@@ -495,7 +483,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 							renderingContext["Digest"] = value.Digest[0:8]
 
 							// Retrieve manifests as unstructured
-							manifests, err := GetManifests(c, stackResource.Spec.PipelinesNamespace, value.PipelineStatus, renderingContext, log)
+							manifests, err := GetManifests(c, pipelinesNamespace, value.PipelineStatus, renderingContext, log)
 							if err != nil {
 								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
 								value.ActiveAssets[index].Status = assetStatusFailed
@@ -627,7 +615,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					if err != nil {
 						image.Digest.Message = fmt.Sprintf("Unable to parse registry from image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
 					} else {
-						digest, err := retrieveImageDigest(c, stackResource.Spec.PipelinesNamespace, registry, logger, img)
+						digest, err := retrieveImageDigest(c, pipelinesNamespace, registry, logger, img)
 						if err != nil {
 							image.Digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
 						} else {
@@ -870,4 +858,42 @@ func deleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, 
 	}
 
 	return nil
+}
+
+
+func reconcilePipelinesNamespace(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
+	// Ensure PipelinesNamespace exists
+	
+	pipelinesNamespace := pipelinesNamespace(stackResource)
+	
+	namespace := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Namespace",
+			"metadata": map[string]interface{}{
+				"name": pipelinesNamespace,
+			},
+		},
+	}
+	
+	err := c.Get(context.TODO(), client.ObjectKey{Namespace: pipelinesNamespace, Name: pipelinesNamespace,}, namespace)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			err = c.Create(context.TODO(), namespace)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+func pipelinesNamespace(stackResource *kabanerov1alpha2.Stack) string {
+	pipelinesNamespace := "kabanero-pipelines"
+	if len(stackResource.Spec.PipelinesNamespace) != 0 {
+		pipelinesNamespace = stackResource.Spec.PipelinesNamespace
+	}
+	return pipelinesNamespace
 }
