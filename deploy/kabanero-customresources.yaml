@@ -245,6 +245,14 @@ rules:
   - imagestreams
   verbs:
   - create
+- apiGroups:
+  - image.config.openshift.io
+  resources:
+  - cluster
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
