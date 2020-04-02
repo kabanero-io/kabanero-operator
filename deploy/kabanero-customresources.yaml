@@ -246,9 +246,9 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - image.config.openshift.io
+  - config.openshift.io
   resources:
-  - cluster
+  - images
   verbs:
   - get
   - list
