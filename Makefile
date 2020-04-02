@@ -4,20 +4,21 @@
 #   DOCKER_ID would be your docker user name
 #   DOCKER_TAG would be the tag you want to use in the repository
 ARCH ?= amd64
-ifdef DOCKER_ID
 DOCKER_TAG ?= latest
-IMAGE = ${DOCKER_ID}/kabanero-operator:${DOCKER_TAG}
-REGISTRY_IMAGE = ${DOCKER_ID}/kabanero-operator-registry:${DOCKER_TAG}
-WEBHOOK_IMAGE = ${DOCKER_ID}/kabanero-operator-admission-webhook:${DOCKER_TAG}
-COLLECTION_CTRLR_IMAGE = ${DOCKER_ID}/kabanero-operator-collection-controller:${DOCKER_TAG}
-STACK_CTRLR_IMAGE = ${DOCKER_ID}/kabanero-operator-stack-controller:${DOCKER_TAG}
-else
-IMAGE ?= kabanero-operator:latest
-REGISTRY_IMAGE ?= kabanero-operator-registry:latest
-WEBHOOK_IMAGE ?= kabanero-operator-admission-webhook:latest
-COLLECTION_CTRLR_IMAGE ?= kabanero-operator-collection-controller:latest
-STACK_CTRLR_IMAGE ?= kabanero-operator-stack-controller:latest
+ifdef DOCKER_ID
+DOCKER_PREFIX=${DOCKER_ID}/
 endif
+
+IMAGE = ${DOCKER_PREFIX}kabanero-operator:${DOCKER_TAG}
+PULL_IMAGE = ${DOCKER_PREFIX}kabanero/kabanero-operator:${DOCKER_TAG}
+REGISTRY_IMAGE = ${DOCKER_PREFIX}kabanero-operator-registry:${DOCKER_TAG}
+PULL_REGISTRY_IMAGE = ${DOCKER_PREFIX}kabanero/kabanero-operator-registry:${DOCKER_TAG}
+WEBHOOK_IMAGE = ${DOCKER_PREFIX}kabanero-operator-admission-webhook:${DOCKER_TAG}
+PULL_WEBHOOK_IMAGE = ${DOCKER_PREFIX}kabanero/kabanero-operator-admission-webhook:${DOCKER_TAG}
+COLLECTION_CTRLR_IMAGE = ${DOCKER_PREFIX}kabanero-operator-collection-controller:${DOCKER_TAG}
+PULL_COLLECTION_CTRLR_IMAGE = ${DOCKER_PREFIX}kabanero/kabanero-operator-collection-controller:${DOCKER_TAG}
+STACK_CTRLR_IMAGE = ${DOCKER_PREFIX}kabanero-operator-stack-controller:${DOCKER_TAG}
+PULL_STACK_CTRLR_IMAGE = ${DOCKER_PREFIX}kabanero/kabanero-operator-stack-controller:${DOCKER_TAG}
 
 # For integration testing
 # INTERNAL_REGISTRY: the public facing registry url. Set TRUE to enable and find the default address, or manually set to address itself
@@ -232,8 +233,20 @@ int-test-install: creds build-image push-image int-install int-config
 int-docker-image-install: creds pull-docker-image int-install int-config
 
 pull-docker-image:
-	docker pull ${IMAGE}
-	docker tag ${IMAGE} ${IMAGE_SVC}
+	kubectl create namespace kabanero || true
+	docker pull ${PULL_IMAGE}
+	docker tag ${PULL_IMAGE} ${IMAGE}
+	docker push ${IMAGE}
+	docker pull ${PULL_REGISTRY_IMAGE}
+	docker tag ${PULL_REGISTRY_IMAGE} ${REGISTRY_IMAGE}
+	docker push ${REGISTRY_IMAGE}
+	docker pull ${PULL_WEBHOOK_IMAGE}
+	docker tag ${PULL_WEBHOOK_IMAGE} ${WEBHOOK_IMAGE}
+	docker push ${WEBHOOK_IMAGE}
+	docker pull ${PULL_STACK_CTRLR_IMAGE}
+	docker tag ${PULL_STACK_CTRLR_IMAGE} ${STACK_CTRLR_IMAGE}
+	docker push ${STACK_CTRLR_IMAGE}
+
 creds:
 	tests/00-credentials.sh
 
