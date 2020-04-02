@@ -68,7 +68,7 @@ ifeq ($(detected_OS),Darwin)
 endif
 endif
 
-.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle int-master-install pull-master-image
+.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle int-docker-image-install pull-docker-image
 
 build: generate
 	GO111MODULE=on go install ./cmd/manager
