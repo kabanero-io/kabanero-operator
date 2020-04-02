@@ -68,6 +68,7 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 					},
 					Spec: kabanerov1alpha2.StackSpec{
 						Name: key,
+						PipelinesNamespace: k.Spec.PipelinesNamespace,
 					},
 				}
 			} else {

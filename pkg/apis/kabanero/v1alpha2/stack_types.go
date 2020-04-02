@@ -35,6 +35,7 @@ type StackSpec struct {
 	Name string `json:"name,omitempty"`
 	// +listType=set
 	Versions []StackVersion `json:"versions,omitempty"`
+	PipelinesNamespace string `json:"pipelinesNamespace,omitempty"`
 }
 
 // StackVersion defines the desired composition of a specific stack version.

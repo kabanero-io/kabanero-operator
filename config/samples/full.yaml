@@ -124,6 +124,9 @@ spec:
       sha256: e6ebc6aeaf21540f0d0dac8caf0a2d805e8d90f174cb912a31831f700d049bb1
       https:
         url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.7.0/default-kabanero-pipelines.tar.gz
+        
+  # The namespace pipelines will be created in
+  pipelinesNamespace: kabanero-pipelines
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
