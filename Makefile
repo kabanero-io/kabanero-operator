@@ -229,9 +229,9 @@ endif
 # Install Test
 int-test-install: creds build-image push-image int-install int-config
 
-int-master-install: creds  pull-master-image int-install int-config
+int-docker-image-install: creds pull-docker-image int-install int-config
 
-pull-master-image:
+pull-docker-image:
 	docker pull ${IMAGE}
 	docker tag ${IMAGE} ${IMAGE_SVC}
 creds:
