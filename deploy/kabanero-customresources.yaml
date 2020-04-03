@@ -222,6 +222,7 @@ rules:
   - kabanero.io
   resources:
   - stacks
+  - kabaneros
   verbs:
   - get
   - list
