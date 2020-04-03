@@ -44,6 +44,8 @@ deploy:
     - "deploy/kabanero-customresources.yaml"
     - "deploy/install.sh"
     - "deploy/uninstall.sh"
+    - "config/samples/default.yaml"
+    - "config/samples/full.yaml"
   skip_cleanup: true
   on:
     repo: kabanero-io/kabanero-operator
