@@ -39,6 +39,8 @@ type StackSpec struct {
 
 // StackVersion defines the desired composition of a specific stack version.
 type StackVersion struct {
+	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
+
 	// +listType=set
 	Pipelines            []PipelineSpec `json:"pipelines,omitempty"`
 	Version              string         `json:"version,omitempty"`

@@ -644,6 +644,8 @@ spec:
                           type: array
                       type: object
                     type: array
+                  skipRegistryCertVerification:
+                    type: boolean
                 type: object
               targetNamespaces:
                 items:

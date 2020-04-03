@@ -2,8 +2,10 @@ package stack
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"regexp"
 	"runtime"
 	"strings"
@@ -490,7 +492,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						for _, manifest := range value.manifests {
 							if asset.Name == manifest.Name {
 								resources := []unstructured.Unstructured{manifest.Yaml}
-								
+
 								// Only allow Group: tekton.dev
 								allowed := true
 								for _, resource := range resources {
@@ -500,7 +502,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 										allowed = false
 									}
 								}
-								
+
 								if allowed == true {
 									mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
 
@@ -612,7 +614,6 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			// image/digest may have changed before the next successful retry.
 			for j, image := range newStackVersionStatus.Images {
 				activationDigestExists := isActivationDigestPresent(stackResource, curSpec, image)
-
 				if !activationDigestExists {
 					image.Digest.Message = ""
 					img := image.Image + ":" + curSpec.Version
@@ -620,7 +621,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					if err != nil {
 						image.Digest.Message = fmt.Sprintf("Unable to parse registry from image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
 					} else {
-						digest, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, logger, img)
+						digest, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, curSpec.SkipRegistryCertVerification, logger, img)
 						if err != nil {
 							image.Digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
 						} else {
@@ -671,7 +672,7 @@ func isActivationDigestPresent(stackResource *kabanerov1alpha2.Stack, curSpec ka
 }
 
 // Retrieves the input image digest from the hosting repository.
-func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, logr logr.Logger, image string) (string, error) {
+func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, skipCertVerification bool, logr logr.Logger, image string) (string, error) {
 	// Search all secrets under the given namespace for the one containing the required hostname.
 	annotationKey := "kabanero.io/docker-"
 	secret, err := cutils.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistry, annotationKey)
@@ -715,9 +716,16 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 		return "", err
 	}
 
+	transport := &http.Transport{}
+	if skipCertVerification {
+		tlsConf := &tls.Config{InsecureSkipVerify: skipCertVerification}
+		transport.TLSClientConfig = tlsConf
+	}
+
 	img, err := remote.Image(ref,
+		remote.WithAuth(authenticator),
 		remote.WithPlatform(v1.Platform{Architecture: runtime.GOARCH, OS: runtime.GOOS}),
-		remote.WithAuth(authenticator))
+		remote.WithTransport(transport))
 	if err != nil {
 		return "", err
 	}
