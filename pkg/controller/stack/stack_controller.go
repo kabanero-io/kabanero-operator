@@ -492,7 +492,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						for _, manifest := range value.manifests {
 							if asset.Name == manifest.Name {
 								resources := []unstructured.Unstructured{manifest.Yaml}
-								
+
 								// Only allow Group: tekton.dev
 								allowed := true
 								for _, resource := range resources {
@@ -502,7 +502,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 										allowed = false
 									}
 								}
-								
+
 								if allowed == true {
 									mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
 
@@ -615,28 +615,13 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			for j, image := range newStackVersionStatus.Images {
 				activationDigestExists := isActivationDigestPresent(stackResource, curSpec, image)
 				if !activationDigestExists {
-					var kinst *kabanerov1alpha2.Kabanero
-					l := kabanerov1alpha2.KabaneroList{}
-					err = c.List(context.Background(), &l, client.InNamespace(stackResource.GetNamespace()))
-					if err != nil {
-						return err
-					}
-					for _, _k := range l.Items {
-						kinst = &_k
-					}
-
-					skipRegistryCertVerification := false
-					if kinst != nil {
-						skipRegistryCertVerification = kinst.Spec.Stacks.SkipRegistryCertVerification
-					}
-
 					image.Digest.Message = ""
 					img := image.Image + ":" + curSpec.Version
 					registry, err := sutils.GetImageRegistry(img)
 					if err != nil {
 						image.Digest.Message = fmt.Sprintf("Unable to parse registry from image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
 					} else {
-						digest, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, skipRegistryCertVerification, logger, img)
+						digest, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, curSpec.SkipRegistryCertVerification, logger, img)
 						if err != nil {
 							image.Digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
 						} else {
