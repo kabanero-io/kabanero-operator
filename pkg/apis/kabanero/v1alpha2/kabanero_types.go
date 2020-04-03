@@ -24,7 +24,7 @@ type KabaneroSpec struct {
 
 	Github GithubConfig `json:"github,omitempty"`
 
-	GovernacePolicy GovernancePolicyConfig `json:"governancePolicy,omitempty"`
+	GovernancePolicy GovernancePolicyConfig `json:"governancePolicy,omitempty"`
 
 	Stacks InstanceStackConfig `json:"stacks,omitempty"`
 

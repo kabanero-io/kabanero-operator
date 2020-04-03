@@ -568,7 +568,7 @@ func (in *KabaneroSpec) DeepCopyInto(out *KabaneroSpec) {
 		copy(*out, *in)
 	}
 	in.Github.DeepCopyInto(&out.Github)
-	out.GovernacePolicy = in.GovernacePolicy
+	out.GovernancePolicy = in.GovernancePolicy
 	in.Stacks.DeepCopyInto(&out.Stacks)
 	if in.Triggers != nil {
 		in, out := &in.Triggers, &out.Triggers
