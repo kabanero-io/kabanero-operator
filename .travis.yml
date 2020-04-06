@@ -7,7 +7,7 @@ services:
 
 # Install operator-sdk
 env:
-  - RELEASE_VERSION=v0.15.1
+  - RELEASE_VERSION=v0.16.0
 
 before_install:
 - curl -OJL https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
@@ -44,6 +44,8 @@ deploy:
     - "deploy/kabanero-customresources.yaml"
     - "deploy/install.sh"
     - "deploy/uninstall.sh"
+    - "config/samples/default.yaml"
+    - "config/samples/full.yaml"
   skip_cleanup: true
   on:
     repo: kabanero-io/kabanero-operator

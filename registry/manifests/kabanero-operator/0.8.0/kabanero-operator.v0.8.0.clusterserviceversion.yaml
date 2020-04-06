@@ -28,16 +28,16 @@ metadata:
                 {
                   "name": "incubator",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.7.0/kabanero-stack-hub-index.yaml"
+                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0-rc1/kabanero-stack-hub-index.yaml"
                   }
                 }
               ],
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "e6ebc6aeaf21540f0d0dac8caf0a2d805e8d90f174cb912a31831f700d049bb1",
+                  "sha256": "653e5c69abcefdaf7ac9ef3b826376edb8517f64aca44d5eda40a74ff1d62ee5",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.7.0/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0-rc.1/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -65,18 +65,18 @@ metadata:
           "spec": {
             "name": "java-microprofile",
             "versions": [
-              { "version": "0.2.25",
+              { "version": "0.2.26",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "e6ebc6aeaf21540f0d0dac8caf0a2d805e8d90f174cb912a31831f700d049bb1",
+                    "sha256": "653e5c69abcefdaf7ac9ef3b826376edb8517f64aca44d5eda40a74ff1d62ee5",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.7.0/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0-rc.1/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
                 "images": [
                   { "id": "java-microprofile",
-                    "image": "docker.io/kabanero/java-microprofile:0.2"
+                    "image": "docker.io/kabanerobeta/java-microprofile:0.2.26"
                   }
                 ]
               }

@@ -6,7 +6,7 @@
 #
 
 # -----------------------------------------------------------------------
-# KAppNav 0.7.0
+# KAppNav 0.8.0
 # -----------------------------------------------------------------------
 apiVersion: v1
 kind: Namespace
@@ -104,7 +104,7 @@ spec:
       containers:
         - name: kappnav-operator
           # Replace this with the built image name
-          image: kappnav/operator:0.7.0
+          image: kappnav/operator:0.8.0
           command:
           - kappnav-operator
           imagePullPolicy: Always
@@ -129,7 +129,6 @@ metadata:
   labels:
     kabanero.io/component: kappnav
 spec:
-  # Default values copied from <project_dir>/helm-charts/kappnav/values.yaml
 
   ###############################################################################
   ## kAppNav REST API variables
@@ -137,7 +136,7 @@ spec:
 
   appNavAPI:
     repository: kappnav/apis
-    tag: 0.7.0
+    tag: 0.8.0
 
   ###############################################################################
   ## kAppNav Controller variables
@@ -145,7 +144,7 @@ spec:
 
   appNavController:
     repository: kappnav/controller
-    tag: 0.7.0
+    tag: 0.8.0
 
   ###############################################################################
   ## kAppNav UI variables
@@ -153,16 +152,21 @@ spec:
 
   appNavUI:
     repository: kappnav/ui
-    tag: 0.7.0
+    tag: 0.8.0
 
   ###############################################################################
-  ## Environmental variables
+  ## kAppNav Inventory variables
   ###############################################################################
-  env:
-    kubeEnv: ocp
-    
+
+  extensionContainers:
+    appNavInv:
+      repository: kappnav/inv
+      tag: 0.8.0
+
   ###############################################################################
   ## Logging variables
   ###############################################################################
   logging:
     apis: info
+    operator: info
+    controller: info

@@ -107,6 +107,7 @@ rules:
   - get
   - create
   - delete
+  - list
 - apiGroups:
   - route.openshift.io
   resources:

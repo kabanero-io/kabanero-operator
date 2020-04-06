@@ -24,7 +24,7 @@ type KabaneroSpec struct {
 
 	Github GithubConfig `json:"github,omitempty"`
 
-	GovernacePolicy GovernancePolicyConfig `json:"governancePolicy,omitempty"`
+	GovernancePolicy GovernancePolicyConfig `json:"governancePolicy,omitempty"`
 
 	Stacks InstanceStackConfig `json:"stacks,omitempty"`
 
@@ -50,6 +50,8 @@ type KabaneroSpec struct {
 
 // InstanceStackConfig defines the customization entries for a set of stacks.
 type InstanceStackConfig struct {
+	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
+
 	// +listType=set
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 

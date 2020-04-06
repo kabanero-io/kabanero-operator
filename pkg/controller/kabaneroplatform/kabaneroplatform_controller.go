@@ -102,7 +102,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-	
+
+/* Useful if RoleBindingList is changed to use Structured instead of Unstructured
+	// Index Rolebindings by name
+	if err := mgr.GetFieldIndexer().IndexField(&rbacv1.RoleBinding{}, "metadata.name", func(rawObj runtime.Object) []string {
+		rolebinding := rawObj.(*rbacv1.RoleBinding)
+		return []string{rolebinding.ObjectMeta.Name}
+	}); err != nil {
+		return err
+	}
+*/
+
 	return nil
 }
 
@@ -282,7 +292,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			log.Error(err, "Could not read the kabanero-operator container image from the pod")
 		}
 	})
-	
+
 	// TODO: Retrieve kabanero as unstructured and see if there is a collection hub defined.  If so,
 	// convert it, update, and retry.
 	kabInstanceUnstructured := &unstructured.Unstructured{}
@@ -367,6 +377,13 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			processStatus(ctx, request, instance, r.client, reqLogger)
 			return reconcile.Result{}, err
 		}
+	}
+
+	// Reconcile the targetNamespaces
+	err = reconcileTargetNamespaces(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling targetNamespaces")
+		return reconcile.Result{}, err
 	}
 
 	// Deploy feature collection resources.

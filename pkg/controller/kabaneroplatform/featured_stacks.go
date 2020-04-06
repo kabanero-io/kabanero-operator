@@ -94,6 +94,7 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 					if !(alreadyDeployed && len(stackVersion.DesiredState) > 0) {
 						stackVersion.Pipelines = stack.Pipelines
 						stackVersion.SkipCertVerification = stack.SkipCertVerification
+						stackVersion.SkipRegistryCertVerification = stack.SkipRegistryCertVerification
 						stackVersion.Images = stack.Images
 						stackResource.Spec.Versions[j] = stackVersion
 					}
@@ -145,13 +146,14 @@ func featuredStacks(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger lo
 				pipelineUrl := kabanerov1alpha2.HttpsProtocolFile{Url: pipeline.Url, SkipCertVerification: pipeline.SkipCertVerification}
 				pipelines = append(pipelines, kabanerov1alpha2.PipelineSpec{Id: pipeline.Id, Sha256: pipeline.Sha256, Https: pipelineUrl, GitRelease: pipeline.GitRelease})
 			}
+
 			// The image information will be in the stack.  Today we just support reading the legacy field from the collection hub.
 			images := []kabanerov1alpha2.Image{}
 			for _, image := range c.Images {
 				images = append(images, kabanerov1alpha2.Image{Id: image.Id, Image: image.Image})
 			}
 
-			stackMap[c.Id] = append(stackMap[c.Id], kabanerov1alpha2.StackVersion{Pipelines: pipelines, Version: c.Version, Images: images})
+			stackMap[c.Id] = append(stackMap[c.Id], kabanerov1alpha2.StackVersion{Pipelines: pipelines, Version: c.Version, Images: images, SkipRegistryCertVerification: k.Spec.Stacks.SkipRegistryCertVerification})
 		}
 	}
 

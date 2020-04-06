@@ -222,18 +222,7 @@ rules:
   - kabanero.io
   resources:
   - stacks
-  verbs:
-  - get
-  - list
-  - create
-  - update
-  - delete
-  - patch
-  - watch
-- apiGroups:
-  - appsody.dev
-  resources:
-  - appsodyapplications
+  - kabaneros
   verbs:
   - get
   - list
@@ -257,6 +246,14 @@ rules:
   - imagestreams
   verbs:
   - create
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - images
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -274,6 +271,27 @@ subjects:
   namespace: kabanero
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kabanero-pipeline-deploy-role 
+  namespace: kabanero
+  labels:
+    kabanero.io/install: 24-pipeline-sa  
+rules:
+- apiGroups:
+  - appsody.dev
+  resources:
+  - appsodyapplications
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kabanero-trigger-role 
@@ -286,6 +304,7 @@ rules:
   resources:
   - triggerbindings
   - triggertemplates
+  - eventlisteners
   verbs:
   - get
   - list
