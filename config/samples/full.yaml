@@ -9,7 +9,7 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: "0.8.0"
+  version: "0.9.0"
 
   targetNamespaces:
   - ns1
@@ -17,7 +17,7 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1 "
+    version: "0.8.0-rc.1"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
@@ -34,25 +34,25 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabaner-operator-collection-controller
+    repository: kabanero/kabanero-operator
     tag: "TRAVIS_TAG"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-collection-controller:TRAVIS_TAG
+    image: kabanero/kabanero-operator:TRAVIS_TAG
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabaner-operator-stack-controller
+    repository: kabanero/kabanero-operator
     tag: "TRAVIS_TAG"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-stack-controller:TRAVIS_TAG
+    image: kabanero/kabanero-operator:TRAVIS_TAG
 
   landing:
     # The landing page is enabled by default. To disable specify false.
@@ -70,14 +70,14 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabanero-operator-admission-webhook
+    repository: kabanero/kabanero-operator
     tag: "TRAVIS_TAG"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-admission-webhook:TRAVIS_TAG
+    image: kabanero/kabanero-operator:TRAVIS_TAG
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
