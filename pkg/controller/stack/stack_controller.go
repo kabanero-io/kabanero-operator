@@ -253,6 +253,12 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 		log.Error(err, fmt.Sprintf("Error during reconcilePipelinesNamespace"))
 	}
 
+	// Ensure Pipelines ServeAccount, Role & Rolebinding exists
+	err = reconcilePipelinesServiceAccount(c, r.client, r_log)
+	if err != nil {
+		log.Error(err, fmt.Sprintf("Error during reconcilePipelinesServiceAccount"))
+	}
+
 	// Process the versions array and activate (or deactivate) the desired versions.
 	err = reconcileActiveVersions(c, r.client, r_log)
 	if err != nil {
@@ -891,9 +897,80 @@ func reconcilePipelinesNamespace(stackResource *kabanerov1alpha2.Stack, c client
 }
 
 func pipelinesNamespace(stackResource *kabanerov1alpha2.Stack) string {
-	pipelinesNamespace := "kabanero-pipelines"
+	pipelinesNamespace := "kabanero"
 	if len(stackResource.Spec.PipelinesNamespace) != 0 {
 		pipelinesNamespace = stackResource.Spec.PipelinesNamespace
 	}
 	return pipelinesNamespace
+}
+
+func reconcilePipelinesServiceAccount(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
+	// Ensure PipelinesNamespace exists
+	
+	pipelinesNamespace := pipelinesNamespace(stackResource)
+	serviceAccountName := "kabanero-pipeline"
+	
+	serviceAccount := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "ServiceAccount",
+			"metadata": map[string]interface{}{
+				"name": serviceAccountName,
+				"namespace": pipelinesNamespace,
+			},
+		},
+	}
+	
+	err := c.Get(context.TODO(), client.ObjectKey{Namespace: pipelinesNamespace, Name: serviceAccountName,}, serviceAccount)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			err = c.Create(context.TODO(), serviceAccount)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	
+	roleName := "kabanero-pipeline-role "
+	
+	role := &unstructured.Unstructured{}
+	
+	serviceAccount.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "ServiceAccount",
+		Version: "v1",
+	})
+	
+	role.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "rbac.authorization.k8s.io",
+		Kind:    "Role",
+		Version: "v1",
+	})
+	
+	role.Object = map[string]interface{}{
+		"name": roleName,
+		"namespace": pipelinesNamespace,
+		"rules": []map[string]interface{}{
+			{
+				"apiGroups": []string{"security.openshift.io",},
+				"resources": []string{"securitycontextconstraints",},
+				"verbs": []string{"use",},
+			},
+		},
+	}
+	
+	err = c.Get(context.TODO(), client.ObjectKey{Namespace: pipelinesNamespace, Name: roleName,}, role)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			err = c.Create(context.TODO(), role)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	
+	return nil
 }
