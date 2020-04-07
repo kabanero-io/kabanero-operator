@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -13,10 +15,12 @@ import (
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -30,6 +34,8 @@ import (
 
 var log = logf.Log.WithName("controller_kabaneroplatform")
 var ctrlr controller.Controller
+var operatorContainerImage string
+var operatorContainerImageOp sync.Once
 
 // A list of functions driven by the reconciler
 type reconcileFunc func(context.Context, *kabanerov1alpha2.Kabanero, client.Client, logr.Logger) error
@@ -109,6 +115,37 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	return nil
 }
+
+func getOperatorImage(c client.Client) (string, error) {
+	// First, read the POD_NAME env variable.  This is set in the deployment spec in the CSV.
+	podName := os.Getenv("POD_NAME")
+	if len(podName) == 0 {
+		return "", fmt.Errorf("The POD_NAME environment variable is not set, or is empty")
+	}
+
+	namespace := os.Getenv("WATCH_NAMESPACE")
+	if len(namespace) == 0 {
+		return "", fmt.Errorf("The WATCH_NAMESPACE environment variable is not set, or is empty")
+	}
+	
+	// Second, get the Pod instance with that name
+	pod := &corev1.Pod{}
+	kubePodName := types.NamespacedName{Name: podName, Namespace: namespace}
+	err := c.Get(context.TODO(), kubePodName, pod)
+	if err != nil {
+		return "", fmt.Errorf("Pod %v could not be retrieved: %v", podName, err.Error())
+	} 
+	
+	// Third, parse out the container name, then the image
+	for _, container := range pod.Spec.Containers {
+		if container.Name == "kabanero-operator" {
+			return container.Image, nil
+		}
+	}
+
+	return "", fmt.Errorf("No container named 'kabanero-operator' was found in Pod %v", podName)
+}
+
 
 // Returns a watch handler.
 func getWatchHandlerForKabaneroOwner() *handler.EnqueueRequestForOwner {
@@ -245,6 +282,16 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Kabanero")
+
+	// Retrieve the Kabanero operator image name, for use later.  Only do this once.  Can't do it
+	// in the add() method because the client is not started yet (that would have been ideal).
+	operatorContainerImageOp.Do(func() {
+		var err error
+		operatorContainerImage, err = getOperatorImage(r.client)
+		if err != nil {
+			log.Error(err, "Could not read the kabanero-operator container image from the pod")
+		}
+	})
 
 	// TODO: Retrieve kabanero as unstructured and see if there is a collection hub defined.  If so,
 	// convert it, update, and retry.

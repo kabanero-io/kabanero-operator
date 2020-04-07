@@ -124,6 +124,8 @@ spec:
         - name: kabanero-operator-stack-controller
           image: {{ .image }}
           imagePullPolicy: Always
+          command:
+          - /usr/local/bin/kabanero-operator-stack-controller
           env:
             - name: KABANERO_NAMESPACE
               valueFrom:
