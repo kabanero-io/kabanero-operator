@@ -21,6 +21,9 @@ const (
 	scOrchestrationFileName = "stack-controller.yaml"
 
 	scDeploymentResourceName = "kabanero-operator-stack-controller"
+	
+	scPipelinesNamespaceServiceAccount = "stack-controller-pipelinesnamespace-serviceaccount.yaml"
+	
 )
 
 // Installs the Kabanero stack controller.
@@ -99,6 +102,62 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
+
+	// Create the Namespace, ServiceAccount, Roles, & Bindings for the pipelinesNamespace
+	pipelinesNamespace := pipelinesNamespace(k)
+	templateCtx["pipelinesNamespace"] = pipelinesNamespace
+
+	f, err = rev.OpenOrchestration(scPipelinesNamespaceServiceAccount)
+	if err != nil {
+		return err
+	}
+	
+	// Delete the ServiceAccount if the PipelinesNamespace was changed
+	if len(k.Status.PipelinesNamespace) != 0 {
+		if k.Status.PipelinesNamespace != pipelinesNamespace {
+		
+			templateCtx["pipelinesNamespace"] = k.Status.PipelinesNamespace
+			
+			s, err = renderOrchestration(f, templateCtx)
+			if err != nil {
+				return err
+			}
+			
+			m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+			if err != nil {
+				return err
+			}
+
+			err = m.Delete()
+			if err != nil {
+				return err
+			}
+			
+		}
+	}
+	
+	// Apply the ServiceAccount to the pipelinesNamespace
+	templateCtx["pipelinesNamespace"] = pipelinesNamespace
+
+	s, err = renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+	if err != nil {
+		return err
+	}
+
+	err = mOrig.Apply()
+	if err != nil {
+		return err
+	}
+
+	k.Status.PipelinesNamespace = pipelinesNamespace
+
+
+
 	return nil
 }
 
@@ -171,6 +230,31 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 		return err
 	}
 
+
+	// Cleanup PipelinesNamespace
+	templateCtx["pipelinesNamespace"] = k.Status.PipelinesNamespace
+	
+	f, err = rev.OpenOrchestration(scPipelinesNamespaceServiceAccount)
+	if err != nil {
+		return err
+	}
+
+	s, err = renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	m, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+	if err != nil {
+		return err
+	}
+
+	err = m.Delete()
+	if err != nil {
+		return err
+	}
+
+
 	return nil
 }
 
@@ -218,4 +302,15 @@ func getStackControllerStatus(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	}
 
 	return ready, err
+}
+
+
+func pipelinesNamespace(k *kabanerov1alpha2.Kabanero) string {
+	var pipelinesNamespace string
+	if len(k.Spec.PipelinesNamespace) != 0 {
+		pipelinesNamespace = k.Spec.PipelinesNamespace
+	} else {
+		pipelinesNamespace = k.GetNamespace()
+	}
+	return pipelinesNamespace
 }

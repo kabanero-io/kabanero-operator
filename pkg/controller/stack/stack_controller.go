@@ -247,6 +247,7 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 
 	r_log = r_log.WithValues("Stack.Name", stackName)
 	
+/*
 	// Ensure PipelinesNamespace exists
 	err := reconcilePipelinesNamespace(c, r.client, r_log)
 	if err != nil {
@@ -258,9 +259,10 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Error during reconcilePipelinesServiceAccount"))
 	}
+*/
 
 	// Process the versions array and activate (or deactivate) the desired versions.
-	err = reconcileActiveVersions(c, r.client, r_log)
+	err := reconcileActiveVersions(c, r.client, r_log)
 	if err != nil {
 		// TODO - what is useful to print?
 		log.Error(err, fmt.Sprintf("Error during reconcileActiveVersions"))
@@ -867,110 +869,12 @@ func deleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, 
 }
 
 
-func reconcilePipelinesNamespace(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
-	// Ensure PipelinesNamespace exists
-	
-	pipelinesNamespace := pipelinesNamespace(stackResource)
-	
-	namespace := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Namespace",
-			"metadata": map[string]interface{}{
-				"name": pipelinesNamespace,
-			},
-		},
-	}
-	
-	err := c.Get(context.TODO(), client.ObjectKey{Namespace: pipelinesNamespace, Name: pipelinesNamespace,}, namespace)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			err = c.Create(context.TODO(), namespace)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-	return nil
-}
-
-func pipelinesNamespace(stackResource *kabanerov1alpha2.Stack) string {
-	pipelinesNamespace := "kabanero"
-	if len(stackResource.Spec.PipelinesNamespace) != 0 {
-		pipelinesNamespace = stackResource.Spec.PipelinesNamespace
+func pipelinesNamespace(s *kabanerov1alpha2.Stack) string {
+	var pipelinesNamespace string
+	if len(s.Spec.PipelinesNamespace) != 0 {
+		pipelinesNamespace = s.Spec.PipelinesNamespace
+	} else {
+		pipelinesNamespace = s.GetNamespace()
 	}
 	return pipelinesNamespace
-}
-
-func reconcilePipelinesServiceAccount(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
-	// Ensure PipelinesNamespace exists
-	
-	pipelinesNamespace := pipelinesNamespace(stackResource)
-	serviceAccountName := "kabanero-pipeline"
-	
-	serviceAccount := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "ServiceAccount",
-			"metadata": map[string]interface{}{
-				"name": serviceAccountName,
-				"namespace": pipelinesNamespace,
-			},
-		},
-	}
-	
-	err := c.Get(context.TODO(), client.ObjectKey{Namespace: pipelinesNamespace, Name: serviceAccountName,}, serviceAccount)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			err = c.Create(context.TODO(), serviceAccount)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-	
-	roleName := "kabanero-pipeline-role "
-	
-	role := &unstructured.Unstructured{}
-	
-	serviceAccount.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "ServiceAccount",
-		Version: "v1",
-	})
-	
-	role.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "rbac.authorization.k8s.io",
-		Kind:    "Role",
-		Version: "v1",
-	})
-	
-	role.Object = map[string]interface{}{
-		"name": roleName,
-		"namespace": pipelinesNamespace,
-		"rules": []map[string]interface{}{
-			{
-				"apiGroups": []string{"security.openshift.io",},
-				"resources": []string{"securitycontextconstraints",},
-				"verbs": []string{"use",},
-			},
-		},
-	}
-	
-	err = c.Get(context.TODO(), client.ObjectKey{Namespace: pipelinesNamespace, Name: roleName,}, role)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			err = c.Create(context.TODO(), role)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-	
-	return nil
 }

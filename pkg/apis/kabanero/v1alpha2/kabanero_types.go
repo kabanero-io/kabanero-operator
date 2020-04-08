@@ -241,6 +241,9 @@ type KabaneroStatus struct {
 
 	// SSO server status
 	Sso SsoStatus `json:"sso,omitempty"`
+	
+	// Namespace of deployed Pipelines
+	PipelinesNamespace  string    `json:"pipelinesNamespace,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance
