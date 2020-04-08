@@ -1,0 +1,5 @@
+# This namespace is created for tekton pipelineruns
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .pipelinesNamespace }}

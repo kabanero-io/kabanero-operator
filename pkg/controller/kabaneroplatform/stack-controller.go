@@ -22,8 +22,10 @@ const (
 
 	scDeploymentResourceName = "kabanero-operator-stack-controller"
 	
-	scPipelinesNamespaceServiceAccount = "stack-controller-pipelinesnamespace-serviceaccount.yaml"
+	scKabaneroTriggersFileName = "stack-controller-kabanero-triggers.yaml"
 	
+	scPipelinesNamespaceFileName = "stack-controller-pipelines-namespace.yaml"
+	scPipelinesNamespaceManifestsFileName = "stack-controller-pipelines-namespace-manifests.yaml"
 )
 
 // Installs the Kabanero stack controller.
@@ -31,22 +33,21 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	logger := sclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
 	logger.Info("Reconciling Kabanero stack controller installation.")
 
-	// Deploy the Kabanero stack operator.
+	// Setup context
 	rev, err := resolveSoftwareRevision(k, scVersionSoftCompName, k.Spec.StackController.Version)
 	if err != nil {
 		logger.Error(err, "Kabanero stack controller deployment failed. Unable to resolve software revision.")
 		return err
 	}
-
 	templateCtx := rev.Identifiers
-	image, err := imageUriWithOverrides(k.Spec.StackController.Repository, k.Spec.StackController.Tag, k.Spec.StackController.Image, rev)
-	if err != nil {
-		logger.Error(err, "Kabanero stack controller deployment failed. Unable to process image overrides.")
-		return err
-	}
-	templateCtx["image"] = image
+	templateCtx["kabaneroNamespace"] = k.GetNamespace()
 
-	f, err := rev.OpenOrchestration(scOrchestrationFileName)
+	// Create a Role & RoleBinding in the tekton-pipelines namespace that will allow
+	// the stack controller to create triggerbinding and triggertemplate
+	// objects in the tekton-pipelines namespace.
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+
+	f, err := rev.OpenOrchestration(scKabaneroTriggersFileName)
 	if err != nil {
 		return err
 	}
@@ -56,17 +57,7 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
-	if err != nil {
-		return err
-	}
-
-	transforms := []mf.Transformer{
-		mf.InjectOwner(k),
-		mf.InjectNamespace(k.GetNamespace()),
-	}
-
-	m, err := mOrig.Transform(transforms...)
+	m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
@@ -76,13 +67,13 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	// Create a RoleBinding in the tekton-pipelines namespace that will allow
-	// the stack controller to create triggerbinding and triggertemplate
-	// objects in the tekton-pipelines namespace.
-	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
-	templateCtx["kabaneroNamespace"] = k.GetNamespace()
+	// Create the Namespace, ServiceAccount, Roles, & Bindings for the pipelinesNamespace
+	pipelinesNamespace := pipelinesNamespace(k)
+	templateCtx["pipelinesNamespace"] = pipelinesNamespace
+	
 
-	f, err = rev.OpenOrchestration("stack-controller-tekton.yaml")
+	// Namespace
+	f, err = rev.OpenOrchestration(scPipelinesNamespaceFileName)
 	if err != nil {
 		return err
 	}
@@ -92,27 +83,23 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+	m, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
-	err = mOrig.Apply()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
 
-
-	// Create the Namespace, ServiceAccount, Roles, & Bindings for the pipelinesNamespace
-	pipelinesNamespace := pipelinesNamespace(k)
-	templateCtx["pipelinesNamespace"] = pipelinesNamespace
-
-	f, err = rev.OpenOrchestration(scPipelinesNamespaceServiceAccount)
+	// ServiceAccount, Role, Rolebinding
+	f, err = rev.OpenOrchestration(scPipelinesNamespaceManifestsFileName)
 	if err != nil {
 		return err
 	}
 	
-	// Delete the ServiceAccount if the PipelinesNamespace was changed
+	// Delete if the PipelinesNamespace was changed
 	if len(k.Status.PipelinesNamespace) != 0 {
 		if k.Status.PipelinesNamespace != pipelinesNamespace {
 		
@@ -135,8 +122,7 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 			
 		}
 	}
-	
-	// Apply the ServiceAccount to the pipelinesNamespace
+
 	templateCtx["pipelinesNamespace"] = pipelinesNamespace
 
 	s, err = renderOrchestration(f, templateCtx)
@@ -144,12 +130,12 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 
-	mOrig, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+	m, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
-	err = mOrig.Apply()
+	err = m.Apply()
 	if err != nil {
 		return err
 	}
@@ -157,6 +143,43 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	k.Status.PipelinesNamespace = pipelinesNamespace
 
 
+	// Deploy the Kabanero stack operator.
+	image, err := imageUriWithOverrides(k.Spec.StackController.Repository, k.Spec.StackController.Tag, k.Spec.StackController.Image, rev)
+	if err != nil {
+		logger.Error(err, "Kabanero stack controller deployment failed. Unable to process image overrides.")
+		return err
+	}
+	templateCtx["image"] = image
+
+	f, err = rev.OpenOrchestration(scOrchestrationFileName)
+	if err != nil {
+		return err
+	}
+
+	s, err = renderOrchestration(f, templateCtx)
+	if err != nil {
+		return err
+	}
+
+	m, err = mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+	if err != nil {
+		return err
+	}
+
+	transforms := []mf.Transformer{
+		mf.InjectOwner(k),
+		mf.InjectNamespace(k.GetNamespace()),
+	}
+
+	mt, err := m.Transform(transforms...)
+	if err != nil {
+		return err
+	}
+
+	err = mt.Apply()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -210,7 +233,7 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
 	templateCtx["kabaneroNamespace"] = k.GetNamespace()
 
-	f, err := rev.OpenOrchestration("stack-controller-tekton.yaml")
+	f, err := rev.OpenOrchestration(scKabaneroTriggersFileName)
 	if err != nil {
 		return err
 	}
@@ -231,10 +254,10 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 	}
 
 
-	// Cleanup PipelinesNamespace
+	// Delete the ServiceAccount, Roles, & Bindings for the pipelinesNamespace (leave Namespace)
 	templateCtx["pipelinesNamespace"] = k.Status.PipelinesNamespace
 	
-	f, err = rev.OpenOrchestration(scPipelinesNamespaceServiceAccount)
+	f, err = rev.OpenOrchestration(scPipelinesNamespaceManifestsFileName)
 	if err != nil {
 		return err
 	}
@@ -253,6 +276,8 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 	if err != nil {
 		return err
 	}
+
+
 
 
 	return nil
