@@ -416,7 +416,11 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 				// Add the Digest to the rendering context. No need to validate if the digest was tampered
 				// with here. Later one and before we do anything with this, we will have validated the specified
 				// digest against the generated digest from the archive.
-				renderingContext["Digest"] = value.Digest[0:8]
+				if len(value.Digest) >= 8 {
+					renderingContext["Digest"] = value.Digest[0:8]
+				} else {
+					renderingContext["Digest"] = "nodigest"
+				}
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
 				manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
@@ -474,7 +478,11 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 						// Make sure the manifests are loaded.
 						if len(value.manifests) == 0 {
 							// Add the Digest to the rendering context.
-							renderingContext["Digest"] = value.Digest[0:8]
+							if len(value.Digest) >= 8 {
+								renderingContext["Digest"] = value.Digest[0:8]
+							} else {
+								renderingContext["Digest"] = "nodigest"
+							}
 
 							// Retrieve manifests as unstructured
 							manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
