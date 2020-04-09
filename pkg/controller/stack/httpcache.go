@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -15,9 +17,9 @@ var cachelog = rlog.Log.WithName("httpcache")
 // Value in the cache map.  This contains the etag returned from the remote
 // server, which is used on subsequent requests to use the cached data.
 type cacheValue struct {
-	etag string
-	date string
-	body []byte
+	etag     string
+	date     string
+	body     []byte
 	lastUsed time.Time
 }
 
@@ -84,7 +86,7 @@ func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
 		cacheLock.Lock()
 		httpCache[url] = cacheData
 		cacheLock.Unlock()
-		
+
 		return cacheData.body, nil
 	} else if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(fmt.Sprintf("Could not retrieve the resource: %v. Http status code: %v", url, resp.StatusCode))
@@ -105,7 +107,9 @@ func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
 	defer cacheLock.Unlock()
 	if (len(etag) > 0) && (len(date) > 0) {
 		// Before adding an entry to the cache, make sure the purge task is running.
-		startPurgeTicker.Do(startCachePurgeTask)
+		startPurgeTicker.Do(func() {
+			cutils.ScheduleWork(tickerDuration, cachelog, purgeCache, purgeDuration)
+		})
 		httpCache[url] = cacheValue{etag: etag, date: date, body: b, lastUsed: time.Now()}
 		cachelog.Info(fmt.Sprintf("Stored to cache: %v", url))
 	} else {
@@ -114,26 +118,6 @@ func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
 	}
 
 	return b, nil
-}
-
-// Starts the periodic purge task
-func startCachePurgeTask() {
-	// Start a ticker that will receive periodic requests to purge the cache.
-	purgeTicker := time.NewTicker(tickerDuration)
-
-	// This is the function that will purge the cache.  Note that this function
-	// never ends since we expect this to be running in a Kube pod which will
-	// never end on its own.
-	go func() {
-		for {
-			select {
-			case <-purgeTicker.C:
-				cachelog.Info("Started cache purge")
-				purgeCache(purgeDuration)
-				cachelog.Info("Finished cache purge")
-			}
-		}
-	}()
 }
 
 // Purges the cache
