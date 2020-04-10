@@ -51,7 +51,7 @@ ifeq ($(detected_OS),Darwin)
 endif
 endif
 
-.PHONY: build deploy deploy-olm build-image push-image int-test-install int-test-collections int-test-uninstall int-test-lifecycle
+.PHONY: build deploy deploy-olm build-image push-image push-manifest int-test-install int-test-collections int-test-uninstall int-test-lifecycle
 
 build: generate
 	GO111MODULE=on go install ./cmd/manager
@@ -121,6 +121,20 @@ ifdef TRAVIS_BRANCH
 	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
 endif
 endif
+
+push-manifest:
+	echo "IMAGE="$(IMAGE)
+	docker manifest create $(IMAGE) $(IMAGE)-amd64 $(IMAGE)-s390x --amend
+	docker manifest annotate $(IMAGE) $(IMAGE)-amd64 --os linux --arch amd64
+	docker manifest annotate $(IMAGE) $(IMAGE)-s390x --os linux --arch s390x
+	docker manifest inspect $(IMAGE)
+	docker manifest push $(IMAGE)
+	echo "REGISTRY_IMAGE="$(REGISTRY_IMAGE)
+	docker manifest create $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-amd64 $(REGISTRY_IMAGE)-s390x --amend
+	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-amd64 --os linux --arch amd64
+	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-s390x --os linux --arch s390x
+	docker manifest inspect $(REGISTRY_IMAGE)
+	docker manifest push $(REGISTRY_IMAGE)
 
 test: 
 	GO111MODULE=on go test ./cmd/... ./pkg/... 
