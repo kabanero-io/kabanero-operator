@@ -246,20 +246,6 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 	}
 
 	r_log = r_log.WithValues("Stack.Name", stackName)
-	
-/*
-	// Ensure PipelinesNamespace exists
-	err := reconcilePipelinesNamespace(c, r.client, r_log)
-	if err != nil {
-		log.Error(err, fmt.Sprintf("Error during reconcilePipelinesNamespace"))
-	}
-
-	// Ensure Pipelines ServeAccount, Role & Rolebinding exists
-	err = reconcilePipelinesServiceAccount(c, r.client, r_log)
-	if err != nil {
-		log.Error(err, fmt.Sprintf("Error during reconcilePipelinesServiceAccount"))
-	}
-*/
 
 	// Process the versions array and activate (or deactivate) the desired versions.
 	err := reconcileActiveVersions(c, r.client, r_log)
@@ -316,9 +302,9 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	renderingContext := make(map[string]interface{})
 	
 	pipelinesNamespace := pipelinesNamespace(stackResource)
-
+	log.Info(fmt.Sprintf("starting reconcileActiveVersions, pipelinesNamespace is: %v", pipelinesNamespace))
 	// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
-	// Appsody stack creation namimg constrains the length to 68 characters:
+	// Appsody stack creation naming constrains the length to 68 characters:
 	// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
 	// and cannot end in a dash."
 	cID := stackResource.Spec.Name
@@ -568,6 +554,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 	// Now update the StackStatus to reflect the current state of things.
 	newStackStatus := kabanerov1alpha2.StackStatus{}
+	newStackStatus.PipelinesNamespace = pipelinesNamespace
 	for i, curSpec := range stackResource.Spec.Versions {
 		newStackVersionStatus := kabanerov1alpha2.StackVersionStatus{Version: curSpec.Version}
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {

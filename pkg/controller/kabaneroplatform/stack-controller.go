@@ -98,30 +98,6 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	if err != nil {
 		return err
 	}
-	
-	// Delete if the PipelinesNamespace was changed
-	if len(k.Status.PipelinesNamespace) != 0 {
-		if k.Status.PipelinesNamespace != pipelinesNamespace {
-		
-			templateCtx["pipelinesNamespace"] = k.Status.PipelinesNamespace
-			
-			s, err = renderOrchestration(f, templateCtx)
-			if err != nil {
-				return err
-			}
-			
-			m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
-			if err != nil {
-				return err
-			}
-
-			err = m.Delete()
-			if err != nil {
-				return err
-			}
-			
-		}
-	}
 
 	templateCtx["pipelinesNamespace"] = pipelinesNamespace
 
@@ -139,9 +115,6 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	if err != nil {
 		return err
 	}
-
-	k.Status.PipelinesNamespace = pipelinesNamespace
-
 
 	// Deploy the Kabanero stack operator.
 	image, err := imageUriWithOverrides(k.Spec.StackController.Repository, k.Spec.StackController.Tag, k.Spec.StackController.Image, rev)
@@ -277,9 +250,6 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 		return err
 	}
 
-
-
-
 	return nil
 }
 
@@ -338,4 +308,65 @@ func pipelinesNamespace(k *kabanerov1alpha2.Kabanero) string {
 		pipelinesNamespace = k.GetNamespace()
 	}
 	return pipelinesNamespace
+}
+
+
+// Clean up the old namespace SA/Role/Bindings
+func reconcilePipelinesNamespace(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, _ logr.Logger) error {
+	logger := sclog.WithValues("Kabanero instance namespace", k.Namespace, "Kabanero instance Name", k.Name)
+	logger.Info("Reconciling Kabanero pipelinesNamespace.")
+
+	pipelinesNamespace := pipelinesNamespace(k)
+
+	deployedStacks := &kabanerov1alpha2.StackList{}
+	err := c.List(ctx, deployedStacks, client.InNamespace(k.GetNamespace()))
+	if err != nil {
+		return err
+	}
+
+	// Remove the old SA/Role/Bindings once all the Featured Stacks are re-created in the new pipelinesNamespace
+	canCleanup := true
+	for _, deployedStack := range deployedStacks.Items {
+		if k.Spec.PipelinesNamespace != deployedStack.Status.PipelinesNamespace {
+			canCleanup = false
+		}
+	}
+	
+	if canCleanup == true {
+		// Setup context
+		rev, err := resolveSoftwareRevision(k, scVersionSoftCompName, k.Spec.StackController.Version)
+		if err != nil {
+			logger.Error(err, "Unable to resolve software revision.")
+			return err
+		}
+		templateCtx := rev.Identifiers
+		templateCtx["kabaneroNamespace"] = k.GetNamespace()
+		templateCtx["pipelinesNamespace"] = pipelinesNamespace
+
+		f, err := rev.OpenOrchestration(scPipelinesNamespaceManifestsFileName)
+		if err != nil {
+			return err
+		}
+
+		s, err := renderOrchestration(f, templateCtx)
+		if err != nil {
+			return err
+		}
+		
+		m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(logger.WithName("manifestival")))
+		if err != nil {
+			return err
+		}
+
+		err = m.Delete()
+		if err != nil {
+			return err
+		}
+		
+		k.Status.PipelinesNamespace = pipelinesNamespace
+	}
+
+
+
+	return nil
 }

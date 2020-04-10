@@ -46,7 +46,13 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 		alreadyDeployed := true
 		stackResource := &kabanerov1alpha2.Stack{}
 		err := cl.Get(ctx, name, stackResource)
-		if err != nil {
+
+		pipelinesNamespace := pipelinesNamespace(k)
+
+		if err == nil {
+			// Ensure the featured stack pipelinesNamespace = Kabanero pipelinesNamespace
+			stackResource.Spec.PipelinesNamespace = pipelinesNamespace
+		} else {
 			if errors.IsNotFound(err) {
 				alreadyDeployed = false
 				// Not found. Need to create it.
@@ -68,7 +74,7 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 					},
 					Spec: kabanerov1alpha2.StackSpec{
 						Name: key,
-						PipelinesNamespace: k.Spec.PipelinesNamespace,
+						PipelinesNamespace: pipelinesNamespace,
 					},
 				}
 			} else {
@@ -167,10 +173,31 @@ func preProcessCurrentStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 		return err
 	}
 
+	// Only keep the FeaturedStack if the Kabanero pipelinesNamespace did not change, otherwise delete & recreate
+	log.Info(fmt.Sprintf("Check pipelinesNamespace"))
+	pipelinesNamespace := pipelinesNamespace(k)
+	for _, deployedStack := range deployedStacks.Items {
+		if deployedStack.Spec.PipelinesNamespace != pipelinesNamespace {
+			log.Info(fmt.Sprintf("PipelinesNamespace has changed. Delete Stack: %v", deployedStack.Spec.Name))
+			err := cl.Delete(ctx, &deployedStack)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	deployedStacks = &kabanerov1alpha2.StackList{}
+	err = cl.List(ctx, deployedStacks, client.InNamespace(k.GetNamespace()))
+	if err != nil {
+		return err
+	}
+
 	// Compare the list of currently deployed stacks and the stacks in the index.
 	for _, deployedStack := range deployedStacks.Items {
+
 		iStackList, _ := indexStackMap[deployedStack.GetName()]
 		newStackVersions := []kabanerov1alpha2.StackVersion{}
+		log.Info(fmt.Sprintf("Match pipelinesNamespace"))
 		for _, dStackVersion := range deployedStack.Spec.Versions {
 			deployedStackVersionMatchIndex := false
 			// Keep the stacks with matching versions. The caller will do the updates if necessary.
@@ -191,6 +218,7 @@ func preProcessCurrentStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 
 		// If there were no indications that the stack should be kept around, delete it.
 		if len(newStackVersions) == 0 {
+			log.Info(fmt.Sprintf("Delete Stack: %v", deployedStack.Spec.Name))
 			err := cl.Delete(ctx, &deployedStack)
 			if err != nil {
 				return err

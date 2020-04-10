@@ -347,6 +347,14 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return r.determineHowToRequeue(ctx, request, instance, err.Error(), r.requeueDelayMap, reqLogger)
 	}
 
+	// Reconcile the cleanup of old pipelinesNamespace SA/Role/Rolebinding after processing FeaturedStacks
+	err = reconcilePipelinesNamespace(ctx, instance, r.client, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error reconciling pipelinesNamespace")
+		processStatus(ctx, request, instance, r.client, reqLogger)
+		return reconcile.Result{}, err
+	}
+
 	// things worked reset requeue data
 	r.requeueDelayMap[request.Namespace] = RequeueData{0, time.Now()}
 

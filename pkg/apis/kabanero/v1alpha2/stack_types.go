@@ -78,6 +78,7 @@ type StackStatus struct {
 	// +listType=set
 	Versions []StackVersionStatus `json:"versions,omitempty"`
 	Summary  string               `json:"summary,omitempty"`
+	PipelinesNamespace string `json:"pipelinesNamespace,omitempty"`
 }
 
 // StackVersionStatus defines the observed state of a specific stack version.

@@ -1,4 +1,4 @@
-# ServiceAccount, Role & RoleBinding for piplines to be run
+# ServiceAccount, Role & RoleBinding for stack-controller to create & piplines to be run
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -190,3 +190,39 @@ subjects:
 - kind: ServiceAccount
   name: kabanero-pipeline
   namespace:  {{ .pipelinesNamespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kabanero-operator-stack-controller-tekton
+  namespace: {{ .pipelinesNamespace }}
+rules:
+- apiGroups:
+  - tekton.dev
+  resources:
+  - conditions
+  - pipelines
+  - tasks
+  - triggerbindings
+  - triggertemplates
+  verbs:
+  - delete
+  - get
+  - create
+  - list
+  - update
+  - watch
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-operator-stack-controller-tekton
+  namespace: {{ .pipelinesNamespace }}
+subjects:
+- kind: ServiceAccount
+  name: kabanero-operator-stack-controller
+  namespace: {{ .kabaneroNamespace }}
+roleRef:
+  kind: Role
+  name: kabanero-operator-stack-controller
+  apiGroup: rbac.authorization.k8s.io
