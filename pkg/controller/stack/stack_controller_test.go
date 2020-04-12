@@ -143,57 +143,242 @@ func TestNoFailedAssetsEmptyStatus(t *testing.T) {
 	}
 }
 
-func TestIsActivationDigestPresent(t *testing.T) {
-	testStack := kabanerov1alpha2.Stack{
+func TestImageActivationDigestInStackStatus(t *testing.T) {
+	v026Digest := "026abcde"
+	v027Digest := "027abcde"
+
+	stackVersion027 := kabanerov1alpha2.StackVersion{
+		Version:   "0.2.7",
+		Pipelines: []kabanerov1alpha2.PipelineSpec{},
+		Images: []kabanerov1alpha2.Image{{
+			Id:    "java-microprofile-027",
+			Image: "my-test-repo.io/kabanero/java-microprofile-027",
+		}},
+	}
+
+	stackVersion027Status := kabanerov1alpha2.StackVersionStatus{
+		Version:   "0.2.7",
+		Pipelines: []kabanerov1alpha2.PipelineStatus{},
+		Status:    "active",
+		Images: []kabanerov1alpha2.ImageStatus{{
+			Id:     "java-microprofile-027",
+			Image:  "my-test-repo.io/kabanero/java-microprofile-027",
+			Digest: kabanerov1alpha2.ImageDigest{Activation: v027Digest},
+		}},
+	}
+
+	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
-		Spec:       kabanerov1alpha2.StackSpec{},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name: "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version:      "0.2.6",
+				DesiredState: "active",
+				Pipelines:    []kabanerov1alpha2.PipelineSpec{},
+				Images: []kabanerov1alpha2.Image{{
+					Id:    "java-microprofile-026",
+					Image: "my-test-repo.io/kabanero/java-microprofile-026",
+				}},
+			}},
+		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
-				Version: "0.2.6",
+				Version:   "0.2.6",
+				Pipelines: []kabanerov1alpha2.PipelineStatus{},
+				Status:    "active",
 				Images: []kabanerov1alpha2.ImageStatus{{
-					Image: "docker.io/kabanero/java-microprofile-2",
-				}},
-			}, {
-				Version: "0.2.5",
-				Images: []kabanerov1alpha2.ImageStatus{{
-					Image:  "docker.io/kabanero/java-microprofile-1",
-					Digest: kabanerov1alpha2.ImageDigest{Activation: "12345"},
-				}},
-			}, {
-				Version: "0.2.4",
-				Images: []kabanerov1alpha2.ImageStatus{{
-					Image:  "docker.io/kabanero/java-microprofile-3",
-					Digest: kabanerov1alpha2.ImageDigest{Message: "Something Happened."},
+					Id:     "java-microprofile-026",
+					Image:  "my-test-repo.io/kabanero/java-microprofile-026",
+					Digest: kabanerov1alpha2.ImageDigest{Activation: v026Digest},
 				}},
 			}},
 		},
 	}
 
-	// Test 1.
-	stack := testStack.DeepCopy()
-	stackVersion := kabanerov1alpha2.StackVersion{Version: "0.2.6"}
-	stackImgStatusPreDigest := kabanerov1alpha2.ImageStatus{Id: "default-2", Image: "docker.io/kabanero/java-microprofile-2"}
-	activationDigestPresent := isActivationDigestPresent(&testStack, stackVersion, stackImgStatusPreDigest)
-	if activationDigestPresent {
-		t.Fatal(fmt.Sprintf("A false answer was expected. The digest value should not be present. Stack: %v. StackVersion: %v. stackImgStatusPreDigest: %v", stack, stackVersion, stackImgStatusPreDigest))
+	// Test 1. Stack with activation digest already set in status. Expectation: The same digest continues to be set.
+	stackResourceT1 := stackResource.DeepCopy()
+	client := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
+	err := reconcileActiveVersions(stackResourceT1, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
 	}
 
-	// Test 2.
-	stack = testStack.DeepCopy()
-	stackVersion = kabanerov1alpha2.StackVersion{Version: "0.2.5"}
-	stackImgStatusPreDigest = kabanerov1alpha2.ImageStatus{Id: "default-1", Image: "docker.io/kabanero/java-microprofile-1"}
-	activationDigestPresent = isActivationDigestPresent(&testStack, stackVersion, stackImgStatusPreDigest)
-	if !activationDigestPresent {
-		t.Fatal(fmt.Sprintf("A true answer was expected. The digest value should have been present. Stack: %v. StackVersion: %v. stackImgStatusPreDigest: %v", stack, stackVersion, stackImgStatusPreDigest))
+	if len(stackResourceT1.Status.Versions[0].Images[0].Digest.Activation) == 0 {
+		t.Fatal("The activation digest under stackResourceT1.Status.Versions[0].Images[0] should have been found in the status.")
 	}
 
-	// Test 2.
-	stack = testStack.DeepCopy()
-	stackVersion = kabanerov1alpha2.StackVersion{Version: "0.2.4"}
-	stackImgStatusPreDigest = kabanerov1alpha2.ImageStatus{Id: "default-1", Image: "docker.io/kabanero/java-microprofile-3"}
-	activationDigestPresent = isActivationDigestPresent(&testStack, stackVersion, stackImgStatusPreDigest)
-	if activationDigestPresent {
-		t.Fatal(fmt.Sprintf("A false answer was expected. The digest value should not be present. Stack: %v. StackVersion: %v. stackImgStatusPreDigest: %v", stack, stackVersion, stackImgStatusPreDigest))
+	if stackResourceT1.Status.Versions[0].Images[0].Digest.Activation != v026Digest {
+		t.Fatal(fmt.Sprintf("The activation digest under stackResourceT1.Status.Versions[0].Images[0] does not have the expected value. Current: %v, Expected: %v", stackResourceT1.Status.Versions[0].Images[0].Digest.Activation, v026Digest))
+	}
+
+	// Test 2: Same as test 1 but multiple versions.
+	stackResourceT2 := stackResource.DeepCopy()
+	stackVersion027T2 := *stackVersion027.DeepCopy()
+	stackVersion027StatusT2 := *stackVersion027Status.DeepCopy()
+	stackResourceT2.Spec.Versions = append(stackResourceT2.Spec.Versions, stackVersion027T2)
+	stackResourceT2.Status.Versions = append(stackResourceT2.Status.Versions, stackVersion027StatusT2)
+
+	err = reconcileActiveVersions(stackResourceT2, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if len(stackResourceT2.Status.Versions[0].Images[0].Digest.Activation) == 0 {
+		t.Fatal("The activation digest under stackResourceT2.Status.Versions[0].Images[0] should have been found in the status.")
+	}
+
+	if len(stackResourceT2.Status.Versions[1].Images[0].Digest.Activation) == 0 {
+		t.Fatal("The activation digest under stackResourceT2.Status.Versions[1].Images[0] should have been found in the status.")
+	}
+
+	// Test 3: Activation digest never set. Invalid image. Expectation: A message should be generated and reported.
+	// This test exercises the code path that attempts to get this digest.
+	stackResourceT3 := stackResource.DeepCopy()
+	stackResourceT3.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT3.Status.Versions[0].Images[0].Digest.Activation = ""
+	stackResourceT3.Status.Versions[0].Images[0].Digest.Message = ""
+	err = reconcileActiveVersions(stackResourceT3, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if len(stackResourceT3.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT3.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT3.Status.Versions[0].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT3.Status.Versions[0].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT3.Status.Versions[0].Images[0] does not have an expected error message."))
+	}
+
+	// Test 4: Same as test3 with multiple versions.
+	stackResourceT4 := stackResource.DeepCopy()
+	stackResourceT4.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT4.Status.Versions[0].Images[0].Digest.Activation = ""
+	stackResourceT4.Status.Versions[0].Images[0].Digest.Message = ""
+
+	stackVersion027T4 := *stackVersion027.DeepCopy()
+	stackVersion027StatusT4 := *stackVersion027Status.DeepCopy()
+	stackResourceT4.Spec.Versions = append(stackResourceT4.Spec.Versions, stackVersion027T4)
+	stackResourceT4.Status.Versions = append(stackResourceT4.Status.Versions, stackVersion027StatusT4)
+	stackResourceT4.Spec.Versions[1].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-027"
+	stackResourceT4.Status.Versions[1].Images[0].Digest.Activation = ""
+	stackResourceT4.Status.Versions[1].Images[0].Digest.Message = ""
+
+	err = reconcileActiveVersions(stackResourceT4, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if len(stackResourceT4.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT4.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT4.Status.Versions[0].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT4.Status.Versions[0].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT4.Status.Versions[0].Images[0] does not have an expected error message."))
+	}
+
+	if len(stackResourceT4.Status.Versions[1].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT4.Status.Versions[1].Images[0] should not have an activation digest. Digest found: %v", stackResourceT4.Status.Versions[1].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT4.Status.Versions[1].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT4.Status.Versions[1].Images[0] does not have an expected error message."))
+	}
+
+	// Test 5: New stack. No status. Invalid image. Expectation: A digest struct with a message should be created. No activation digest.
+	// This test exercises the code path that attempts to get this digest.
+	stackResourceT5 := stackResource.DeepCopy()
+	stackResourceT5.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT5.Status = kabanerov1alpha2.StackStatus{}
+
+	err = reconcileActiveVersions(stackResourceT5, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if len(stackResourceT5.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT5.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT5.Status.Versions[0].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT5.Status.Versions[0].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT5.Status.Versions[0].Images[0] does not have an expected error message."))
+	}
+
+	// Test 6: Stack with digest error message in status. Invalid image. Expectation: The message in the digest should change to invalid image message.
+	// This test exercises the code path that attempts to get this digest.
+	testMsg6 := "testDigestMessageError"
+	stackResourceT6 := stackResource.DeepCopy()
+	stackResourceT6.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT6.Status.Versions[0].Images[0].Digest.Activation = ""
+	stackResourceT6.Status.Versions[0].Images[0].Digest.Message = testMsg6
+	stackResourceT6.Status = kabanerov1alpha2.StackStatus{}
+
+	err = reconcileActiveVersions(stackResourceT6, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if len(stackResourceT6.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT6.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT6.Status.Versions[0].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT6.Status.Versions[0].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT6.Status.Versions[0].Images[0] does not have an expected error message."))
+	}
+
+	if stackResourceT6.Status.Versions[0].Images[0].Digest.Message == testMsg6 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT6.Status.Versions[0].Images[0] does not have an expected error message stating invalid image. Message found: %v", testMsg6))
+	}
+
+	// Test 7: Stack deactivate and activate sequence. Bad image. Expectation: On activate, a digest struct with a message should be created. No activation digest.
+	// This test exercises the code path that attempts to get this digest.
+	stackResourceT7 := stackResource.DeepCopy()
+	stackResourceT7.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT7.Spec.Versions[0].DesiredState = "inactive"
+	stackVersion027T7 := *stackVersion027.DeepCopy()
+	stackVersion027StatusT7 := *stackVersion027Status.DeepCopy()
+	stackResourceT7.Spec.Versions = append(stackResourceT7.Spec.Versions, stackVersion027T7)
+	stackResourceT7.Status.Versions = append(stackResourceT7.Status.Versions, stackVersion027StatusT7)
+	stackResourceT7.Spec.Versions[1].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-027"
+	stackResourceT7.Spec.Versions[1].DesiredState = "inactive"
+
+	// Deactivate:
+	err = reconcileActiveVersions(stackResourceT7, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if stackResourceT7.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive && len(stackResourceT7.Status.Versions[0].Images) != 0 {
+		t.Fatal(fmt.Sprintf("Stack version stackResourceT7.Status.Versions[0] was not deactivated. Stack version: %v", stackResourceT7.Status.Versions[0]))
+
+	}
+	if stackResourceT7.Status.Versions[1].Status != kabanerov1alpha2.StackDesiredStateInactive && len(stackResourceT7.Status.Versions[1].Images) != 0 {
+		t.Fatal(fmt.Sprintf("Stack version stackResourceT7.Status.Versions[1] was not deactivated. Stack version: %v", stackResourceT7.Status.Versions[1]))
+	}
+
+	// Activate.
+	stackResourceT7.Spec.Versions[0].DesiredState = "active"
+	stackResourceT7.Spec.Versions[1].DesiredState = "active"
+
+	err = reconcileActiveVersions(stackResourceT7, client, sctlog)
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	if len(stackResourceT7.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT7.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT7.Status.Versions[0].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT7.Status.Versions[0].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT7.Status.Versions[0].Images[0] does not have an expected error message."))
+	}
+
+	if len(stackResourceT7.Status.Versions[1].Images[0].Digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT7.Status.Versions[1].Images[0] should not have an activation digest. Digest found: %v", stackResourceT7.Status.Versions[1].Images[0].Digest.Activation))
+	}
+
+	if len(stackResourceT7.Status.Versions[1].Images[0].Digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT7.Status.Versions[1].Images[0] does not have an expected error message."))
 	}
 }
 

@@ -612,32 +612,8 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 			// Update the status of the Stack object to reflect the images used
 			for _, img := range curSpec.Images {
-				newStackVersionStatus.Images = append(newStackVersionStatus.Images, kabanerov1alpha2.ImageStatus{Id: img.Id, Image: img.Image})
-			}
-
-			// Retrieve stack image version activation digests. As such, it should only be done once during activation.
-			// If there is an error during first retrieval, a subsequent successful retry may set the current digest and
-			// not the activation digest. More precisely, the digest may not necessarily be the initial activation digest
-			// because we allow stack activation despite there being a failure when retrieving the digest and the
-			// image/digest may have changed before the next successful retry.
-			for j, image := range newStackVersionStatus.Images {
-				activationDigestExists := isActivationDigestPresent(stackResource, curSpec, image)
-				if !activationDigestExists {
-					image.Digest.Message = ""
-					img := image.Image + ":" + curSpec.Version
-					registry, err := sutils.GetImageRegistry(img)
-					if err != nil {
-						image.Digest.Message = fmt.Sprintf("Unable to parse registry from image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
-					} else {
-						digest, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, curSpec.SkipRegistryCertVerification, logger, img)
-						if err != nil {
-							image.Digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v associated with stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
-						} else {
-							image.Digest.Activation = digest
-						}
-					}
-					newStackVersionStatus.Images[j] = image
-				}
+				digest := getStatusImageDigest(c, *stackResource, curSpec, img.Image, logger)
+				newStackVersionStatus.Images = append(newStackVersionStatus.Images, kabanerov1alpha2.ImageStatus{Id: img.Id, Image: img.Image, Digest: digest})
 			}
 		} else {
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateInactive
@@ -664,19 +640,53 @@ func getStackForSpecVersion(spec kabanerov1alpha2.StackVersion, stacks []resolve
 	return nil
 }
 
-// Returns true if the input stack resource has the activation digest present in its status.
-func isActivationDigestPresent(stackResource *kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, image kabanerov1alpha2.ImageStatus) bool {
+// Retrieves stack image version activation digests. As such, the digest is only captured once during the actvation
+// of the stacks. If there is an error during first retrieval, a subsequent successful retry may set the current digest and
+// not the activation digest. More precisely, the digest may not necessarily be the initial activation digest
+// because we allow stack activation despite there being a failure when retrieving the digest and the
+// image/digest may have changed before the next successful retry.
+func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, targetImg string, logger logr.Logger) kabanerov1alpha2.ImageDigest {
+	digest := kabanerov1alpha2.ImageDigest{}
+	foundTargetImage := false
+
+	// If the activation digest was already set, capture its value.
 	for _, ssv := range stackResource.Status.Versions {
-		if ssv.Version == curSpec.Version {
-			for _, ssvi := range ssv.Images {
-				if image.Image == ssvi.Image && len(ssvi.Digest.Activation) != 0 {
-					return true
-				}
+		if ssv.Version != curSpec.Version {
+			continue
+		}
+		for _, ssvi := range ssv.Images {
+			if targetImg != ssvi.Image {
+				continue
+			}
+			if len(ssvi.Digest.Activation) != 0 {
+				digest = ssvi.Digest
+			}
+			foundTargetImage = true
+			break
+		}
+		if foundTargetImage {
+			break
+		}
+	}
+
+	// If the activation digest was not set, find it.
+	if digest == (kabanerov1alpha2.ImageDigest{}) {
+		digest.Message = ""
+		img := targetImg + ":" + curSpec.Version
+		registry, err := sutils.GetImageRegistry(img)
+		if err != nil {
+			digest.Message = fmt.Sprintf("Unable to parse registry from image: %v. Associated stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+		} else {
+			imgDig, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, curSpec.SkipRegistryCertVerification, logger, img)
+			if err != nil {
+				digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v. Associated stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+			} else {
+				digest.Activation = imgDig
 			}
 		}
 	}
 
-	return false
+	return digest
 }
 
 // Retrieves the input image digest from the hosting repository.
