@@ -304,7 +304,6 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	renderingContext := make(map[string]interface{})
 	
 	pipelinesNamespace := pipelinesNamespace(stackResource)
-	log.Info(fmt.Sprintf("starting reconcileActiveVersions, pipelinesNamespace is: %v", pipelinesNamespace))
 	// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
 	// Appsody stack creation naming constrains the length to 68 characters:
 	// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
