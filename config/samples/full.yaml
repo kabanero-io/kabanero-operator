@@ -9,7 +9,7 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: "0.8.0"
+  version: "0.9.0"
 
   targetNamespaces:
   - ns1
@@ -17,14 +17,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.7.0"
+    version: "0.8.0-rc.1"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.7.0"
+    tag: "0.8.0-rc.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.7.0
+    image: kabanero/kabanero-command-line-services:0.8.0-rc.1
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -34,50 +34,50 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.8.0"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabaner-operator-collection-controller
-    tag: "0.8.0-alpha.1"
+    repository: kabanero/kabanero-operator
+    tag: "TRAVIS_TAG"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-collection-controller:0.8.0-alpha.1
+    image: kabanero/kabanero-operator:TRAVIS_TAG
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.8.0"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabaner-operator-stack-controller
-    tag: "0.8.0-alpha.1"
+    repository: kabanero/kabanero-operator
+    tag: "TRAVIS_TAG"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-stack-controller:0.8.0-alpha.1
+    image: kabanero/kabanero-operator:TRAVIS_TAG
 
   landing:
     # The landing page is enabled by default. To disable specify false.
     enable: true
 
     # Overrides the setting for version on this component
-    version: "0.7.0"
+    version: "0.8.0-rc.1"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/landing
-    tag: "0.7.0"
+    tag: "0.8.0-rc.1"
 
     # Overrides the image uri
-    image: kabanero/landing:0.7.0
+    image: kabanero/landing:0.8.0-rc.1
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.8.0"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
-    repository: kabanero/kabanero-operator-admission-webhook
-    tag: "0.8.0-alpha.1"
+    repository: kabanero/kabanero-operator
+    tag: "TRAVIS_TAG"
 
     # Overrides the image uri
-    image: kabanero/kabanero-operator-admission-webhook:0.8.0-alpha.1
+    image: kabanero/kabanero-operator:TRAVIS_TAG
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 
@@ -118,15 +118,15 @@ spec:
     repositories: 
     - name: incubator
       https:
-        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.7.0/kabanero-stack-hub-index.yaml
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0-rc1/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: e6ebc6aeaf21540f0d0dac8caf0a2d805e8d90f174cb912a31831f700d049bb1
+      sha256: 653e5c69abcefdaf7ac9ef3b826376edb8517f64aca44d5eda40a74ff1d62ee5
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.7.0/default-kabanero-pipelines.tar.gz
-        
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0-rc.1/default-kabanero-pipelines.tar.gz
+
   # The namespace pipelines will be created in
-  pipelinesNamespace: kabanero-pipelines
+  pipelinesNamespace: kabanero-pipeliness
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
