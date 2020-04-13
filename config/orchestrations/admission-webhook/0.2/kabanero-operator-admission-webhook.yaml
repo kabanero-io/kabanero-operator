@@ -99,6 +99,8 @@ spec:
         - name: kabanero-operator-admission-webhook
           image: {{ .image }}
           imagePullPolicy: Always
+          command:
+          - /usr/local/bin/admission-webhook
           env:
             - name: KABANERO_NAMESPACE
               valueFrom:

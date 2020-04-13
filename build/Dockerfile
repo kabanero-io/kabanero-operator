@@ -13,12 +13,17 @@ ENV OPERATOR=/usr/local/bin/kabanero-operator \
     USER_UID=1001 \
     USER_NAME=kabanero-operator
 
-# install operator binary
+# install operator binary and supporting controllers.
 COPY build/_output/bin/kabanero-operator ${OPERATOR}
+COPY build/_output/bin/kabanero-operator-stack-controller /usr/local/bin/kabanero-operator-stack-controller
+COPY build/_output/bin/kabanero-operator-collection-controller /usr/local/bin/kabanero-operator-collection-controller
+COPY build/_output/bin/admission-webhook /usr/local/bin/admission-webhook
 
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 
+# Note that the entrypoint will be over-ridden in the pod/deployment
+# definitions for the supporting controllers, and admission webhook.
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 USER ${USER_UID}

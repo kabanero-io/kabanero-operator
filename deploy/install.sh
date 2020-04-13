@@ -2,7 +2,7 @@
 
 set -Eeox pipefail
 
-RELEASE="${RELEASE:-0.7.0}"
+RELEASE="${RELEASE:-0.8.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
 SLEEP_LONG="${SLEEP_LONG:-5}"
@@ -338,7 +338,8 @@ oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pip
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Install complete.  give instructions for how to create an instance.
-SAMPLE_KAB_INSTANCE_URL=https://raw.githubusercontent.com/kabanero-io/kabanero-operator/${RELEASE}/config/samples/default.yaml
+SAMPLE_KAB_INSTANCE_URL=https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml
+
 
 # Turn off debugging, and wait 3 seconds for it to flush output, before
 # printing instructions.

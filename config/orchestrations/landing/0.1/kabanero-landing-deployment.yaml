@@ -20,3 +20,4 @@ spec:
             - containerPort: 9443
               protocol: TCP
       serviceAccountName: kabanero-landing
+

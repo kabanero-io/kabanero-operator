@@ -12,3 +12,6 @@ sed -i.bak -e 's/RELEASE=.*/RELEASE="${RELEASE:-'$TRAVIS_TAG'}"/' deploy/install
 
 # Set the tag for the uninstall script
 sed -i.bak -e 's/RELEASE=.*/RELEASE="${RELEASE:-'$TRAVIS_TAG'}"/' deploy/uninstall.sh
+
+# Set the tag for the full.yaml
+sed -i.bak -e 's/TRAVIS_TAG/'$TRAVIS_TAG'/' config/samples/full.yaml
