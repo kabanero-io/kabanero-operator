@@ -34,7 +34,7 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.8.0-rc.2"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-collection-controller
@@ -45,7 +45,7 @@ spec:
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.8.0-rc.2"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-stack-controller
@@ -70,7 +70,7 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.8.0-rc.2"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator-admission-webhook
