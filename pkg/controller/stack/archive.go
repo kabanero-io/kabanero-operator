@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 	"unicode"
 
@@ -278,18 +279,22 @@ type fileType string
 var tarGzType fileType = ".tar.gz"
 var yamlType fileType = ".yaml"
 
-func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) fileType {
-	fileName := pipelineStatus.Url
+func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) (fileType, error) {
+	fileNameURL, err := url.Parse(pipelineStatus.Url)
+	if err != nil {
+		return "", err
+	}
+	fileName := fileNameURL.Path
 	if isGitReleaseUsable(pipelineStatus.GitRelease) {
 		fileName = pipelineStatus.GitRelease.AssetName
 	}
 	switch {
 	case strings.HasSuffix(fileName, ".tar.gz") || strings.HasSuffix(fileName, ".tgz"):
-		return tarGzType
+		return tarGzType, nil
 	case strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml"):
-		return yamlType
+		return yamlType, nil
 	default:
-		return ""
+		return "", nil
 	}
 }
 
@@ -307,7 +312,10 @@ func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1al
 	}
 	copy(c_sum[:], decoded)
 
-	fileType := getPipelineFileType(pipelineStatus)
+	fileType, err := getPipelineFileType(pipelineStatus)
+	if err != nil {
+		return nil, err
+	}
 	if fileType == tarGzType {
 		if b_sum != c_sum {
 			return nil, fmt.Errorf("Index checksum: %x not match download checksum: %x for Pipeline Name %v", c_sum, b_sum, pipelineStatus.Name)

@@ -25,6 +25,23 @@ func TestGetManifests(t *testing.T) {
 	}
 }
 
+func TestGetManifestsQuery(t *testing.T) {
+	reqLogger := logf.NullLogger{}
+	pipelineStatus := kabanerov1alpha2.PipelineStatus{
+		Url:        "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz?raw=true",
+		Digest:     "8eacd2a6870c2b7c729ae1441cc58d6f1356bde08a022875f9f50bca8fc66543",
+		GitRelease: kabanerov1alpha2.GitReleaseSpec{}}
+
+	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, manifest := range manifests {
+		t.Log(manifest)
+	}
+}
+
 func TestGetManifestsYaml(t *testing.T) {
 	reqLogger := logf.NullLogger{}
 	pipelineStatus := kabanerov1alpha2.PipelineStatus{
