@@ -1,4 +1,4 @@
-package stack
+package cache
 
 import (
 	"crypto/tls"
@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -43,7 +43,7 @@ var cacheLock sync.Mutex
 // Returns the requested resource, either from the cache, or from the
 // remote server.  The cache is not meant to be a "high performance" or
 // "heavily concurrent" cache.
-func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
+func GetFromCache(url string, skipCertVerify bool) ([]byte, error) {
 
 	// Build the request.
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -108,7 +108,7 @@ func getFromCache(url string, skipCertVerify bool) ([]byte, error) {
 	if (len(etag) > 0) && (len(date) > 0) {
 		// Before adding an entry to the cache, make sure the purge task is running.
 		startPurgeTicker.Do(func() {
-			cutils.ScheduleWork(tickerDuration, cachelog, purgeCache, purgeDuration)
+			timer.ScheduleWork(tickerDuration, cachelog, purgeCache, purgeDuration)
 		})
 		httpCache[url] = cacheValue{etag: etag, date: date, body: b, lastUsed: time.Now()}
 		cachelog.Info(fmt.Sprintf("Stored to cache: %v", url))

@@ -1,11 +1,33 @@
 package v1alpha2
 
 import (
+	"strings"
+	
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 // NOTE: The +listType=set marker are required by OpenAPI generation for list types.
+
+// TDK TODO: There four interfaces should be in some more generic API package...
+type ComponentStatusVersion interface {
+	GetVersion() (string)
+	GetPipelines() ([]PipelineStatus)
+}
+
+type ComponentStatus interface {
+	GetVersions() ([]ComponentStatusVersion)
+}
+
+type ComponentSpecVersion interface {
+	GetVersion() (string)
+	GetPipelines() ([]PipelineSpec)
+}
+
+type ComponentSpec interface {
+	GetVersions() ([]ComponentSpecVersion)
+}
+
 
 const (
 	// StackDesiredStateActive represents a desired stack active state.
@@ -37,6 +59,14 @@ type StackSpec struct {
 	Versions []StackVersion `json:"versions,omitempty"`
 }
 
+func (s StackSpec) GetVersions() []ComponentSpecVersion {
+	ret := make([]ComponentSpecVersion, len(s.Versions))
+	for i, _ := range s.Versions {
+		ret[i] = s.Versions[i]
+	}
+	return ret
+}
+
 // StackVersion defines the desired composition of a specific stack version.
 type StackVersion struct {
 	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
@@ -48,6 +78,19 @@ type StackVersion struct {
 	SkipCertVerification bool           `json:"skipCertVerification,omitempty"`
 	// +listType=set
 	Images []Image `json:"images,omitempty"`
+}
+
+func (sv StackVersion) GetVersion() string {
+	return sv.Version
+}
+
+func (sv StackVersion) GetPipelines() []PipelineSpec {
+	// Only return pipelines if the version is active
+	if !strings.EqualFold(sv.DesiredState, StackDesiredStateInactive) {
+		return sv.Pipelines
+	}
+
+	return nil
 }
 
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
@@ -81,6 +124,14 @@ type StackStatus struct {
 	Summary  string               `json:"summary,omitempty"`
 }
 
+func (s StackStatus) GetVersions() []ComponentStatusVersion {
+	ret := make([]ComponentStatusVersion, len(s.Versions))
+	for i, _ := range s.Versions {
+		ret[i] = s.Versions[i]
+	}
+	return ret
+}
+
 // StackVersionStatus defines the observed state of a specific stack version.
 type StackVersionStatus struct {
 	Version  string `json:"version,omitempty"`
@@ -91,6 +142,14 @@ type StackVersionStatus struct {
 	StatusMessage string           `json:"statusMessage,omitempty"`
 	// +listType=set
 	Images []ImageStatus `json:"images,omitempty"`
+}
+
+func (sv StackVersionStatus) GetVersion() string {
+	return sv.Version
+}
+
+func (sv StackVersionStatus) GetPipelines() []PipelineStatus {
+	return sv.Pipelines
 }
 
 // Image defines a container image used by a stack

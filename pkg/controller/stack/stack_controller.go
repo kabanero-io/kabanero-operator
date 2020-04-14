@@ -18,18 +18,14 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
-	mfc "github.com/manifestival/controller-runtime-client"
-	mf "github.com/manifestival/manifestival"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
 
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8runtime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -270,7 +266,7 @@ type pipelineUseMapKey struct {
 type pipelineUseMapValue struct {
 	kabanerov1alpha2.PipelineStatus
 	useCount      int64
-	manifests     []StackAsset
+	manifests     []cutils.StackAsset
 	manifestError error
 }
 
@@ -278,24 +274,6 @@ type pipelineUseMapValue struct {
 type pipelineVersion struct {
 	pipelineUseMapKey
 	version string
-}
-
-// Some objects need to get created in a specific namespace.  Try and figure out what that is.
-func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string) string {
-	kind := u.GetKind()
-
-	// Presently, TriggerBinding, TriggerTemplate and EventListener objects are created
-	// in the tekton-pipelines namespace.
-	//
-	// TODO (future): Kabanero Eventing will likely want to create these objects in the
-	//                kabanero namespace, since they are not interacting with the Tekton
-	//                Webhook Extension anymore.  We'll need to make this selectable
-	//                somehow, perhaps just using the namespace in the yaml.
-	if (kind == "TriggerBinding") || (kind == "TriggerTemplate") || (kind == "EventListener") {
-		return "tekton-pipelines"
-	}
-
-	return defaultNamespace
 }
 
 func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
@@ -328,251 +306,13 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		Controller: &ownerIsController,
 	}
 
-	// Multiple versions of the same stack, could be using the same pipeline zip.  Count how many
-	// times each pipeline has been used.
-	assetUseMap := make(map[pipelineUseMapKey]*pipelineUseMapValue)
-	for _, curStatus := range stackResource.Status.Versions {
-		for _, pipeline := range curStatus.Pipelines {
-			key := pipelineUseMapKey{url: pipeline.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Digest}
-			value := assetUseMap[key]
-			if value == nil {
-				value = &pipelineUseMapValue{}
-				pipeline.DeepCopyInto(&(value.PipelineStatus))
-				assetUseMap[key] = value
-			}
-			value.useCount++
-		}
+	// Activate the pipelines used by this stack.
+	assetUseMap, err := cutils.ActivatePipelines(stackResource.Spec, stackResource.Status, stackResource.GetNamespace(), renderingContext, assetOwner, c, logger)
+
+	if err != nil {
+		return err
 	}
-
-	// Reconcile the version changes.  Make a set of versions being removed, and versions being added.  Be
-	// sure to take into consideration the digest on the individual pipeline zips.
-	assetsToDecrement := make(map[pipelineVersion]bool)
-	assetsToIncrement := make(map[pipelineVersion]bool)
-	for _, curStatus := range stackResource.Status.Versions {
-		for _, pipeline := range curStatus.Pipelines {
-			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Digest}, version: curStatus.Version}
-			assetsToDecrement[cur] = true
-		}
-	}
-
-	for _, curSpec := range stackResource.Spec.Versions {
-		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
-			for _, pipeline := range curSpec.Pipelines {
-				cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Https.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Sha256}, version: curSpec.Version}
-				if assetsToDecrement[cur] == true {
-					delete(assetsToDecrement, cur)
-				} else {
-					assetsToIncrement[cur] = true
-				}
-			}
-		}
-	}
-
-	// Now go thru the maps and update the use counts
-	for cur, _ := range assetsToDecrement {
-		value := assetUseMap[cur.pipelineUseMapKey]
-		if value == nil {
-			return fmt.Errorf("Pipeline version not found in use map: %v", cur)
-		}
-
-		value.useCount--
-	}
-
-	for cur, _ := range assetsToIncrement {
-		value := assetUseMap[cur.pipelineUseMapKey]
-		if value == nil {
-			// Need to add a new entry for this pipeline.
-			value = &pipelineUseMapValue{PipelineStatus: kabanerov1alpha2.PipelineStatus{Url: cur.url, GitRelease: cur.gitRelease, Digest: cur.digest}}
-			assetUseMap[cur.pipelineUseMapKey] = value
-		}
-
-		value.useCount++
-	}
-
-	// Now iterate thru the asset use map and delete any assets with a use count of 0,
-	// and create any assets with a positive use count.
-	for _, value := range assetUseMap {
-		if value.useCount <= 0 {
-			log.Info(fmt.Sprintf("Deleting assets with use count %v: %v", value.useCount, value))
-
-			for _, asset := range value.ActiveAssets {
-				// Old assets may not have a namespace set - correct that now.
-				if len(asset.Namespace) == 0 {
-					asset.Namespace = stackResource.GetNamespace()
-				}
-
-				deleteAsset(c, asset, assetOwner)
-			}
-		}
-	}
-
-	for _, value := range assetUseMap {
-		if value.useCount > 0 {
-			log.Info(fmt.Sprintf("Creating assets with use count %v: %v", value.useCount, value))
-
-			// Check to see if there is already an asset list.  If not, read the manifests and
-			// create one.
-			if len(value.ActiveAssets) == 0 {
-				// Add the Digest to the rendering context. No need to validate if the digest was tampered
-				// with here. Later one and before we do anything with this, we will have validated the specified
-				// digest against the generated digest from the archive.
-				if len(value.Digest) >= 8 {
-					renderingContext["Digest"] = value.Digest[0:8]
-				} else {
-					renderingContext["Digest"] = "nodigest"
-				}
-
-				// Retrieve manifests as unstructured.  If we could not get them, skip.
-				manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("Error retrieving archive manifests: %v", value))
-					value.manifestError = err
-					continue
-				}
-
-				// Save the manifests for later.
-				value.manifests = manifests
-
-				// Create the asset status slice, but don't apply anything yet.
-				for _, asset := range manifests {
-					// Figure out what namespace we should create the object in.
-					value.ActiveAssets = append(value.ActiveAssets, kabanerov1alpha2.RepositoryAssetStatus{
-						Name:          asset.Name,
-						Namespace:     getNamespaceForObject(&asset.Yaml, stackResource.GetNamespace()),
-						Group:         asset.Group,
-						Version:       asset.Version,
-						Kind:          asset.Kind,
-						Digest:        asset.Sha256,
-						Status:        assetStatusUnknown,
-						StatusMessage: "Asset has not been applied yet.",
-					})
-				}
-			}
-
-			// Now go thru the asset list and see if the objects are there.  If not, create them.
-			for index, asset := range value.ActiveAssets {
-				// Old assets may not have a namespace set - correct that now.
-				if len(asset.Namespace) == 0 {
-					asset.Namespace = stackResource.GetNamespace()
-					value.ActiveAssets[index].Namespace = asset.Namespace
-				}
-
-				u := &unstructured.Unstructured{}
-				u.SetGroupVersionKind(schema.GroupVersionKind{
-					Group:   asset.Group,
-					Version: asset.Version,
-					Kind:    asset.Kind,
-				})
-
-				err := c.Get(context.Background(), client.ObjectKey{
-					Namespace: asset.Namespace,
-					Name:      asset.Name,
-				}, u)
-
-				if err != nil {
-					if errors.IsNotFound(err) == false {
-						log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
-						value.ActiveAssets[index].Status = assetStatusUnknown
-						value.ActiveAssets[index].StatusMessage = "Unable to check asset: " + err.Error()
-					} else {
-						// Make sure the manifests are loaded.
-						if len(value.manifests) == 0 {
-							// Add the Digest to the rendering context.
-							if len(value.Digest) >= 8 {
-								renderingContext["Digest"] = value.Digest[0:8]
-							} else {
-								renderingContext["Digest"] = "nodigest"
-							}
-
-							// Retrieve manifests as unstructured
-							manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
-							if err != nil {
-								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
-								value.ActiveAssets[index].Status = assetStatusFailed
-								value.ActiveAssets[index].StatusMessage = "Manifests are no longer available at specified URL"
-							} else {
-								// Save the manifests for later.
-								value.manifests = manifests
-							}
-						}
-
-						// Now find the correct manifest and create the object
-						for _, manifest := range value.manifests {
-							if asset.Name == manifest.Name {
-								resources := []unstructured.Unstructured{manifest.Yaml}
-
-								// Only allow Group: tekton.dev
-								allowed := true
-								for _, resource := range resources {
-									if resource.GroupVersionKind().Group != "tekton.dev" {
-										value.ActiveAssets[index].Status = assetStatusFailed
-										value.ActiveAssets[index].StatusMessage = "Manifest rejected: contains a Group not equal to tekton.dev"
-										allowed = false
-									}
-								}
-
-								if allowed == true {
-									mOrig, err := mf.ManifestFrom(mf.Slice(resources), mf.UseClient(mfc.NewClient(c)), mf.UseLogger(log.WithName("manifestival")))
-
-									log.Info(fmt.Sprintf("Resources: %v", mOrig.Resources()))
-
-									transforms := []mf.Transformer{
-										transforms.InjectOwnerReference(assetOwner),
-										mf.InjectNamespace(asset.Namespace),
-									}
-
-									m, err := mOrig.Transform(transforms...)
-									if err != nil {
-										log.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
-										value.ActiveAssets[index].Status = assetStatusFailed
-										value.ActiveAssets[index].Status = err.Error()
-									} else {
-										log.Info(fmt.Sprintf("Applying resources: %v", m.Resources()))
-										err = m.Apply()
-										if err != nil {
-											// Update the asset status with the error message
-											log.Error(err, "Error installing the resource", "resource", asset.Name)
-											value.ActiveAssets[index].Status = assetStatusFailed
-											value.ActiveAssets[index].StatusMessage = err.Error()
-										} else {
-											value.ActiveAssets[index].Status = assetStatusActive
-											value.ActiveAssets[index].StatusMessage = ""
-										}
-									}
-								}
-							}
-						}
-					}
-				} else {
-					// Add owner reference
-					ownerRefs := u.GetOwnerReferences()
-					foundOurselves := false
-					for _, ownerRef := range ownerRefs {
-						if ownerRef.UID == assetOwner.UID {
-							foundOurselves = true
-						}
-					}
-
-					if foundOurselves == false {
-
-						// There can only be one 'controller' reference, so additional references should not
-						// be controller references.  It's not clear what Kubernetes does with this field.
-						ownerRefs = append(ownerRefs, assetOwner)
-						u.SetOwnerReferences(ownerRefs)
-
-						err = c.Update(context.TODO(), u)
-						if err != nil {
-							log.Error(err, fmt.Sprintf("Unable to add owner reference to %v", asset.Name))
-						}
-					}
-
-					value.ActiveAssets[index].Status = assetStatusActive
-					value.ActiveAssets[index].StatusMessage = ""
-				}
-			}
-		}
-	}
-
+	
 	// Now update the StackStatus to reflect the current state of things.
 	newStackStatus := kabanerov1alpha2.StackStatus{}
 	for i, curSpec := range stackResource.Spec.Versions {
@@ -584,7 +324,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive
 
 			for _, pipeline := range curSpec.Pipelines {
-				key := pipelineUseMapKey{url: pipeline.Https.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Sha256}
+				key := cutils.PipelineUseMapKey{Url: pipeline.Https.Url, GitRelease: pipeline.GitRelease, Digest: pipeline.Sha256}
 				value := assetUseMap[key]
 				if value == nil {
 					// TODO: ???
@@ -594,8 +334,8 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					newStatus.Name = pipeline.Id // This may vary by stack version
 					newStackVersionStatus.Pipelines = append(newStackVersionStatus.Pipelines, newStatus)
 					// If we had a problem loading the pipeline manifests, say so.
-					if value.manifestError != nil {
-						newStackVersionStatus.StatusMessage = value.manifestError.Error()
+					if value.ManifestError != nil {
+						newStackVersionStatus.StatusMessage = value.ManifestError.Error()
 					}
 				}
 			}
@@ -693,7 +433,7 @@ func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack,
 func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, skipCertVerification bool, logr logr.Logger, image string) (string, error) {
 	// Search all secrets under the given namespace for the one containing the required hostname.
 	annotationKey := "kabanero.io/docker-"
-	secret, err := cutils.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistry, annotationKey)
+	secret, err := secret.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistry, annotationKey)
 	if err != nil {
 		newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, imgRegistry, namespace, err)
 		return "", newError
@@ -835,7 +575,7 @@ func cleanup(ctx context.Context, stack *kabanerov1alpha2.Stack, c client.Client
 					asset.Namespace = stack.GetNamespace()
 				}
 
-				deleteAsset(c, asset, assetOwner)
+				cutils.DeleteAsset(c, asset, assetOwner, reqLogger)
 			}
 		}
 	}
@@ -843,50 +583,3 @@ func cleanup(ctx context.Context, stack *kabanerov1alpha2.Stack, c client.Client
 	return nil
 }
 
-// Deletes an asset.  This can mean removing an object owner, or completely deleting it.
-func deleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, assetOwner metav1.OwnerReference) error {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   asset.Group,
-		Version: asset.Version,
-		Kind:    asset.Kind,
-	})
-
-	err := c.Get(context.Background(), client.ObjectKey{
-		Namespace: asset.Namespace,
-		Name:      asset.Name,
-	}, u)
-
-	if err != nil {
-		if errors.IsNotFound(err) == false {
-			log.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
-			return err
-		}
-	} else {
-		// Get the owner references.  See if we're the last one.
-		ownerRefs := u.GetOwnerReferences()
-		newOwnerRefs := []metav1.OwnerReference{}
-		for _, ownerRef := range ownerRefs {
-			if ownerRef.UID != assetOwner.UID {
-				newOwnerRefs = append(newOwnerRefs, ownerRef)
-			}
-		}
-
-		if len(newOwnerRefs) == 0 {
-			err = c.Delete(context.TODO(), u)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("Unable to delete asset name %v", asset.Name))
-				return err
-			}
-		} else {
-			u.SetOwnerReferences(newOwnerRefs)
-			err = c.Update(context.TODO(), u)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("Unable to delete owner reference from %v", asset.Name))
-				return err
-			}
-		}
-	}
-
-	return nil
-}

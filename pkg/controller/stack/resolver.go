@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/cache"
 	"gopkg.in/yaml.v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -16,8 +17,8 @@ func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, n
 
 	switch {
 	// GIT:
-	case isGitReleaseUsable(repoConf.GitRelease):
-		bytes, err := getStackDataUsingGit(c, repoConf.GitRelease, namespace, reqLogger)
+	case repoConf.GitRelease.IsUsable():
+		bytes, err := cache.GetStackDataUsingGit(c, repoConf.GitRelease, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -128,5 +129,5 @@ func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte,
 		url = url + "/index.yaml"
 	}
 
-	return getFromCache(url, repoConf.Https.SkipCertVerification)
+	return cache.GetFromCache(url, repoConf.Https.SkipCertVerification)
 }

@@ -1,4 +1,4 @@
-package stack
+package utils
 
 import (
 	"archive/tar"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/cache"
 	yml "gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -45,15 +46,15 @@ func DownloadToByte(c client.Client, namespace string, url string, gitRelease ka
 	var archiveBytes []byte
 	switch {
 	// GIT:
-	case isGitReleaseUsable(gitRelease):
-		bytes, err := getStackDataUsingGit(c, gitRelease, namespace, reqLogger)
+	case gitRelease.IsUsable():
+		bytes, err := cache.GetStackDataUsingGit(c, gitRelease, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
 		archiveBytes = bytes
 	// HTTPS:
 	case len(url) != 0:
-		bytes, err := getFromCache(url, false)
+		bytes, err := cache.GetFromCache(url, false)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +286,7 @@ func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) (fileTy
 		return "", err
 	}
 	fileName := fileNameURL.Path
-	if isGitReleaseUsable(pipelineStatus.GitRelease) {
+	if pipelineStatus.GitRelease.IsUsable() {
 		fileName = pipelineStatus.GitRelease.AssetName
 	}
 	switch {

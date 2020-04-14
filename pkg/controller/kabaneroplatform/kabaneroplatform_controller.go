@@ -12,7 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
+  "github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -568,7 +568,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	}
 
 	// Update the kabanero instance status in a retriable manner. The instance may have changed.
-	err := cutils.Retry(10, 100*time.Millisecond, func() (bool, error) {
+	err := timer.Retry(10, 100*time.Millisecond, func() (bool, error) {
 		err := c.Status().Update(ctx, k)
 		if err != nil {
 			if errors.IsConflict(err) {
