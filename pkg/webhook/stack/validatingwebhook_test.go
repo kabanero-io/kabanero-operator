@@ -30,7 +30,7 @@ var validatingStack kabanerov1alpha2.Stack = kabanerov1alpha2.Stack{
 			Pipelines: []kabanerov1alpha2.PipelineSpec{{
 				Sha256: "abc121cba",
 				Https: kabanerov1alpha2.HttpsProtocolFile{
-					Url: "http://pipelinelink",
+					Url: "http://pipelinelink/pipeline.tar.gz",
 				},
 			}},
 			Images: []kabanerov1alpha2.Image{{
@@ -208,7 +208,7 @@ func TestValidatingWebhook8(t *testing.T) {
 	}
 }
 
-// Spec.Versions[].Pipelines[].Sha256 empty
+// Spec.Versions[].Pipelines[].Sha256 empty with tar.gz
 func TestValidatingWebhook9(t *testing.T) {
 	newStack := validatingStack.DeepCopy()
 	newStack.Spec.Versions[0].Pipelines[0].Sha256 = ""
@@ -331,5 +331,71 @@ func TestValidatingWebhook14(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}
+
+
+// Yaml file
+func TestValidatingWebhook15(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = "http://pipelinelink/pipeline.yaml"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if !allowed {
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
+	}
+
+	if len(msg) != 0 {
+		t.Fatal("Validation succeeded. A message was not expected. Message: ", msg)
+	}
+
+	if err != nil {
+		t.Fatal("Validation succeeded. An error was not expected. Error: ", err)
+	}
+}
+
+
+// Unknown file
+func TestValidatingWebhook16(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = "http://pipelinelink/pipeline.nope"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed because the file type in the pipeline url is unknown.")
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}
+
+// Spec.Versions[].Pipelines[].Sha256 empty with yaml
+func TestValidatingWebhook17(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Sha256 = ""
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = "http://pipelinelink/pipeline.yaml"
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if !allowed {
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
+	}
+
+	if len(msg) != 0 {
+		t.Fatal("Validation succeeded. A message was not expected. Message: ", msg)
+	}
+
+	if err != nil {
+		t.Fatal("Validation succeeded. An error was not expected. Error: ", err)
 	}
 }
