@@ -53,6 +53,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "CodeReady Workspaces", function: reconcileCRW},
 	{name: "events", function: reconcileEvents},
 	{name: "sso", function: reconcileSso},
+	{name: "gitops", function: reconcileGitopsPipelines},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -509,6 +510,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 		return err
 	}
 
+	// Cleanup the Gitops pipelines and their cross-namespace objects
+	err = cleanupGitopsPipelines(ctx, k, client, reqLogger)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -545,6 +552,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
+	isGitopsReady, _ := getGitopsStatus(k)
 
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
@@ -558,7 +566,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isCRWReady &&
 		isEventsRouteReady &&
 		isAdmissionControllerWebhookReady &&
-		isSsoReady
+		isSsoReady &&
+		isGitopsReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.Message = ""

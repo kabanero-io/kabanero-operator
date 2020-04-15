@@ -93,16 +93,6 @@ func (sv StackVersion) GetPipelines() []PipelineSpec {
 	return nil
 }
 
-// PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
-type PipelineStatus struct {
-	Name       string         `json:"name,omitEmpty"`
-	Url        string         `json:"url,omitEmpty"`
-	GitRelease GitReleaseSpec `json:"gitRelease,omitEmpty"`
-	Digest     string         `json:"digest,omitEmpty"`
-	// +listType=set
-	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
-}
-
 // RepositoryAssetStatus defines the observed state of a single asset in a respository, in the stack.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`

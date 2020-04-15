@@ -61,7 +61,17 @@ func (g DirectiveProcessor) process_directive(directive string, text string, con
 			text = strings.Replace(text, directive, "", 1)
 			text = strings.TrimSpace(text)
 
-			text = strings.ReplaceAll(text, text_to_replace, context[key].(string))
+			_, ok := context[key]
+			if !ok {
+				return "", fmt.Errorf("Unknown key: %v", key)
+			}
+
+			value, ok := context[key].(string)
+			if !ok {
+				return "", fmt.Errorf("Invalid value for key: %v", key)
+			}
+			
+			text = strings.ReplaceAll(text, text_to_replace, value)
 
 			return text, nil
 		} else {
