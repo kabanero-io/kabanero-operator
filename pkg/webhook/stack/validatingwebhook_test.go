@@ -399,3 +399,121 @@ func TestValidatingWebhook17(t *testing.T) {
 		t.Fatal("Validation succeeded. An error was not expected. Error: ", err)
 	}
 }
+
+
+// Spec.Versions[].Pipelines[].GitRelease .tar.gz
+func TestValidatingWebhook18(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = ""
+	newStack.Spec.Versions[0].Pipelines[0].GitRelease = kabanerov1alpha2.GitReleaseSpec{
+		Hostname: "somehost",
+		Organization: "someorg",
+		Project: "someproject",
+		Release: "somerelease",
+		AssetName: "pipelines.tar.gz",
+	}
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if !allowed {
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
+	}
+
+	if len(msg) != 0 {
+		t.Fatal("Validation succeeded. A message was not expected. Message: ", msg)
+	}
+
+	if err != nil {
+		t.Fatal("Validation succeeded. An error was not expected. Error: ", err)
+	}
+}
+
+
+// Spec.Versions[].Pipelines[].GitRelease .yaml no sha
+func TestValidatingWebhook19(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = ""
+	newStack.Spec.Versions[0].Pipelines[0].Sha256 = ""
+	newStack.Spec.Versions[0].Pipelines[0].GitRelease = kabanerov1alpha2.GitReleaseSpec{
+		Hostname: "somehost",
+		Organization: "someorg",
+		Project: "someproject",
+		Release: "somerelease",
+		AssetName: "pipelines.yaml",
+	}
+
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if !allowed {
+		t.Fatal("Validation should have passed and the stack update should have been allowed. Error: ", err)
+	}
+
+	if len(msg) != 0 {
+		t.Fatal("Validation succeeded. A message was not expected. Message: ", msg)
+	}
+
+	if err != nil {
+		t.Fatal("Validation succeeded. An error was not expected. Error: ", err)
+	}
+}
+
+
+// Spec.Versions[].Pipelines[].GitRelease unknown file
+func TestValidatingWebhook20(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = ""
+	newStack.Spec.Versions[0].Pipelines[0].GitRelease = kabanerov1alpha2.GitReleaseSpec{
+		Hostname: "somehost",
+		Organization: "someorg",
+		Project: "someproject",
+		Release: "somerelease",
+		AssetName: "pipelines.nope",
+	}
+	
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed because the file type in the asset file is unknown type.")
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}
+
+
+// Spec.Versions[].Pipelines[].GitRelease tar.gz no sha
+func TestValidatingWebhook21(t *testing.T) {
+	newStack := validatingStack.DeepCopy()
+	newStack.Spec.Versions[0].Pipelines[0].Https.Url = ""
+	newStack.Spec.Versions[0].Pipelines[0].Sha256 = ""
+	newStack.Spec.Versions[0].Pipelines[0].GitRelease = kabanerov1alpha2.GitReleaseSpec{
+		Hostname: "somehost",
+		Organization: "someorg",
+		Project: "someproject",
+		Release: "somerelease",
+		AssetName: "pipelines.tar.gz",
+	}
+	
+	cv := stackValidator{}
+	allowed, msg, err := cv.validateStackFn(nil, newStack)
+
+	if allowed {
+		t.Fatal("Validation should have failed because the sha is missing for .tar.gz.")
+	}
+
+	if len(msg) == 0 {
+		t.Fatal("Validation failed. A message was expected: ", msg)
+	}
+
+	if err == nil {
+		t.Fatal("Validation failed. An error was expected: ", err)
+	}
+}

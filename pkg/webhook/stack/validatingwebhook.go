@@ -137,6 +137,23 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 						return false, reason, err
 				}
 			}
+
+			if len(pipeline.GitRelease.AssetName) != 0 {
+				switch {
+					case strings.HasSuffix(pipeline.GitRelease.AssetName, ".tar.gz") || strings.HasSuffix(pipeline.GitRelease.AssetName, ".tgz"):
+						if len(pipeline.Sha256) == 0 {
+							reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Sha256 must be set for .tar.gz. stack: %v", stack.Spec.Name, version.Version, stack)
+							err = fmt.Errorf(reason)
+							return false, reason, err
+						}
+					case strings.HasSuffix(pipeline.GitRelease.AssetName, ".yaml") || strings.HasSuffix(pipeline.GitRelease.AssetName, ".yml"):
+						break
+					default:
+						reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].GitRelease.AssetName must be a .tar.gz or .yaml. stack: %v", stack.Spec.Name, version.Version, stack)
+						err = fmt.Errorf(reason)
+						return false, reason, err
+				}
+			}
 		}
 	}
 
