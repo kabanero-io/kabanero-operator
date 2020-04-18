@@ -17,14 +17,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1 "
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.8.0-rc.1"
+    tag: "0.8.0"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.8.0-rc.1
+    image: kabanero/kabanero-command-line-services:0.8.0
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -34,7 +34,7 @@ spec:
 
   collectionController:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.2"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-collection-controller
@@ -45,7 +45,7 @@ spec:
 
   stackController:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.2"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabaner-operator-stack-controller
@@ -59,18 +59,18 @@ spec:
     enable: true
 
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.1"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/landing
-    tag: "0.8.0-rc.1"
+    tag: "0.8.0"
 
     # Overrides the image uri
-    image: kabanero/landing:0.8.0-rc.1
+    image: kabanero/landing:0.8.0
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.8.0-rc.2"
+    version: "0.8.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator-admission-webhook
@@ -118,12 +118,12 @@ spec:
     repositories: 
     - name: incubator
       https:
-        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0-rc1/kabanero-stack-hub-index.yaml
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 653e5c69abcefdaf7ac9ef3b826376edb8517f64aca44d5eda40a74ff1d62ee5
+      sha256: 3f3e440b3eed24273fd43c40208fdd95de6eadeb82b7bb461f52e1e5da7e239d
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0-rc.1/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0/default-kabanero-pipelines.tar.gz
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
