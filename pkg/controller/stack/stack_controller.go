@@ -302,9 +302,10 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 	// Gather the known stack asset (*-tasks, *-pipeline) substitution data.
 	renderingContext := make(map[string]interface{})
-
+	
+	pipelinesNamespace := pipelinesNamespace(stackResource)
 	// The stack id is the name of the Appsody stack directory ("the stack name from the stack path").
-	// Appsody stack creation namimg constrains the length to 68 characters:
+	// Appsody stack creation naming constrains the length to 68 characters:
 	// "The name must start with a lowercase letter, contain only lowercase letters, numbers, or dashes,
 	// and cannot end in a dash."
 	cID := stackResource.Spec.Name
@@ -398,7 +399,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			for _, asset := range value.ActiveAssets {
 				// Old assets may not have a namespace set - correct that now.
 				if len(asset.Namespace) == 0 {
-					asset.Namespace = stackResource.GetNamespace()
+					asset.Namespace = pipelinesNamespace
 				}
 
 				deleteAsset(c, asset, assetOwner)
@@ -423,7 +424,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 				}
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
-				manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
+				manifests, err := GetManifests(c, pipelinesNamespace, value.PipelineStatus, renderingContext, log)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("Error retrieving archive manifests: %v", value))
 					value.manifestError = err
@@ -438,7 +439,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					// Figure out what namespace we should create the object in.
 					value.ActiveAssets = append(value.ActiveAssets, kabanerov1alpha2.RepositoryAssetStatus{
 						Name:          asset.Name,
-						Namespace:     getNamespaceForObject(&asset.Yaml, stackResource.GetNamespace()),
+						Namespace:     getNamespaceForObject(&asset.Yaml, pipelinesNamespace),
 						Group:         asset.Group,
 						Version:       asset.Version,
 						Kind:          asset.Kind,
@@ -453,7 +454,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			for index, asset := range value.ActiveAssets {
 				// Old assets may not have a namespace set - correct that now.
 				if len(asset.Namespace) == 0 {
-					asset.Namespace = stackResource.GetNamespace()
+					asset.Namespace = pipelinesNamespace
 					value.ActiveAssets[index].Namespace = asset.Namespace
 				}
 
@@ -485,7 +486,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 							}
 
 							// Retrieve manifests as unstructured
-							manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
+							manifests, err := GetManifests(c, pipelinesNamespace, value.PipelineStatus, renderingContext, log)
 							if err != nil {
 								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
 								value.ActiveAssets[index].Status = assetStatusFailed
@@ -575,6 +576,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 	// Now update the StackStatus to reflect the current state of things.
 	newStackStatus := kabanerov1alpha2.StackStatus{}
+	newStackStatus.PipelinesNamespace = pipelinesNamespace
 	for i, curSpec := range stackResource.Spec.Versions {
 		newStackVersionStatus := kabanerov1alpha2.StackVersionStatus{Version: curSpec.Version}
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
@@ -889,4 +891,15 @@ func deleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, 
 	}
 
 	return nil
+}
+
+
+func pipelinesNamespace(s *kabanerov1alpha2.Stack) string {
+	var pipelinesNamespace string
+	if len(s.Spec.PipelinesNamespace) != 0 {
+		pipelinesNamespace = s.Spec.PipelinesNamespace
+	} else {
+		pipelinesNamespace = s.GetNamespace()
+	}
+	return pipelinesNamespace
 }

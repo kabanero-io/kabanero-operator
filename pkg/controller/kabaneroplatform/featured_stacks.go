@@ -46,7 +46,13 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 		alreadyDeployed := true
 		stackResource := &kabanerov1alpha2.Stack{}
 		err := cl.Get(ctx, name, stackResource)
-		if err != nil {
+
+		pipelinesNamespace := pipelinesNamespace(k)
+
+		if err == nil {
+			// Ensure the featured stack pipelinesNamespace = Kabanero pipelinesNamespace
+			stackResource.Spec.PipelinesNamespace = pipelinesNamespace
+		} else {
 			if errors.IsNotFound(err) {
 				alreadyDeployed = false
 				// Not found. Need to create it.
@@ -68,6 +74,7 @@ func reconcileFeaturedStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 					},
 					Spec: kabanerov1alpha2.StackSpec{
 						Name: key,
+						PipelinesNamespace: pipelinesNamespace,
 					},
 				}
 			} else {
@@ -168,8 +175,26 @@ func preProcessCurrentStacks(ctx context.Context, k *kabanerov1alpha2.Kabanero, 
 		return err
 	}
 
+	// Only keep the FeaturedStack if the Kabanero pipelinesNamespace did not change, otherwise delete & recreate
+	pipelinesNamespace := pipelinesNamespace(k)
+	for _, deployedStack := range deployedStacks.Items {
+		if deployedStack.Spec.PipelinesNamespace != pipelinesNamespace {
+			err := cl.Delete(ctx, &deployedStack)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	deployedStacks = &kabanerov1alpha2.StackList{}
+	err = cl.List(ctx, deployedStacks, client.InNamespace(k.GetNamespace()))
+	if err != nil {
+		return err
+	}
+
 	// Compare the list of currently deployed stacks and the stacks in the index.
 	for _, deployedStack := range deployedStacks.Items {
+
 		iStackList, _ := indexStackMap[deployedStack.GetName()]
 		newStackVersions := []kabanerov1alpha2.StackVersion{}
 		for _, dStackVersion := range deployedStack.Spec.Versions {

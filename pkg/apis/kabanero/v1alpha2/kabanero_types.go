@@ -46,6 +46,8 @@ type KabaneroSpec struct {
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 
 	Sso SsoCustomizationSpec `json:"sso,omitempty"`
+	
+	PipelinesNamespace string `json:"pipelinesNamespace,omitempty"`
 }
 
 // InstanceStackConfig defines the customization entries for a set of stacks.
@@ -241,6 +243,9 @@ type KabaneroStatus struct {
 
 	// SSO server status
 	Sso SsoStatus `json:"sso,omitempty"`
+	
+	// Namespace of deployed Pipelines
+	PipelinesNamespace  string    `json:"pipelinesNamespace,omitempty"`
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance

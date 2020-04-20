@@ -125,6 +125,9 @@ spec:
       https:
         url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0-rc.1/default-kabanero-pipelines.tar.gz
 
+  # The namespace pipelines will be created in
+  pipelinesNamespace: kabanero-pipeliness
+
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
     # strictDigest, activeDigest, ignoreDigest, and none. If a stack policy is not specified, activeDigest is used. 
