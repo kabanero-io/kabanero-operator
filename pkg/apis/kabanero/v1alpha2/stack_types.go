@@ -50,11 +50,27 @@ type StackVersion struct {
 	Images []Image `json:"images,omitempty"`
 }
 
+// GitReleaseInfo is all of the GitReleaseSpec information, minus the "skip cert
+// verification" information, which is not relevant for status.
+type GitReleaseInfo struct {
+	Hostname             string `json:"hostname,omitempty"`
+	Organization         string `json:"organization,omitempty"`
+	Project              string `json:"project,omitempty"`
+	Release              string `json:"release,omitempty"`
+	AssetName            string `json:"assetName,omitempty"`
+}
+
+// Returns true if the user specified all values for the release.
+func (gitRelease GitReleaseInfo) IsUsable() bool {
+	return len(gitRelease.Hostname) != 0 && len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
+		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
+}
+
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
 type PipelineStatus struct {
 	Name       string         `json:"name,omitEmpty"`
 	Url        string         `json:"url,omitEmpty"`
-	GitRelease GitReleaseSpec `json:"gitRelease,omitEmpty"`
+	GitRelease GitReleaseInfo `json:"gitRelease,omitEmpty"`
 	Digest     string         `json:"digest,omitEmpty"`
 	// +listType=set
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`

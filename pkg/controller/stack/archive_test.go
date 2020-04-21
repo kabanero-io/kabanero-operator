@@ -13,9 +13,9 @@ func TestGetManifests(t *testing.T) {
 	pipelineStatus := kabanerov1alpha2.PipelineStatus{
 		Url:        "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz",
 		Digest:     "8eacd2a6870c2b7c729ae1441cc58d6f1356bde08a022875f9f50bca8fc66543",
-		GitRelease: kabanerov1alpha2.GitReleaseSpec{}}
+		GitRelease: kabanerov1alpha2.GitReleaseInfo{}}
 
-	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, false, reqLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,9 +30,9 @@ func TestGetManifestsQuery(t *testing.T) {
 	pipelineStatus := kabanerov1alpha2.PipelineStatus{
 		Url:        "https://github.com/kabanero-io/stacks/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz?raw=true",
 		Digest:     "8eacd2a6870c2b7c729ae1441cc58d6f1356bde08a022875f9f50bca8fc66543",
-		GitRelease: kabanerov1alpha2.GitReleaseSpec{}}
+		GitRelease: kabanerov1alpha2.GitReleaseInfo{}}
 
-	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, false, reqLogger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,9 +47,9 @@ func TestGetManifestsYaml(t *testing.T) {
 	pipelineStatus := kabanerov1alpha2.PipelineStatus{
 		Url: "https://raw.githubusercontent.com/dacleyra/kabanero-operator/451/pkg/controller/stack/testdata/good-pipeline.yaml",
 		Digest: "3b34de594df82cac3cb67c556a416443f6fafc0bc79101613eaa7ae0d59dd462",
-		GitRelease: kabanerov1alpha2.GitReleaseSpec{}}
+		GitRelease: kabanerov1alpha2.GitReleaseInfo{}}
 	
-	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, reqLogger)
+	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, false, reqLogger)
 	if err != nil {
 		t.Fatal(err)
 	}

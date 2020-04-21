@@ -16,8 +16,8 @@ func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, n
 
 	switch {
 	// GIT:
-	case isGitReleaseUsable(repoConf.GitRelease):
-		bytes, err := getStackDataUsingGit(c, repoConf.GitRelease, namespace, reqLogger)
+	case repoConf.GitRelease.IsUsable():
+		bytes, err := getStackDataUsingGit(c, gitReleaseSpecToGitReleaseInfo(repoConf.GitRelease), repoConf.GitRelease.SkipCertVerification, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
