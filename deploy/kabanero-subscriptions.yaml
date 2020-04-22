@@ -61,10 +61,10 @@ metadata:
   labels:
     kabanero.io/install: 11-subscription
 spec:
-  channel: kabanero-0.7
+  channel: stable
   installPlanApproval: Automatic
   name: servicemeshoperator
-  source: kabanero-catalog
+  source: redhat-operators
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
