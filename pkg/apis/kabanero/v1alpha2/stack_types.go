@@ -9,26 +9,6 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 // NOTE: The +listType=set marker are required by OpenAPI generation for list types.
 
-// TDK TODO: There four interfaces should be in some more generic API package...
-type ComponentStatusVersion interface {
-	GetVersion() (string)
-	GetPipelines() ([]PipelineStatus)
-}
-
-type ComponentStatus interface {
-	GetVersions() ([]ComponentStatusVersion)
-}
-
-type ComponentSpecVersion interface {
-	GetVersion() (string)
-	GetPipelines() ([]PipelineSpec)
-}
-
-type ComponentSpec interface {
-	GetVersions() ([]ComponentSpecVersion)
-}
-
-
 const (
 	// StackDesiredStateActive represents a desired stack active state.
 	// It indicates that the stack needs activation.

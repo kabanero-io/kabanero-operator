@@ -19,9 +19,9 @@ import (
 
 const (
 	// Asset status.
-	assetStatusActive  = "active"
-	assetStatusFailed  = "failed"
-	assetStatusUnknown = "unknown"
+	AssetStatusActive  = "active"
+	AssetStatusFailed  = "failed"
+	AssetStatusUnknown = "unknown"
 )
 
 // A key to the pipeline use count map
@@ -163,7 +163,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 						Version:       asset.Version,
 						Kind:          asset.Kind,
 						Digest:        asset.Sha256,
-						Status:        assetStatusUnknown,
+						Status:        AssetStatusUnknown,
 						StatusMessage: "Asset has not been applied yet.",
 					})
 				}
@@ -192,7 +192,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 				if err != nil {
 					if errors.IsNotFound(err) == false {
 						logger.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
-						value.ActiveAssets[index].Status = assetStatusUnknown
+						value.ActiveAssets[index].Status = AssetStatusUnknown
 						value.ActiveAssets[index].StatusMessage = "Unable to check asset: " + err.Error()
 					} else {
 						// Make sure the manifests are loaded.
@@ -208,7 +208,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 							manifests, err := GetManifests(c, targetNamespace, value.PipelineStatus, renderingContext, logger)
 							if err != nil {
 								logger.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
-								value.ActiveAssets[index].Status = assetStatusFailed
+								value.ActiveAssets[index].Status = AssetStatusFailed
 								value.ActiveAssets[index].StatusMessage = "Manifests are no longer available at specified URL"
 							} else {
 								// Save the manifests for later.
@@ -225,7 +225,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 								allowed := true
 								for _, resource := range resources {
 									if resource.GroupVersionKind().Group != "tekton.dev" {
-										value.ActiveAssets[index].Status = assetStatusFailed
+										value.ActiveAssets[index].Status = AssetStatusFailed
 										value.ActiveAssets[index].StatusMessage = "Manifest rejected: contains a Group not equal to tekton.dev"
 										allowed = false
 									}
@@ -244,7 +244,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 									m, err := mOrig.Transform(transforms...)
 									if err != nil {
 										logger.Error(err, fmt.Sprintf("Error transforming manifests for %v", asset.Name))
-										value.ActiveAssets[index].Status = assetStatusFailed
+										value.ActiveAssets[index].Status = AssetStatusFailed
 										value.ActiveAssets[index].Status = err.Error()
 									} else {
 										logger.Info(fmt.Sprintf("Applying resources: %v", m.Resources()))
@@ -252,10 +252,10 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 										if err != nil {
 											// Update the asset status with the error message
 											logger.Error(err, "Error installing the resource", "resource", asset.Name)
-											value.ActiveAssets[index].Status = assetStatusFailed
+											value.ActiveAssets[index].Status = AssetStatusFailed
 											value.ActiveAssets[index].StatusMessage = err.Error()
 										} else {
-											value.ActiveAssets[index].Status = assetStatusActive
+											value.ActiveAssets[index].Status = AssetStatusActive
 											value.ActiveAssets[index].StatusMessage = ""
 										}
 									}
@@ -286,7 +286,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 						}
 					}
 
-					value.ActiveAssets[index].Status = assetStatusActive
+					value.ActiveAssets[index].Status = AssetStatusActive
 					value.ActiveAssets[index].StatusMessage = ""
 				}
 			}

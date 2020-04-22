@@ -40,13 +40,6 @@ import (
 var log = logf.Log.WithName("controller_stack")
 var cIDRegex = regexp.MustCompile("^[a-z]([a-z0-9-]*[a-z0-9])?$")
 
-const (
-	// Asset status.
-	assetStatusActive  = "active"
-	assetStatusFailed  = "failed"
-	assetStatusUnknown = "unknown"
-)
-
 // Add creates a new Stack Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -202,7 +195,7 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	for _, version := range status.Versions {
 		for _, pipeline := range version.Pipelines {
 			for _, asset := range pipeline.ActiveAssets {
-				if asset.Status == assetStatusFailed {
+				if asset.Status == cutils.AssetStatusFailed {
 					return true
 				}
 			}

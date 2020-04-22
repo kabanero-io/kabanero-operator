@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -724,7 +725,7 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -755,7 +756,7 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -831,13 +832,13 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "java-microprofile-old-asset",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -880,7 +881,7 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -915,7 +916,7 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v in version status should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -979,10 +980,10 @@ func TestReconcileActiveVersionsDeactivate(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -1105,7 +1106,7 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -1177,10 +1178,10 @@ func TestReconcileActiveVersionsSharedAssetDeactivate(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -1268,10 +1269,10 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -1312,7 +1313,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -1380,10 +1381,10 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "java-microprofile-build-task",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "java-microprofile-build-pipeline",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -1426,7 +1427,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 	foundPipeline, foundTask := false, false
 	for _, asset := range pipeline.ActiveAssets {
 		if asset.Name == "java-microprofile-build-task" {
-			if asset.Status != assetStatusActive {
+			if asset.Status != utils.AssetStatusActive {
 				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage != "" {
@@ -1435,7 +1436,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssetsNoManifest(t *testing.T) {
 			foundTask = true
 		}
 		if asset.Name == "java-microprofile-build-pipeline" {
-			if asset.Status != assetStatusFailed {
+			if asset.Status != utils.AssetStatusFailed {
 				t.Fatal(fmt.Sprintf("Asset %v should have status failed, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage == "" {
@@ -1524,7 +1525,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 	foundPipeline, foundTask := false, false
 	for _, asset := range pipeline.ActiveAssets {
 		if asset.Name == "java-microprofile-build-pipeline" {
-			if asset.Status != assetStatusActive {
+			if asset.Status != utils.AssetStatusActive {
 				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage != "" {
@@ -1533,7 +1534,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 			foundTask = true
 		}
 		if asset.Name == "java-microprofile-build-task" {
-			if asset.Status != assetStatusFailed {
+			if asset.Status != utils.AssetStatusFailed {
 				t.Fatal(fmt.Sprintf("Asset %v should have status failed, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage == "" {
@@ -1628,7 +1629,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -1669,7 +1670,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 	}
 
 	for _, asset := range pipeline.ActiveAssets {
-		if asset.Status != assetStatusActive {
+		if asset.Status != utils.AssetStatusActive {
 			t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 		}
 		if asset.StatusMessage != "" {
@@ -1816,7 +1817,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 		}
 
 		for _, asset := range pipeline.ActiveAssets {
-			if asset.Status != assetStatusActive {
+			if asset.Status != utils.AssetStatusActive {
 				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage != "" {
@@ -1945,7 +1946,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 		}
 
 		for _, asset := range pipeline.ActiveAssets {
-			if asset.Status != assetStatusActive {
+			if asset.Status != utils.AssetStatusActive {
 				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage != "" {
@@ -2029,10 +2030,10 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "build-task-0238ff31",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "build-pipeline-0238ff31",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}, {
@@ -2043,10 +2044,10 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "build-task-c3f28ffc",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "build-pipeline-c3f28ffc",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -2087,7 +2088,7 @@ func TestReconcileActiveVersionsInternalTwoDeactivateOne(t *testing.T) {
 		}
 
 		for _, asset := range pipeline.ActiveAssets {
-			if asset.Status != assetStatusActive {
+			if asset.Status != utils.AssetStatusActive {
 				t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 			}
 			if asset.StatusMessage != "" {
@@ -2174,10 +2175,10 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "build-task-0238ff31",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "build-pipeline-0238ff31",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}, {
@@ -2188,10 +2189,10 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 					Name:   "default",
 					ActiveAssets: []kabanerov1alpha2.RepositoryAssetStatus{{
 						Name:   "build-task-c3f28ffc",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}, {
 						Name:   "build-pipeline-c3f28ffc",
-						Status: assetStatusActive,
+						Status: utils.AssetStatusActive,
 					}},
 				}},
 			}},
@@ -2244,7 +2245,7 @@ func TestReconcileActiveVersionsInternalTwoDeleteOne(t *testing.T) {
 			}
 
 			for _, asset := range pipeline.ActiveAssets {
-				if asset.Status != assetStatusActive {
+				if asset.Status != utils.AssetStatusActive {
 					t.Fatal(fmt.Sprintf("Asset %v should have status active, but is %v", asset.Name, asset.Status))
 				}
 				if asset.StatusMessage != "" {
