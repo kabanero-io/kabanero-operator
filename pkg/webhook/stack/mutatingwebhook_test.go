@@ -50,7 +50,7 @@ func Test1(t *testing.T) {
 		DesiredState: "active",
 		Images: []kabanerov1alpha2.Image{{
 			Id:    "java-microprofile",
-			Image: "kabanero/java-microprofile"}},
+			Image: "docker.io/kabanero/java-microprofile"}},
 	}
 
 	if newStack.Spec.Versions[0].Version != expectedversion0.Version {

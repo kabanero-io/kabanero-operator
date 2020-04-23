@@ -234,7 +234,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	// Test 3: Activation digest never set. Invalid image. Expectation: A message should be generated and reported.
 	// This test exercises the code path that attempts to get this digest.
 	stackResourceT3 := stackResource.DeepCopy()
-	stackResourceT3.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT3.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
 	stackResourceT3.Status.Versions[0].Images[0].Digest.Activation = ""
 	stackResourceT3.Status.Versions[0].Images[0].Digest.Message = ""
 	err = reconcileActiveVersions(stackResourceT3, client, sctlog)
@@ -252,7 +252,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 
 	// Test 4: Same as test3 with multiple versions.
 	stackResourceT4 := stackResource.DeepCopy()
-	stackResourceT4.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT4.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
 	stackResourceT4.Status.Versions[0].Images[0].Digest.Activation = ""
 	stackResourceT4.Status.Versions[0].Images[0].Digest.Message = ""
 
@@ -260,7 +260,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	stackVersion027StatusT4 := *stackVersion027Status.DeepCopy()
 	stackResourceT4.Spec.Versions = append(stackResourceT4.Spec.Versions, stackVersion027T4)
 	stackResourceT4.Status.Versions = append(stackResourceT4.Status.Versions, stackVersion027StatusT4)
-	stackResourceT4.Spec.Versions[1].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-027"
+	stackResourceT4.Spec.Versions[1].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-027"
 	stackResourceT4.Status.Versions[1].Images[0].Digest.Activation = ""
 	stackResourceT4.Status.Versions[1].Images[0].Digest.Message = ""
 
@@ -288,7 +288,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	// Test 5: New stack. No status. Invalid image. Expectation: A digest struct with a message should be created. No activation digest.
 	// This test exercises the code path that attempts to get this digest.
 	stackResourceT5 := stackResource.DeepCopy()
-	stackResourceT5.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT5.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
 	stackResourceT5.Status = kabanerov1alpha2.StackStatus{}
 
 	err = reconcileActiveVersions(stackResourceT5, client, sctlog)
@@ -308,7 +308,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	// This test exercises the code path that attempts to get this digest.
 	testMsg6 := "testDigestMessageError"
 	stackResourceT6 := stackResource.DeepCopy()
-	stackResourceT6.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT6.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
 	stackResourceT6.Status.Versions[0].Images[0].Digest.Activation = ""
 	stackResourceT6.Status.Versions[0].Images[0].Digest.Message = testMsg6
 	stackResourceT6.Status = kabanerov1alpha2.StackStatus{}
@@ -333,13 +333,13 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	// Test 7: Stack deactivate and activate sequence. Bad image. Expectation: On activate, a digest struct with a message should be created. No activation digest.
 	// This test exercises the code path that attempts to get this digest.
 	stackResourceT7 := stackResource.DeepCopy()
-	stackResourceT7.Spec.Versions[0].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT7.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
 	stackResourceT7.Spec.Versions[0].DesiredState = "inactive"
 	stackVersion027T7 := *stackVersion027.DeepCopy()
 	stackVersion027StatusT7 := *stackVersion027Status.DeepCopy()
 	stackResourceT7.Spec.Versions = append(stackResourceT7.Spec.Versions, stackVersion027T7)
 	stackResourceT7.Status.Versions = append(stackResourceT7.Status.Versions, stackVersion027StatusT7)
-	stackResourceT7.Spec.Versions[1].Images[0].Image = "my_test_repo.io:5000/kabanero/java-microprofile-027"
+	stackResourceT7.Spec.Versions[1].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-027"
 	stackResourceT7.Spec.Versions[1].DesiredState = "inactive"
 
 	// Deactivate:
@@ -1572,7 +1572,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 	defer server.Close()
 
 	defaultImage := Images{Id: "default", Image: "kabanero/kabanero-image:latest"}
-	desiredImage := Images{Id: "default", Image: "kabanero/kabanero-image"}
+	desiredImage := Images{Id: "default", Image: "docker.io/kabanero/kabanero-image"}
 
 	pipelineZipUrl := server.URL + triggerPipeline.name
 	desiredStack := Stack{

@@ -52,7 +52,7 @@ var testSecret corev1.Secret = corev1.Secret{
 func TestRemoveTagFromStackImages(t *testing.T) {
 	stack := testStack.DeepCopy()
 	RemoveTagFromStackImages(&stack.Spec.Versions[0], "java-microprofile")
-	expectedImage := "kabanero/kabanero-image"
+	expectedImage := "docker.io/kabanero/kabanero-image"
 	expectedPrivateRepoImage := "image-registry.openshift-image-registry.svc:5000/kabanero/java-microprofile"
 	if stack.Spec.Versions[0].Images[0].Image != expectedImage {
 		t.Fatal(fmt.Sprintf("Image should be %v, but it is %v", expectedImage, stack.Spec.Versions[0].Images[0].Image))
