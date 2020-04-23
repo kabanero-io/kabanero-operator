@@ -172,8 +172,9 @@ spec:
                         digest:
                           type: string
                         gitRelease:
-                          description: GitReleaseSpec defines customization entries
-                            for a Git release.
+                          description: GitReleaseInfo is all of the GitReleaseSpec
+                            information, minus the "skip cert verification" information,
+                            which is not relevant for status.
                           properties:
                             assetName:
                               type: string
@@ -185,8 +186,6 @@ spec:
                               type: string
                             release:
                               type: string
-                            skipCertVerification:
-                              type: boolean
                           type: object
                         name:
                           type: string

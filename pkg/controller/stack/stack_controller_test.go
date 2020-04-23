@@ -1728,6 +1728,100 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 	}
 }
 
+// --------------------------------------------------------------------------------------------------
+// Test that skipCertVerify on a pipline works.
+// --------------------------------------------------------------------------------------------------
+func TestReconcileActiveVersionsSkipCertVerify(t *testing.T) {
+	// The server that will host the pipeline zip
+	server := httptest.NewTLSServer(stackHandler{})
+	defer server.Close()
+
+	pipelineZipUrl := server.URL + basicPipeline.name
+
+	stackResource := kabanerov1alpha2.Stack{
+		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.StackSpec{
+			Name: "java-microprofile",
+			Versions: []kabanerov1alpha2.StackVersion{{
+				Version:      "0.2.5",
+				DesiredState: "active",
+				Pipelines: []kabanerov1alpha2.PipelineSpec{{
+					Id:     "default",
+					Sha256: basicPipeline.sha256,
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
+				}},
+				Images: []kabanerov1alpha2.Image{{
+					Id:    "default",
+					Image: "kabanero/kabanero-image:latest",
+				}},
+			}},
+		},
+		Status: kabanerov1alpha2.StackStatus{},
+	}
+
+	kubeClient := unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
+
+	err := reconcileActiveVersions(&stackResource, kubeClient, sctlog)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure the stack resource was updated with asset information
+	if len(stackResource.Status.Versions[0].Pipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Stack status should have 1 pipeline, but has %v", len(stackResource.Status.Versions[0].Pipelines)))
+	}
+
+	if stackResource.Status.Versions[0].Version != "0.2.5" {
+		t.Fatal(fmt.Sprintf("Stack active version should be 0.2.5, but is %v", stackResource.Status.Versions[0].Version))
+	}
+
+	// Make sure the assets were created in the stack status
+	pipeline := stackResource.Status.Versions[0].Pipelines[0]
+	if len(pipeline.ActiveAssets) != 0 {
+		t.Fatal(fmt.Sprintf("Pipeline should have 0 assets, but has %v", len(pipeline.ActiveAssets)))
+	}
+
+	// Make sure there is an error in the status message.
+	if len(stackResource.Status.Versions[0].StatusMessage) == 0 {
+		t.Fatal(fmt.Sprintf("Should be an error in the status message"))
+	}
+
+	if !strings.Contains(stackResource.Status.Versions[0].StatusMessage, "x509") {
+		t.Fatal(fmt.Sprintf("The error message should contain the string \"x509\": %v", stackResource.Status.Versions[0].StatusMessage))
+	}
+
+	// Now, try again skipping cert verify.
+	stackResource.Spec.Versions[0].Pipelines[0].Https.SkipCertVerification = true
+
+	kubeClient = unitTestClient{map[client.ObjectKey][]metav1.OwnerReference{}}
+	err = reconcileActiveVersions(&stackResource, kubeClient, sctlog)
+
+	if err != nil {
+		t.Fatal("Returned error: " + err.Error())
+	}
+
+	// Make sure the stack resource was updated with asset information
+	if len(stackResource.Status.Versions[0].Pipelines) != 1 {
+		t.Fatal(fmt.Sprintf("Stack status should have 1 pipeline, but has %v", len(stackResource.Status.Versions[0].Pipelines)))
+	}
+
+	if stackResource.Status.Versions[0].Version != "0.2.5" {
+		t.Fatal(fmt.Sprintf("Stack active version should be 0.2.5, but is %v", stackResource.Status.Versions[0].Version))
+	}
+
+	// Make sure the assets were created in the stack status
+	pipeline = stackResource.Status.Versions[0].Pipelines[0]
+	if len(pipeline.ActiveAssets) != 2 {
+		t.Fatal(fmt.Sprintf("Pipeline should have 2 assets, but has %v", len(pipeline.ActiveAssets)))
+	}
+
+	// Make sure there is no error in the status message.
+	if len(stackResource.Status.Versions[0].StatusMessage) != 0 {
+		t.Fatal(fmt.Sprintf("Should not be an error in the status message: %v", stackResource.Status.Versions[0].StatusMessage))
+	}
+}
+
 // ==================================================================================================
 // --------------------------------------------------------------------------------------------------
 // The following tests activate multiple versions of a stack.
