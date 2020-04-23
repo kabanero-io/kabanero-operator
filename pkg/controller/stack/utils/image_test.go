@@ -6,6 +6,7 @@ import (
 )
 
 // Tests that GetImageRepository removes the tag from the input image.
+// docker/distribution/reference will prefix hostname when absent
 func TestGetImageRepository(t *testing.T) {
 	// Test external repository:tag
 	image := "kabanero/kabanero-image:1.2.3"
@@ -13,18 +14,19 @@ func TestGetImageRepository(t *testing.T) {
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
 	}
-	expectedRepo := "kabanero/kabanero-image"
+	expectedRepo := "docker.io/kabanero/kabanero-image"
 	if repo != expectedRepo {
 		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
 	}
 
 	// Test external repository with no tag.
+	// docker/distribution/reference will prefix hostname when absent
 	image = "kabanero/kabanero-image"
 	repo, err = GetImageRepository(image)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
 	}
-	expectedRepo = "kabanero/kabanero-image"
+	expectedRepo = "docker.io/kabanero/kabanero-image"
 	if repo != expectedRepo {
 		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
 	}
@@ -60,7 +62,8 @@ func TestGetImageRepository(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
 	}
 
-	expectedRepo = "java-microprofile"
+	// docker/distribution/reference will prefix hostname/library when hostname/org absent
+	expectedRepo = "docker.io/library/java-microprofile"
 	if repo != expectedRepo {
 		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
 	}
@@ -72,7 +75,8 @@ func TestGetImageRepository(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Unexpected error while removing tag from image: %v. Error: ", err))
 	}
 
-	expectedRepo = "java-microprofile"
+	// docker/distribution/reference will prefix hostname/library when hostname/org absent
+	expectedRepo = "docker.io/library/java-microprofile"
 	if repo != expectedRepo {
 		t.Fatal(fmt.Sprintf("Repo should be %v, but it is %v", expectedRepo, repo))
 	}
@@ -185,10 +189,12 @@ func TestGetImageRegistry(t *testing.T) {
 	// Test 11.
 	image = "my-registry-is_great.io/kabanero/kabanero-image:1.2.3"
 	registry, err = GetImageRegistry(image)
-	expectedReg = "docker.io"
+	expectedReg = ""
 	if err != nil {
 		t.Fatal(fmt.Sprintf("A registry was expected. An error was received instead. Image: %v. Expected registry: %v. Error: %v", image, expectedReg, err))
 	}
+	// Invalid hostnames end up parsed as the org, nor does it fill in docker.io as the domain
+	// https://github.com/docker/distribution/blob/master/reference/reference_test.go#L164
 	if registry != expectedReg {
 		t.Fatal(fmt.Sprintf("The registry retrieved was %v, but it was expected to be: %v", registry, expectedReg))
 	}

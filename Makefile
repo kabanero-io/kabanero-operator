@@ -39,7 +39,7 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.8.0
+CURRENT_RELEASE=0.9.0
 
 # OS detection
 ifeq ($(OS),Windows_NT)
@@ -124,20 +124,22 @@ endif
 
 push-manifest:
 	echo "IMAGE="$(IMAGE)
-	docker manifest create $(IMAGE) $(IMAGE)-amd64 $(IMAGE)-s390x --amend
-	docker manifest annotate $(IMAGE) $(IMAGE)-amd64 --os linux --arch amd64
-	docker manifest annotate $(IMAGE) $(IMAGE)-s390x --os linux --arch s390x
+	docker manifest create $(IMAGE) $(IMAGE)-amd64 $(IMAGE)-ppc64le $(IMAGE)-s390x
+	docker manifest annotate $(IMAGE) $(IMAGE)-amd64   --os linux --arch amd64
+	docker manifest annotate $(IMAGE) $(IMAGE)-ppc64le --os linux --arch ppc64le
+	docker manifest annotate $(IMAGE) $(IMAGE)-s390x   --os linux --arch s390x
 	docker manifest inspect $(IMAGE)
-	docker manifest push $(IMAGE)
+	docker manifest push $(IMAGE) -p
 	echo "REGISTRY_IMAGE="$(REGISTRY_IMAGE)
-	docker manifest create $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-amd64 $(REGISTRY_IMAGE)-s390x --amend
-	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-amd64 --os linux --arch amd64
-	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-s390x --os linux --arch s390x
+	docker manifest create $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-amd64 $(REGISTRY_IMAGE)-ppc64le $(REGISTRY_IMAGE)-s390x 
+	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-amd64   --os linux --arch amd64
+	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-ppc64le --os linux --arch ppc64le
+	docker manifest annotate $(REGISTRY_IMAGE) $(REGISTRY_IMAGE)-s390x   --os linux --arch s390x
 	docker manifest inspect $(REGISTRY_IMAGE)
-	docker manifest push $(REGISTRY_IMAGE)
+	docker manifest push $(REGISTRY_IMAGE) -p
 
 test: 
-	GO111MODULE=on go test ./cmd/... ./pkg/... 
+	GO111MODULE=on go test -cover ./cmd/... ./pkg/... 
 
 format:
 	GO111MODULE=on go fmt ./cmd/... ./pkg/...

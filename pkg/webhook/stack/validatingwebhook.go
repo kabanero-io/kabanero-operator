@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
@@ -113,11 +114,45 @@ func (v *stackValidator) validateStackFn(ctx context.Context, stack *kabanerov1a
 				err = fmt.Errorf(reason)
 				return false, reason, err
 			}
+			
+			if len(pipeline.Https.Url) != 0 {
+				fileNameURL, err := url.Parse(pipeline.Https.Url)
+				if err != nil {
+					reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Https.Url failed to parse. stack: %v", stack.Spec.Name, version.Version, stack)
+					return false, reason, err
+				}
+				
+				switch {
+					case strings.HasSuffix(fileNameURL.Path, ".tar.gz") || strings.HasSuffix(fileNameURL.Path, ".tgz"):
+						if len(pipeline.Sha256) == 0 {
+							reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Sha256 must be set for .tar.gz. stack: %v", stack.Spec.Name, version.Version, stack)
+							err = fmt.Errorf(reason)
+							return false, reason, err
+						}
+					case strings.HasSuffix(fileNameURL.Path, ".yaml") || strings.HasSuffix(fileNameURL.Path, ".yml"):
+						break
+					default:
+						reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Https.Url must be a .tar.gz or .yaml. stack: %v", stack.Spec.Name, version.Version, stack)
+						err = fmt.Errorf(reason)
+						return false, reason, err
+				}
+			}
 
-			if len(pipeline.Sha256) == 0 {
-				reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Sha256 is not set. stack: %v", stack.Spec.Name, version.Version, stack)
-				err = fmt.Errorf(reason)
-				return false, reason, err
+			if len(pipeline.GitRelease.AssetName) != 0 {
+				switch {
+					case strings.HasSuffix(pipeline.GitRelease.AssetName, ".tar.gz") || strings.HasSuffix(pipeline.GitRelease.AssetName, ".tgz"):
+						if len(pipeline.Sha256) == 0 {
+							reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].Sha256 must be set for .tar.gz. stack: %v", stack.Spec.Name, version.Version, stack)
+							err = fmt.Errorf(reason)
+							return false, reason, err
+						}
+					case strings.HasSuffix(pipeline.GitRelease.AssetName, ".yaml") || strings.HasSuffix(pipeline.GitRelease.AssetName, ".yml"):
+						break
+					default:
+						reason = fmt.Sprintf("Stack %v %v Spec.Versions[].Pipelines[].GitRelease.AssetName must be a .tar.gz or .yaml. stack: %v", stack.Spec.Name, version.Version, stack)
+						err = fmt.Errorf(reason)
+						return false, reason, err
+				}
 			}
 		}
 	}

@@ -7,7 +7,7 @@ set -x pipefail
 # following line.
 APPSODY_UNINSTALL=1
 
-RELEASE="${RELEASE:-0.8.0}"
+RELEASE="${RELEASE:-0.9.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
 SLEEP_LONG="${SLEEP_LONG:-15}"
@@ -103,8 +103,8 @@ oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Tekton Dashboard
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.5.3/openshift-tekton-webhooks-extension-release.yaml
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.5.3/openshift-tekton-dashboard-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-webhooks-extension-release.yaml
+oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-dashboard-release.yaml
 
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.

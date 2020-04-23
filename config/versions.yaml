@@ -9,29 +9,29 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.8.0"
+default: "0.9.0"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
 - version: "0.9.0"
   related-versions: 
-    cli-services: "0.8.0-rc.1"
+    cli-services: "0.8.0"
     landing: "0.9.0"
     events: "0.1.0"
     collection-controller: "0.9.0"
     stack-controller: "0.9.0"
     admission-webhook: "0.9.0"
     sso: "7.3.2"
-    codeready-workspaces: "0.8.0"
+    codeready-workspaces: "0.9.0"
 
 - version: "0.8.0"
   related-versions: 
-    cli-services: "0.8.0-rc.1"
-    landing: "0.8.0-rc.1"
+    cli-services: "0.8.0"
+    landing: "0.8.0"
     events: "0.1.0"
-    collection-controller: "0.8.0-rc.1"
-    stack-controller: "0.8.0-rc.1"
-    admission-webhook: "0.8.0-rc.1"
+    collection-controller: "0.8.0"
+    stack-controller: "0.8.0"
+    admission-webhook: "0.8.0"
     sso: "7.3.2"
     codeready-workspaces: "0.8.0"
 
@@ -75,11 +75,11 @@ related-software:
     identifiers:
       repository: "kabanero/landing"
       tag: "0.9.0-alpha.1"
-  - version: "0.8.0-rc.1"
+  - version: "0.8.0"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
       repository: "kabanero/landing"
-      tag: "0.8.0-rc.1"
+      tag: "0.8.0"
   - version: "0.7.0"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
@@ -92,11 +92,11 @@ related-software:
       tag: "0.6.0"
 
   cli-services: 
-  - version: "0.8.0-rc.1"
+  - version: "0.8.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.8.0-rc.1"
+      tag: "0.8.0"
   - version: "0.7.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
@@ -109,6 +109,11 @@ related-software:
       tag: "0.6.0"
 
   codeready-workspaces:
+  - version: "0.9.0"
+    orchestrations: "orchestrations/codeready-workspaces/0.1"
+    identifiers:
+      devfile-reg-repository: "kabanero/che-devfile-registry"
+      devfile-reg-tag: "0.11.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/codeready-workspaces/0.1"
     identifiers:
@@ -133,11 +138,11 @@ related-software:
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
-  - version: "0.8.0-rc.1"
+  - version: "0.8.0"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
       repository: "kabanero/kabanero-operator-collection-controller"
-      tag: "0.8.0-rc.1"
+      tag: "0.8.0"
   - version: "0.7.0"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
@@ -160,11 +165,11 @@ related-software:
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
-  - version: "0.8.0-rc.1"
+  - version: "0.8.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
       repository: "kabanero/kabanero-operator-stack-controller"
-      tag: "0.8.0-rc.1"
+      tag: "0.8.0"
   - version: "0.7.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
@@ -187,11 +192,11 @@ related-software:
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
-  - version: "0.8.0-rc.1"
+  - version: "0.8.0"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
       repository: "kabanero/kabanero-operator-admission-webhook"
-      tag: "0.8.0-rc.1"
+      tag: "0.8.0"
   - version: "0.7.0"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:

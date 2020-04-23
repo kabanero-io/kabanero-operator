@@ -1,0 +1,87 @@
+apiVersion: v2
+stacks:
+- default-dashboard: default
+  default-image: java-microprofile
+  default-pipeline: default
+  default-template: default
+  description: Eclipse MicroProfile using OpenJ9 and Maven
+  id: java-microprofile
+  images:
+  - id: java-microprofile
+    image: kabanero/java-microprofile:0.2
+  license: Apache-2.0
+  maintainers:
+  - email: groeges@uk.ibm.com
+    github-id: groeges
+    name: Steven Groeger
+  name: Eclipse MicroProfile®
+  pipelines:
+  - id: default
+    sha256: 8eacd2a6870c2b7c729ae1441cc58d6f1356bde08a022875f9f50bca8fc66543
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.java-microprofile.pipeline.default.tar.gz
+  templates:
+  - id: default
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.java-microprofile.templates.default.tar.gz
+  version: 0.0.2
+- default-template: default
+  description: Spring Boot using OpenJ9 and Maven
+  id: java-spring-boot2
+  license: Apache-2.0
+  maintainers:
+  - email: schnabel@us.ibm.com
+    github-id: ebullient
+    name: Erin Schnabel
+  name: Spring Boot®
+  templates:
+  - id: default
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.java-spring-boot2.templates.default.tar.gz
+  - id: kotlin
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.java-spring-boot2.templates.kotlin.tar.gz
+  version: 0.3.2
+- default-template: simple
+  description: Express web framework for Node.js
+  id: nodejs-express
+  license: Apache-2.0
+  maintainers:
+  - email: cnbailey@gmail.com
+    github-id: seabaylea
+    name: Chris Bailey
+  - email: neeraj.laad@gmail.com
+    github-id: neeraj-laad
+    name: Neeraj Laad
+  name: Node.js Express
+  templates:
+  - id: simple
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.nodejs-express.templates.simple.tar.gz
+  - id: skaffold
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.nodejs-express.templates.skaffold.tar.gz
+  version: 0.2.2
+- default-template: simple
+  description: Runtime for Node.js applications
+  id: nodejs
+  license: Apache-2.0
+  maintainers:
+  - email: cnbailey@gmail.com
+    github-id: seabaylea
+    name: Chris Bailey
+  - email: neeraj.laad@gmail.com
+    github-id: neeraj-laad
+    name: Neeraj Laad
+  name: Node.js
+  templates:
+  - id: simple
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.nodejs.templates.simple.tar.gz
+  version: 0.2.2
+- default-template: simple
+  description: Runtime for Swift applications
+  id: swift
+  license: Apache-2.0
+  maintainers:
+  - email: i.partridge@uk.ibm.com
+    github-id: ianpartridge
+    name: Ian Partridge
+  name: Swift
+  templates:
+  - id: simple
+    url: https://github.com/kabanero-io/collections/releases/download/v0.0.1/incubator.swift.templates.simple.tar.gz
+  version: 0.1.0
