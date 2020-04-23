@@ -39,7 +39,7 @@ REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
 REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.8.0
+CURRENT_RELEASE=0.9.0
 
 # OS detection
 ifeq ($(OS),Windows_NT)

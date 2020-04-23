@@ -35,7 +35,7 @@ var validatingStack kabanerov1alpha2.Stack = kabanerov1alpha2.Stack{
 			}},
 			Images: []kabanerov1alpha2.Image{{
 				Id:    "java-microprofile",
-				Image: "kabanero/java-microprofile",
+				Image: "docker.io/kabanero/java-microprofile",
 			}},
 		}},
 	},

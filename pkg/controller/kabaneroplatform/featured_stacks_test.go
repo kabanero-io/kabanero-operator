@@ -264,12 +264,12 @@ func TestReconcileFeaturedStacks(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack to have one image, but has %v", len(nodejsStack.Spec.Versions[0].Images)))
 	}
 
-	njsExpectedImage := "kabanero/nodejs"
+	njsExpectedImage := "docker.io/kabanero/nodejs"
 	if nodejsStack.Spec.Versions[0].Images[0].Image != njsExpectedImage {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack image of %v, but was %v", njsExpectedImage, nodejsStack.Spec.Versions[0].Images[0].Image))
 	}
 
-	jmpExpectedImage := "kabanero/java-microprofile"
+	jmpExpectedImage := "docker.io/kabanero/java-microprofile"
 	if javaMicroprofileStack.Spec.Versions[0].Images[0].Image != jmpExpectedImage {
 		t.Fatal(fmt.Sprintf("Expected nodejs stack image of %v, but was %v", jmpExpectedImage, javaMicroprofileStack.Spec.Versions[0].Images[0].Image))
 	}
