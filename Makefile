@@ -5,23 +5,20 @@
 #   DOCKER_TAG would be the tag you want to use in the repository
 ARCH ?= amd64
 
-ifdef DOCKER_ID
-DOCKER_TAG ?= latest
-IMAGE = ${DOCKER_ID}/kabanero-operator:${DOCKER_TAG}
-REGISTRY_IMAGE = ${DOCKER_ID}/kabanero-operator-registry:${DOCKER_TAG}
-else
-IMAGE ?= kabanero-operator:latest
-REGISTRY_IMAGE ?= kabanero-operator-registry:latest
-endif
 
 ### TRAVIS_TAG build
-ifdef ${TRAVIS_TAG}
-IMAGE = $(REPOSITORY):${TRAVIS_TAG}
-REGISTRY_IMAGE = $(REGISTRY_REPOSITORY):${TRAVIS_TAG}
+ifdef TRAVIS_TAG
+IMAGE = kabanero/kabanero-operator:$(TRAVIS_TAG)
+REGISTRY_IMAGE = kabanero/kabanero-operator-registry:$(TRAVIS_TAG)
 ### TRAVIS_BRANCH build
-else ifdef ${TRAVIS_BRANCH}
-IMAGE = $(REPOSITORY):${TRAVIS_BRANCH}
-REGISTRY_IMAGE = $(REGISTRY_REPOSITORY):${TRAVIS_BRANCH}
+else ifdef TRAVIS_BRANCH
+IMAGE = kabanero/kabanero-operator:$(TRAVIS_BRANCH)
+REGISTRY_IMAGE = kabanero/kabanero-operator-registry:$(TRAVIS_BRANCH)
+### Personal Registry Build
+else ifdef DOCKER_ID
+DOCKER_TAG ?= latest
+IMAGE = $(DOCKER_ID)/kabanero-operator:$(DOCKER_TAG)
+REGISTRY_IMAGE = $(DOCKER_ID)/kabanero-operator-registry:$(DOCKER_TAG)
 ### Local cluster integration testing
 else ifdef INTERNAL_REGISTRY
 ifeq ($(INTERNAL_REGISTRY),TRUE)
@@ -29,20 +26,28 @@ INTERNAL_REGISTRY := $(shell kubectl get route default-route -n openshift-image-
 endif
 INTERNAL_REGISTRY_SVC ?= image-registry.openshift-image-registry.svc:5000
 # Public facing registry references
-IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator:latest
-REGISTRY_IMAGE=${INTERNAL_REGISTRY}/openshift-marketplace/kabanero-operator-registry:latest
+IMAGE=$(INTERNAL_REGISTRY)/kabanero/kabanero-operator:latest
+REGISTRY_IMAGE=$(INTERNAL_REGISTRY)/openshift-marketplace/kabanero-operator-registry:latest
 # Internal facing service registry references
-IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator:latest
-REGISTRY_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/openshift-marketplace/kabanero-operator-registry:latest
+IMAGE_SVC=$(INTERNAL_REGISTRY_SVC)/kabanero/kabanero-operator:latest
+REGISTRY_IMAGE_SVC=$(INTERNAL_REGISTRY_SVC)/openshift-marketplace/kabanero-operator-registry:latest
+### Default
+else
+IMAGE ?= kabanero-operator:latest
+REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 endif
 
 
+# Get IMAGE with digest
+IMAGE_REPO_DIGEST = $(shell docker image inspect $(IMAGE) --format="{{index .RepoDigests 0}}")
+
 # Computed repository name (no tag) including repository host/path reference
-#REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
-#REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
-REPOSITORY=$(shell echo $(IMAGE) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
-REGISTRY_REPOSITORY=$(shell echo $(REGISTRY_IMAGE) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
+# Used to populate CSV for INTERNAL_REGISTRY case
 REPOSITORY_SVC=$(shell echo $(IMAGE_SVC) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
+
+# Get the SHA substring
+# Used to populate CSV for INTERNAL_REGISTRY case
+IMAGE_SHA = $(lastword $(subst @, ,$(IMAGE_REPO_DIGEST)))
 
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.9.0
@@ -57,11 +62,6 @@ ifeq ($(detected_OS),Darwin)
 endif
 endif
 
-# Get IMAGE with digest
-IMAGE_REPO_DIGEST = $(shell docker image inspect $(IMAGE) --format="{{index .RepoDigests 0}}")
-
-# Get the SHA substring
-IMAGE_SHA = $(lastword $(subst @, ,$(IMAGE_REPO_DIGEST)))
 
 .PHONY: build deploy deploy-olm build-image build-registry-image push-image push-registry-image push-manifest int-test-install int-test-collections int-test-uninstall int-test-lifecycle
 
@@ -76,12 +76,12 @@ build-image: generate
   # pass the ldflags option.  The advice from operator-sdk was to run the 
   # commands separately here.
   # operator-sdk build ${IMAGE}
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -o build/_output/bin/kabanero-operator-collection-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -o build/_output/bin/kabanero-operator-stack-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/stack
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/kabanero-operator-collection-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/kabanero-operator-stack-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/stack
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
 
-	docker build -f build/Dockerfile -t ${IMAGE} .
+	docker build -f build/Dockerfile -t $(IMAGE) .
 
 build-registry-image:
   # Build an OLM private registry for Kabanero. Should be run after push-image so the IMAGE SHA is generated
@@ -98,7 +98,7 @@ else
 	sed -e "s!kabanero/kabanero-operator:.*!$(IMAGE_REPO_DIGEST)!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 endif
 
-	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
+	docker build -t $(REGISTRY_IMAGE) -f build/registry/Dockerfile build/registry/
 
 #	rm -R build/registry
 
@@ -163,7 +163,7 @@ ifneq "$(IMAGE)" "kabanero-operator:latest"
   # By default there is no image pull policy for local image. However, for other images
   # substitute current image name, and update the pull policy to always pull images.
 	sed -i.bak -e 's!imagePullPolicy: Never!imagePullPolicy: Always!' deploy/operator.yaml
-	sed -i.bak -e 's!image: kabanero-operator:latest!image: ${IMAGE}!' deploy/operator.yaml
+	sed -i.bak -e 's!image: kabanero-operator:latest!image: $(IMAGE)!' deploy/operator.yaml
 endif
 	rm deploy/operator.yaml.bak || true
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
@@ -176,9 +176,9 @@ deploy-olm:
 
 # Update deployment to correct image 
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE_SVC}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
+	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: $(REGISTRY_IMAGE_SVC)!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 else
-	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: ${REGISTRY_IMAGE}!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
+	sed -e "s!image: KABANERO_REGISTRY_IMAGE!image: $(REGISTRY_IMAGE)!" deploy/olm/01-catalog-source.yaml | kubectl apply -f -
 endif
 
 check: format build test
@@ -211,9 +211,9 @@ creds:
 int-install:
 # Update deployment to correct image 
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${REGISTRY_IMAGE_SVC}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REGISTRY_IMAGE_SVC)!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 else
-	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: ${REGISTRY_IMAGE}!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REGISTRY_IMAGE)!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
@@ -235,7 +235,7 @@ int-kop-resub:
 int-config:
 # Update config to correct image
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator:.*!image: ${REPOSITORY_SVC}@$(IMAGE_SHA)!" config/samples/full.yaml | kubectl -n kabanero apply -f -
+	sed -e "s!image: kabanero/kabanero-operator:.*!image: $(REPOSITORY_SVC)@$(IMAGE_SHA)!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 else
 	sed -e "s!image: kabanero/kabanero-operator:.*!image: $(IMAGE_REPO_DIGEST)!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 endif
