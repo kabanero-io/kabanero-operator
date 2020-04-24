@@ -53,7 +53,7 @@ func DownloadToByte(c client.Client, namespace string, url string, gitRelease ka
 		archiveBytes = bytes
 	// HTTPS:
 	case len(url) != 0:
-		bytes, err := getFromCache(url, skipCertVerification)
+		bytes, err := getFromCache(c, url, skipCertVerification)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +299,7 @@ func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) (fileTy
 }
 
 func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, skipCertVerification bool, reqLogger logr.Logger) ([]StackAsset, error) {
-	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease,skipCertVerification, reqLogger)
+	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease, skipCertVerification, reqLogger)
 	if err != nil {
 		return nil, err
 	}

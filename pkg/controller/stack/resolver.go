@@ -24,7 +24,7 @@ func ResolveIndex(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig, n
 		indexBytes = bytes
 	// HTTPS:
 	case len(repoConf.Https.Url) != 0:
-		bytes, err := getStackIndexUsingHttp(repoConf)
+		bytes, err := getStackIndexUsingHttp(c, repoConf)
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +116,7 @@ func SearchStack(stackName string, index *Index) ([]Stack, error) {
 }
 
 // Retrieves a stack index file content using HTTP.
-func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, error) {
+func getStackIndexUsingHttp(c client.Client, repoConf kabanerov1alpha2.RepositoryConfig) ([]byte, error) {
 	url := repoConf.Https.Url
 
 	// user may specify url to yaml file or directory
@@ -128,5 +128,5 @@ func getStackIndexUsingHttp(repoConf kabanerov1alpha2.RepositoryConfig) ([]byte,
 		url = url + "/index.yaml"
 	}
 
-	return getFromCache(url, repoConf.Https.SkipCertVerification)
+	return getFromCache(c, url, repoConf.Https.SkipCertVerification)
 }

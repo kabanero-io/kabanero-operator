@@ -4,6 +4,8 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -24,4 +26,20 @@ func GetMatchingSecret(c client.Client, namespace string, f filter, filterString
 	}
 
 	return secret, nil
+}
+
+// Retrieves an unstructured secret object based on the provided inputs.
+func GetUnstructuredSecret(c client.Client, secretName string, namespace string) (*unstructured.Unstructured, error) {
+	uSecret := &unstructured.Unstructured{}
+	uSecret.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "Secret",
+		Group:   "",
+		Version: "v1",
+	})
+
+	err := c.Get(context.TODO(), client.ObjectKey{
+		Name:      secretName,
+		Namespace: namespace}, uSecret)
+
+	return uSecret, err
 }

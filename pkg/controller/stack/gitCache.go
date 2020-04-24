@@ -2,7 +2,6 @@ package stack
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -63,7 +62,12 @@ func getStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleas
 func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, namespace string, reqLogger logr.Logger) (*github.Client, error) {
 	var client *github.Client
 
-	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerification}}
+	tlsConfig, err := cutils.GetTLSCConfig(c, skipCertVerification)
+	if err != nil {
+		return nil, err
+	}
+
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
 
 	// Search all secrets under the given namespace for the one containing the required hostname.
 	annotationKey := "kabanero.io/git-"
@@ -182,4 +186,3 @@ func gitPurgeCache(localPurgeDuration time.Duration) {
 		}
 	}
 }
-
