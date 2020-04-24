@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"net/url"
@@ -13,8 +14,8 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	mf "github.com/manifestival/manifestival"
 	mfc "github.com/manifestival/controller-runtime-client"
+	mf "github.com/manifestival/manifestival"
 	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -23,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Reconciles the Kabanero CLI service.
 func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 	// Create the AES encryption key secret, if we don't already have one
 	err := createEncryptionKeySecret(k, cl, reqLogger)
@@ -30,105 +32,200 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
-	// Deploy some of the Kabanero CLI components - service acct, role, etc
+	// Resolve the CLI service software infomation (versions.yaml) with overrides (CR instance spec).
 	rev, err := resolveSoftwareRevision(k, "cli-services", k.Spec.CliServices.Version)
 	if err != nil {
 		return err
 	}
 
-	//The context which will be used to render any templates
-	templateContext := rev.Identifiers
+	// Apply CLI service resources. The deployment resource is applied separately.
+	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
+	if err != nil {
+		return err
+	}
 
+	templateContext := rev.Identifiers
 	image, err := imageUriWithOverrides(k.Spec.CliServices.Repository, k.Spec.CliServices.Tag, k.Spec.CliServices.Image, rev)
 	if err != nil {
 		return err
 	}
 	templateContext["image"] = image
 
-	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
-	if err != nil {
-		return err
-	}
-
 	s, err := renderOrchestration(f, templateContext)
 	if err != nil {
 		return err
 	}
 
-	mOrig, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
+	m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
 	if err != nil {
 		return err
 	}
 
-	transforms := []mf.Transformer{
-		mf.InjectOwner(k),
-		mf.InjectNamespace(k.GetNamespace()),
+	processDeploymentEnv := strings.HasSuffix(rev.OrchestrationPath, "0.1")
+	transformedManifest, err := processTransformation(k, m, processDeploymentEnv, reqLogger)
+	if err != nil {
+		return err
 	}
 
-	// The CLI wants to know the Github organization name, if it was provided
-	if len(k.Spec.Github.Organization) > 0 {
-		transforms = append(transforms, kabTransforms.AddEnvVariable("KABANERO_CLI_GROUP", k.Spec.Github.Organization))
+	err = transformedManifest.Apply()
+	if err != nil {
+		return err
 	}
 
-	// The CLI wants to know which teams to bind to the admin role
-	if (len(k.Spec.Github.Teams) > 0) && (len(k.Spec.Github.Organization) > 0) {
-		// Build a list of fully qualified team names
-		teamList := ""
-		for _, team := range k.Spec.Github.Teams {
-			if len(teamList) > 0 {
-				teamList = teamList + ","
-			}
-			teamList = teamList + team + "@" + k.Spec.Github.Organization
-		}
-		transforms = append(transforms, kabTransforms.AddEnvVariable("teamsInGroup_admin", teamList))
-	}
+	// Only 0.2+ orchestrations support CLI services with reencypt tls termination.
+	if !strings.HasSuffix(rev.OrchestrationPath, "0.1") {
+		addTLSCertsToCLIRoute(k, cl)
 
-	// Export the github API URL, if it's set.  This is used by the security portion of the microservice.
-	if len(k.Spec.Github.ApiUrl) > 0 {
-		apiUrlString := k.Spec.Github.ApiUrl
-		apiUrl, err := url.Parse(apiUrlString)
-
-		if err != nil {
-			reqLogger.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
-			apiUrl, _ = url.Parse("https://api.github.com")
-		} else if len(apiUrl.Scheme) == 0 {
-			apiUrl.Scheme = "https"
-		}
-		transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrl.String()))
-	}
-
-	// Set JwtExpiration for login duration/timeout
-	// Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s).
-	if len(k.Spec.CliServices.SessionExpirationSeconds) > 0 {
-		// If the format is incorrect, set the default
-		matched, err := regexp.MatchString(`^\d+[smh]{1}$`, k.Spec.CliServices.SessionExpirationSeconds)
+		file, err := rev.OpenOrchestration("kabanero-cli-deployment.yaml")
 		if err != nil {
 			return err
 		}
-		if !matched {
-			reqLogger.Info(fmt.Sprintf("Kabanero Spec.CliServices.SessionExpirationSeconds must specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). Defaulting to 1440m."))
-			transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
-		} else {
-			transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", k.Spec.CliServices.SessionExpirationSeconds))
+
+		content, err := renderOrchestration(file, templateContext)
+		if err != nil {
+			return err
 		}
-	} else {
-		transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
-	}
 
-	m, err := mOrig.Transform(transforms...)
-	if err != nil {
-		return err
-	}
+		manifest, err := mf.ManifestFrom(mf.Reader(strings.NewReader(content)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
+		if err != nil {
+			return err
+		}
 
-	err = m.Apply()
-	if err != nil {
-		return err
+		transformedManifest, err := processTransformation(k, manifest, true, reqLogger)
+		if err != nil {
+			return err
+		}
+
+		err = transformedManifest.Apply()
+		if err != nil {
+			return err
+		}
 	}
 
 	// If there is a role binding config map, delete it (previous version)
 	err = destroyRoleBindingConfigMap(k, cl, reqLogger)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func processTransformation(k *kabanerov1alpha2.Kabanero, manifest mf.Manifest, processEnv bool, reqLogger logr.Logger) (*mf.Manifest, error) {
+	transforms := []mf.Transformer{
+		mf.InjectOwner(k),
+		mf.InjectNamespace(k.GetNamespace()),
+	}
+
+	if processEnv {
+		// The CLI wants to know the Github organization name, if it was provided
+		if len(k.Spec.Github.Organization) > 0 {
+			transforms = append(transforms, kabTransforms.AddEnvVariable("KABANERO_CLI_GROUP", k.Spec.Github.Organization))
+		}
+
+		// The CLI wants to know which teams to bind to the admin role
+		if (len(k.Spec.Github.Teams) > 0) && (len(k.Spec.Github.Organization) > 0) {
+			// Build a list of fully qualified team names
+			teamList := ""
+			for _, team := range k.Spec.Github.Teams {
+				if len(teamList) > 0 {
+					teamList = teamList + ","
+				}
+				teamList = teamList + team + "@" + k.Spec.Github.Organization
+			}
+			transforms = append(transforms, kabTransforms.AddEnvVariable("teamsInGroup_admin", teamList))
+		}
+
+		// Export the github API URL, if it's set.  This is used by the security portion of the microservice.
+		if len(k.Spec.Github.ApiUrl) > 0 {
+			apiUrlString := k.Spec.Github.ApiUrl
+			apiUrl, err := url.Parse(apiUrlString)
+
+			if err != nil {
+				reqLogger.Error(err, "Could not parse Github API url %v, assuming api.github.com", apiUrlString)
+				apiUrl, _ = url.Parse("https://api.github.com")
+			} else if len(apiUrl.Scheme) == 0 {
+				apiUrl.Scheme = "https"
+			}
+			transforms = append(transforms, kabTransforms.AddEnvVariable("github.api.url", apiUrl.String()))
+		}
+
+		// Set JwtExpiration for login duration/timeout
+		// Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s).
+		if len(k.Spec.CliServices.SessionExpirationSeconds) > 0 {
+			// If the format is incorrect, set the default
+			matched, err := regexp.MatchString(`^\d+[smh]{1}$`, k.Spec.CliServices.SessionExpirationSeconds)
+			if err != nil {
+				return nil, err
+			}
+			if !matched {
+				reqLogger.Info(fmt.Sprintf("Kabanero Spec.CliServices.SessionExpirationSeconds must specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). Defaulting to 1440m."))
+				transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
+			} else {
+				transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", k.Spec.CliServices.SessionExpirationSeconds))
+			}
+		} else {
+			transforms = append(transforms, kabTransforms.AddEnvVariable("JwtExpiration", "1440m"))
+		}
+	}
+
+	manifestTrasformed, err := manifest.Transform(transforms...)
+	if err != nil {
+		return nil, err
+	}
+
+	return manifestTrasformed, nil
+}
+
+// Updates the route with openshift generated TLS key and certificate.
+// The certificate and TLS key were produced by OpenShift and were added to a secret during service creation.
+// The service annotation that triggered the creation of the secret/cert/key is:
+// service.beta.openshift.io/serving-cert-secret-name: kabanero-cli-service-cert-secret
+func addTLSCertsToCLIRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error {
+	// Retrieve the sevice created secret and get the TLS cert/key.
+	secretName := "kabanero-cli-service-cert-secret"
+	secretInstance := &corev1.Secret{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      secretName,
+		Namespace: k.GetNamespace()}, secretInstance)
+
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve a secret object. Secret name: %v. Namespace: %v. Error: %v", secretName, k.GetNamespace(), err)
+	}
+
+	tlskey, ok := secretInstance.Data["tls.key"]
+	if !ok {
+		return fmt.Errorf("The data.tls.key entry under secret %v was not found", secretName)
+	}
+
+	encodedKey := base64.StdEncoding.EncodeToString(tlskey)
+	decodedStringkey, err := base64.StdEncoding.DecodeString(encodedKey)
+
+	tlscrt, ok := secretInstance.Data["tls.crt"]
+	if !ok {
+		return fmt.Errorf("The data.tls.crt entry under secret %v was not found", secretName)
+	}
+	encodedCrt := base64.StdEncoding.EncodeToString(tlscrt)
+	decodedCrtString, err := base64.StdEncoding.DecodeString(encodedCrt)
+
+	// Get the CLI service route.
+	routeName := "kabanero-cli"
+	ri := &routev1.Route{}
+	err = c.Get(context.Background(), types.NamespacedName{
+		Name:      routeName,
+		Namespace: k.ObjectMeta.Namespace}, ri)
+
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve route object. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+	}
+
+	// Add TLS cert/key to route.
+	ri.Spec.TLS.Key = string(decodedStringkey)
+	ri.Spec.TLS.Certificate = string(decodedCrtString)
+
+	err = c.Update(context.Background(), ri)
+	if err != nil {
+		return fmt.Errorf("Unable to update route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
 	}
 
 	return nil

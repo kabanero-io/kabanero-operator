@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-cli
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: kabanero-cli-service-cert-secret
+spec:
+  selector:
+    app: kabanero-cli
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 9443
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kabanero-cli
+spec:
+  to:
+    kind: Service
+    name: kabanero-cli
+  tls:
+    termination: reencrypt
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-cli
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - services
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - kabanero-cli
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-cli
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-cli
+subjects:
+- kind: ServiceAccount
+  name: kabanero-cli
+roleRef:
+  kind: Role
+  name: kabanero-cli
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-cli
+rules:
+- verbs:
+  - get
+  - list
+  - watch
+  apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-cli
+subjects:
+- kind: ServiceAccount
+  name: kabanero-cli
+  namespace: kabanero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kabanero-cli
