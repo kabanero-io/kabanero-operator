@@ -100,7 +100,7 @@ endif
 
 	docker build -t $(REGISTRY_IMAGE) -f build/registry/Dockerfile build/registry/
 
-#	rm -R build/registry
+	rm -R build/registry
 
 push-image:
 ifneq "$(IMAGE)" "kabanero-operator:latest"
