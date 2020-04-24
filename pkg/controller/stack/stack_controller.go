@@ -259,10 +259,11 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
-// A key to the pipeline use count map
+// A key to the pipeline use count map.  Only one of "url" and "gitRelease" should
+// be provided.  It's one or the other.
 type pipelineUseMapKey struct {
 	url        string
-	gitRelease kabanerov1alpha2.GitReleaseSpec
+	gitRelease kabanerov1alpha2.GitReleaseInfo
 	digest     string
 }
 
@@ -296,6 +297,10 @@ func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string
 	}
 
 	return defaultNamespace
+}
+
+func gitReleaseSpecToGitReleaseInfo(gitRelease kabanerov1alpha2.GitReleaseSpec) kabanerov1alpha2.GitReleaseInfo {
+	return kabanerov1alpha2.GitReleaseInfo{Hostname: gitRelease.Hostname, Organization: gitRelease.Organization, Project: gitRelease.Project, Release: gitRelease.Release, AssetName: gitRelease.AssetName}
 }
 
 func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
@@ -333,7 +338,12 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	assetUseMap := make(map[pipelineUseMapKey]*pipelineUseMapValue)
 	for _, curStatus := range stackResource.Status.Versions {
 		for _, pipeline := range curStatus.Pipelines {
-			key := pipelineUseMapKey{url: pipeline.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Digest}
+			key := pipelineUseMapKey{digest: pipeline.Digest}
+			if pipeline.GitRelease.IsUsable() {
+				key.gitRelease = pipeline.GitRelease
+			} else {
+				key.url = pipeline.Url
+			}
 			value := assetUseMap[key]
 			if value == nil {
 				value = &pipelineUseMapValue{}
@@ -350,15 +360,32 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	assetsToIncrement := make(map[pipelineVersion]bool)
 	for _, curStatus := range stackResource.Status.Versions {
 		for _, pipeline := range curStatus.Pipelines {
-			cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Digest}, version: curStatus.Version}
+			key := pipelineUseMapKey{digest: pipeline.Digest}
+			if pipeline.GitRelease.IsUsable() {
+				key.gitRelease = pipeline.GitRelease
+			} else {
+				key.url = pipeline.Url
+			}
+			cur := pipelineVersion{pipelineUseMapKey: key, version: curStatus.Version}
 			assetsToDecrement[cur] = true
 		}
 	}
 
+	// When processing the pipelines currently referenced in the stack spec, save
+	// off whether we should disable certificate verification checking per-resource.
+	certVerification := make(map[pipelineUseMapKey]bool)
 	for _, curSpec := range stackResource.Spec.Versions {
 		if !strings.EqualFold(curSpec.DesiredState, kabanerov1alpha2.StackDesiredStateInactive) {
 			for _, pipeline := range curSpec.Pipelines {
-				cur := pipelineVersion{pipelineUseMapKey: pipelineUseMapKey{url: pipeline.Https.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Sha256}, version: curSpec.Version}
+				key := pipelineUseMapKey{digest: pipeline.Sha256}
+				if pipeline.GitRelease.IsUsable() {
+					key.gitRelease = gitReleaseSpecToGitReleaseInfo(pipeline.GitRelease)
+					certVerification[key] = pipeline.GitRelease.SkipCertVerification
+				} else {
+					key.url = pipeline.Https.Url
+					certVerification[key] = pipeline.Https.SkipCertVerification
+				}
+				cur := pipelineVersion{pipelineUseMapKey: key, version: curSpec.Version}
 				if assetsToDecrement[cur] == true {
 					delete(assetsToDecrement, cur)
 				} else {
@@ -406,7 +433,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		}
 	}
 
-	for _, value := range assetUseMap {
+	for key, value := range assetUseMap {
 		if value.useCount > 0 {
 			log.Info(fmt.Sprintf("Creating assets with use count %v: %v", value.useCount, value))
 
@@ -423,7 +450,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 				}
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
-				manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
+				manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, certVerification[key], log)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("Error retrieving archive manifests: %v", value))
 					value.manifestError = err
@@ -485,7 +512,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 							}
 
 							// Retrieve manifests as unstructured
-							manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, log)
+							manifests, err := GetManifests(c, stackResource.GetNamespace(), value.PipelineStatus, renderingContext, certVerification[key], log)
 							if err != nil {
 								log.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
 								value.ActiveAssets[index].Status = assetStatusFailed
@@ -584,7 +611,12 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive
 
 			for _, pipeline := range curSpec.Pipelines {
-				key := pipelineUseMapKey{url: pipeline.Https.Url, gitRelease: pipeline.GitRelease, digest: pipeline.Sha256}
+				key := pipelineUseMapKey{digest: pipeline.Sha256}
+				if pipeline.GitRelease.IsUsable() {
+					key.gitRelease = gitReleaseSpecToGitReleaseInfo(pipeline.GitRelease)
+				} else {
+					key.url = pipeline.Https.Url
+				}
 				value := assetUseMap[key]
 				if value == nil {
 					// TODO: ???
@@ -620,7 +652,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			newStackVersionStatus.StatusMessage = "The stack has been deactivated."
 		}
 
-		log.Info(fmt.Sprintf("Updated stack status: %v", newStackVersionStatus))
+		log.Info(fmt.Sprintf("Updated stack status: %+v", newStackVersionStatus))
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
 

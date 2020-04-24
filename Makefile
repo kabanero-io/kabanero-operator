@@ -45,7 +45,7 @@ REGISTRY_REPOSITORY=$(shell echo $(REGISTRY_IMAGE) | sed -r 's/:[0-9A-Za-z][0-9A
 REPOSITORY_SVC=$(shell echo $(IMAGE_SVC) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.8.0
+CURRENT_RELEASE=0.9.0
 
 # OS detection
 ifeq ($(OS),Windows_NT)

@@ -41,19 +41,19 @@ type StackAsset struct {
 	Yaml    unstructured.Unstructured
 }
 
-func DownloadToByte(c client.Client, namespace string, url string, gitRelease kabanerov1alpha2.GitReleaseSpec, reqLogger logr.Logger) ([]byte, error) {
+func DownloadToByte(c client.Client, namespace string, url string, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, reqLogger logr.Logger) ([]byte, error) {
 	var archiveBytes []byte
 	switch {
 	// GIT:
-	case isGitReleaseUsable(gitRelease):
-		bytes, err := getStackDataUsingGit(c, gitRelease, namespace, reqLogger)
+	case gitRelease.IsUsable():
+		bytes, err := getStackDataUsingGit(c, gitRelease, skipCertVerification, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
 		archiveBytes = bytes
 	// HTTPS:
 	case len(url) != 0:
-		bytes, err := getFromCache(url, false)
+		bytes, err := getFromCache(url, skipCertVerification)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) (fileTy
 		return "", err
 	}
 	fileName := fileNameURL.Path
-	if isGitReleaseUsable(pipelineStatus.GitRelease) {
+	if pipelineStatus.GitRelease.IsUsable() {
 		fileName = pipelineStatus.GitRelease.AssetName
 	}
 	switch {
@@ -298,8 +298,8 @@ func getPipelineFileType(pipelineStatus kabanerov1alpha2.PipelineStatus) (fileTy
 	}
 }
 
-func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, reqLogger logr.Logger) ([]StackAsset, error) {
-	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease, reqLogger)
+func GetManifests(c client.Client, namespace string, pipelineStatus kabanerov1alpha2.PipelineStatus, renderingContext map[string]interface{}, skipCertVerification bool, reqLogger logr.Logger) ([]StackAsset, error) {
+	b, err := DownloadToByte(c, namespace, pipelineStatus.Url, pipelineStatus.GitRelease,skipCertVerification, reqLogger)
 	if err != nil {
 		return nil, err
 	}

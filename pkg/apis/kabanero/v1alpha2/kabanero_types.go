@@ -116,6 +116,12 @@ type GitReleaseSpec struct {
 	SkipCertVerification bool   `json:"skipCertVerification,omitempty"`
 }
 
+// Returns true if the user specified all values for the release.
+func (gitRelease GitReleaseSpec) IsUsable() bool {
+	return len(gitRelease.Hostname) != 0 && len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
+		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
+}
+
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
 type KabaneroCliServicesCustomizationSpec struct {
 	//Future: Enable     bool   `json:"enable,omitempty"`

@@ -2,7 +2,7 @@
 
 set -Eeox pipefail
 
-RELEASE="${RELEASE:-0.8.0}"
+RELEASE="${RELEASE:-0.9.0}"
 KABANERO_SUBSCRIPTIONS_YAML="${KABANERO_SUBSCRIPTIONS_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-subscriptions.yaml}"
 KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.com/kabanero-io/kabanero-operator/releases/download/$RELEASE/kabanero-customresources.yaml}"
 SLEEP_LONG="${SLEEP_LONG:-5}"
@@ -318,8 +318,8 @@ oc new-project tekton-pipelines || true
 
 openshift_master_default_subdomain=$(oc get ingresses.config.openshift.io cluster --output=jsonpath={.spec.domain})
 
-curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.5.3/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
-oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.5.3/openshift-tekton-dashboard-release.yaml
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
+oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-dashboard-release.yaml
 
 # Network policy for kabanero and tekton pipelines namespaces
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-network-policy
