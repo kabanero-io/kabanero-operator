@@ -1,19 +1,51 @@
 package stack
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// Unit test client.
+type httpCacheTestClient struct {
+}
+
+func (c httpCacheTestClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+	return errors.New("Get is not implemented")
+}
+func (c httpCacheTestClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+	return errors.New("List is not implemented")
+}
+func (c httpCacheTestClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+	return errors.New("Create is not implemented")
+}
+func (c httpCacheTestClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+	return errors.New("Delete is not implemented")
+}
+func (c httpCacheTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+	return errors.New("DeleteAllOf is not implemented")
+}
+func (c httpCacheTestClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	return errors.New("Update is not implemented")
+}
+func (c httpCacheTestClient) Status() client.StatusWriter { return c }
+func (c httpCacheTestClient) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return errors.New("Patch is not implemented")
+}
 
 const theResponse = "The response."
 const theResponse2 = "The response2."
 
 // HTTP handler that lets us know if the caller asked for the etag.
 type CacheHandler struct {
-	etag string
+	etag      string
 	cacheHits *int32
 }
 
@@ -40,7 +72,7 @@ func TestCachePage(t *testing.T) {
 	defer server.Close()
 
 	// Get the page twice... the first time should not cache, the second should cache.
-	data, err := getFromCache(server.URL, false)
+	data, err := getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +80,7 @@ func TestCachePage(t *testing.T) {
 		t.Fatal("Response 1 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +97,7 @@ func TestCachePage(t *testing.T) {
 // HTTP handler that lets us know if the caller asked for the etag.
 type CacheChangeHandler struct {
 	etag1, etag2 string
-	cacheHits *int32
+	cacheHits    *int32
 }
 
 func (ch CacheChangeHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -96,7 +128,7 @@ func TestCacheChangePage(t *testing.T) {
 	defer server.Close()
 
 	// Get the page thrice... the first time and second time should not cache, the third should cache.
-	data, err := getFromCache(server.URL, false)
+	data, err := getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +136,7 @@ func TestCacheChangePage(t *testing.T) {
 		t.Fatal("Response 1 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +144,7 @@ func TestCacheChangePage(t *testing.T) {
 		t.Fatal("Response 2 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +159,7 @@ func TestCacheChangePage(t *testing.T) {
 }
 
 // HTTP handler that does not cache
-type NoCacheHandler struct {}
+type NoCacheHandler struct{}
 
 func (ch NoCacheHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Write([]byte(theResponse))
@@ -139,8 +171,8 @@ func TestNoCachePage(t *testing.T) {
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
-	// Get the page twice... 
-	data, err := getFromCache(server.URL, false)
+	// Get the page twice...
+	data, err := getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +180,7 @@ func TestNoCachePage(t *testing.T) {
 		t.Fatal("Response 1 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +197,7 @@ func TestCachePurge(t *testing.T) {
 	defer server.Close()
 
 	// Get the page twice... the first time should not cache.
-	data, err := getFromCache(server.URL, false)
+	data, err := getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +209,7 @@ func TestCachePurge(t *testing.T) {
 	purgeCache(0)
 
 	// Get the page the second time... it should not be cached.
-	data, err = getFromCache(server.URL, false)
+	data, err = getFromCache(httpCacheTestClient{}, server.URL, true)
 	if err != nil {
 		t.Fatal(err)
 	}
