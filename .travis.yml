@@ -20,7 +20,6 @@ before_install:
 
 script:
 - make check
-- .travis/pre_build_image.sh
 - make build-image
 
 before_deploy:
@@ -28,12 +27,20 @@ before_deploy:
 
 deploy:
 - provider: script
-  script: make push-image
+  script:
+  - make push-image
+  - .travis/pre_build_image.sh
+  - make build-registry-image
+  - make push-registry-image
   on:
      tags: true
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
 - provider: script
-  script: make push-image
+  script:
+  - make push-image
+  - .travis/pre_build_image.sh
+  - make build-registry-image
+  - make push-registry-image
   on:
      branch: master
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
