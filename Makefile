@@ -4,6 +4,7 @@
 #   DOCKER_ID would be your docker user name
 #   DOCKER_TAG would be the tag you want to use in the repository
 ARCH ?= amd64
+
 ifdef DOCKER_ID
 DOCKER_TAG ?= latest
 IMAGE = ${DOCKER_ID}/kabanero-operator:${DOCKER_TAG}
@@ -13,30 +14,35 @@ IMAGE ?= kabanero-operator:latest
 REGISTRY_IMAGE ?= kabanero-operator-registry:latest
 endif
 
-# For integration testing
-# INTERNAL_REGISTRY: the public facing registry url. Set TRUE to enable and find the default address, or manually set to address itself
-# INTERNAL_REGISTRY_SVC: the internal service image pull address. If not set, set to the default
-INTERNAL_REGISTRY ?=
-INTERNAL_REGISTRY_SVC ?=
-ifdef INTERNAL_REGISTRY
+### TRAVIS_TAG build
+ifdef ${TRAVIS_TAG}
+IMAGE = $(REPOSITORY):${TRAVIS_TAG}
+REGISTRY_IMAGE = $(REGISTRY_REPOSITORY):${TRAVIS_TAG}
+### TRAVIS_BRANCH build
+else ifdef ${TRAVIS_BRANCH}
+IMAGE = $(REPOSITORY):${TRAVIS_BRANCH}
+REGISTRY_IMAGE = $(REGISTRY_REPOSITORY):${TRAVIS_BRANCH}
+### Local cluster integration testing
+else ifdef INTERNAL_REGISTRY
 ifeq ($(INTERNAL_REGISTRY),TRUE)
 INTERNAL_REGISTRY := $(shell kubectl get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-ifndef INTERNAL_REGISTRY_SVC
-INTERNAL_REGISTRY_SVC=image-registry.openshift-image-registry.svc:5000
 endif
-# Public registry references
+INTERNAL_REGISTRY_SVC ?= image-registry.openshift-image-registry.svc:5000
+# Public facing registry references
 IMAGE=${INTERNAL_REGISTRY}/kabanero/kabanero-operator:latest
 REGISTRY_IMAGE=${INTERNAL_REGISTRY}/openshift-marketplace/kabanero-operator-registry:latest
-# Internal service registry references
+# Internal facing service registry references
 IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/kabanero/kabanero-operator:latest
 REGISTRY_IMAGE_SVC=${INTERNAL_REGISTRY_SVC}/openshift-marketplace/kabanero-operator-registry:latest
-endif
 endif
 
 
 # Computed repository name (no tag) including repository host/path reference
-REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
-REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
+#REPOSITORY=$(firstword $(subst :, ,${IMAGE}))
+#REGISTRY_REPOSITORY=$(firstword $(subst :, ,${REGISTRY_IMAGE}))
+REPOSITORY=$(shell echo $(IMAGE) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
+REGISTRY_REPOSITORY=$(shell echo $(REGISTRY_IMAGE) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
+REPOSITORY_SVC=$(shell echo $(IMAGE_SVC) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
 
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.8.0
@@ -51,7 +57,13 @@ ifeq ($(detected_OS),Darwin)
 endif
 endif
 
-.PHONY: build deploy deploy-olm build-image push-image push-manifest int-test-install int-test-collections int-test-uninstall int-test-lifecycle
+# Get IMAGE with digest
+IMAGE_REPO_DIGEST = $(shell docker image inspect $(IMAGE) --format="{{index .RepoDigests 0}}")
+
+# Get the SHA substring
+IMAGE_SHA = $(lastword $(subst @, ,$(IMAGE_REPO_DIGEST)))
+
+.PHONY: build deploy deploy-olm build-image build-registry-image push-image push-registry-image push-manifest int-test-install int-test-collections int-test-uninstall int-test-lifecycle
 
 build: generate
 	GO111MODULE=on go install ./cmd/manager
@@ -71,56 +83,44 @@ build-image: generate
 
 	docker build -f build/Dockerfile -t ${IMAGE} .
 
-  # Build an OLM private registry for Kabanero
+build-registry-image:
+  # Build an OLM private registry for Kabanero. Should be run after push-image so the IMAGE SHA is generated
 	mkdir -p build/registry
 	cp LICENSE build/registry/LICENSE
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
 	cp deploy/crds/kabanero.io_kabaneros_crd.yaml deploy/crds/kabanero.io_collections_crd.yaml deploy/crds/kabanero.io_stacks_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
 
+# Use the internal service address in the CSV
 ifdef INTERNAL_REGISTRY
-	sed -e "s!kabanero/kabanero-operator:.*!${IMAGE_SVC}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:.*!$(REPOSITORY_SVC)@$(IMAGE_SHA)!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 else
-	sed -e "s!kabanero/kabanero-operator:.*!${IMAGE}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
+	sed -e "s!kabanero/kabanero-operator:.*!$(IMAGE_REPO_DIGEST)!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
 endif
 
 	docker build -t ${REGISTRY_IMAGE} -f build/registry/Dockerfile build/registry/
 
-  # If we're doing a Travis build, need to build a second image because the CSV
-  # in the registry image has to point to the tagged operator image.
-ifdef TRAVIS_TAG
-	sed -e "s!kabanero/kabanero-operator:.*!${REPOSITORY}:${TRAVIS_TAG}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
-	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_TAG} -f build/registry/Dockerfile build/registry/
-endif
-
-ifdef TRAVIS_BRANCH
-	sed -e "s!kabanero/kabanero-operator:.*!${REPOSITORY}:${TRAVIS_BRANCH}!" registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml > build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/kabanero-operator.v$(CURRENT_RELEASE).clusterserviceversion.yaml
-	docker build -t ${REGISTRY_REPOSITORY}:${TRAVIS_BRANCH} -f build/registry/Dockerfile build/registry/
-endif
-
-	rm -R build/registry
+#	rm -R build/registry
 
 push-image:
 ifneq "$(IMAGE)" "kabanero-operator:latest"
   # Default push.  Make sure the namespace is there in case using local registry
 	kubectl create namespace kabanero || true
 	docker push $(IMAGE)
+	# Get the RepoDigests
+	docker pull $(IMAGE)
+endif
+
+
+push-registry-image:
+ifneq "$(REGISTRY_IMAGE)" "kabanero-operator-registry:latest"
+  # Default push.  Make sure the namespace is there in case using local registry
+	kubectl create namespace kabanero || true
 	docker push $(REGISTRY_IMAGE)
-
-ifdef TRAVIS_TAG
-  # This is a Travis tag build. Pushing using Docker tag TRAVIS_TAG
-	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_TAG)
-	docker push $(REPOSITORY):$(TRAVIS_TAG)
-	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_TAG)
+	# Get the RepoDigests
+	docker pull $(REGISTRY_IMAGE)
 endif
 
-ifdef TRAVIS_BRANCH
-  # This is a Travis branch build. Pushing using Docker tag TRAVIS_BRANCH
-	docker tag $(IMAGE) $(REPOSITORY):$(TRAVIS_BRANCH)
-	docker push $(REPOSITORY):$(TRAVIS_BRANCH)
-	docker push $(REGISTRY_REPOSITORY):$(TRAVIS_BRANCH)
-endif
-endif
 
 push-manifest:
 	echo "IMAGE="$(IMAGE)
@@ -203,7 +203,7 @@ endif
 # Requires jq
 
 # Install Test
-int-test-install: creds build-image push-image int-install int-config
+int-test-install: creds build-image push-image build-registry-image push-registry-image int-install int-config
 
 creds:
 	tests/00-credentials.sh
@@ -218,13 +218,26 @@ endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
 
+# Rebuild & Reinstall only the kabanero-operator
+int-test-kop-reinstall: creds build-image push-image build-registry-image push-registry-image int-kop-resub int-config
+
+# Helper for int-op-reinstall
+int-kop-resub:
+	# Clean up instance, sub & csv
+	kubectl -n kabanero delete kabanero kabanero --ignore-not-found=true && \
+	CSV=$$(kubectl -n kabanero get subscription kabanero-operator --output=jsonpath={.status.installedCSV}) && \
+	kubectl -n kabanero delete subscription kabanero-operator --ignore-not-found=true && \
+	kubectl -n kabanero delete clusterserviceversion $${CSV} || true
+	# Force a new catalog pod
+	kubectl -n openshift-marketplace delete pod -l olm.catalogSource=kabanero-catalog --ignore-not-found=true
+	kubectl -n kabanero apply -f deploy/kabanero-subscriptions.yaml --selector kabanero.io/install=14-subscription
+
 int-config:
 # Update config to correct image
-# Update config to correct image
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator:.*!image: ${IMAGE_SVC}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
+	sed -e "s!image: kabanero/kabanero-operator:.*!image: ${REPOSITORY_SVC}@$(IMAGE_SHA)!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 else
-	sed -e "s!image: kabanero/kabanero-operator:.*!image: ${IMAGE}!" config/samples/full.yaml | kubectl -n kabanero apply -f -
+	sed -e "s!image: kabanero/kabanero-operator:.*!image: $(IMAGE_REPO_DIGEST)!" config/samples/full.yaml | kubectl -n kabanero apply -f -
 endif
 
 # Uninstall Test
