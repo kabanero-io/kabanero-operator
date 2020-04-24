@@ -40,14 +40,17 @@ endif
 
 # Get IMAGE with digest
 IMAGE_REPO_DIGEST = $(shell docker image inspect $(IMAGE) --format="{{index .RepoDigests 0}}")
+REGISTRY_IMAGE_REPO_DIGEST = $(shell docker image inspect $(REGISTRY_IMAGE) --format="{{index .RepoDigests 0}}")
 
 # Computed repository name (no tag) including repository host/path reference
 # Used to populate CSV for INTERNAL_REGISTRY case
 REPOSITORY_SVC=$(shell echo $(IMAGE_SVC) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
+REPOSITORY_REGISTRY_SVC=$(shell echo $(REGISTRY_IMAGE_SVC) | sed -r 's/:[0-9A-Za-z][0-9A-Za-z.-]{0,127}$$//g')
 
 # Get the SHA substring
 # Used to populate CSV for INTERNAL_REGISTRY case
 IMAGE_SHA = $(lastword $(subst @, ,$(IMAGE_REPO_DIGEST)))
+REGISTRY_IMAGE_SHA = $(lastword $(subst @, ,$(REGISTRY_IMAGE_REPO_DIGEST)))
 
 # Current release (used for CSV management)
 CURRENT_RELEASE=0.9.0
@@ -211,9 +214,9 @@ creds:
 int-install:
 # Update deployment to correct image 
 ifdef INTERNAL_REGISTRY
-	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REGISTRY_IMAGE_SVC)!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REPOSITORY_REGISTRY_SVC)@$(REGISTRY_IMAGE_SHA)!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 else
-	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REGISTRY_IMAGE)!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REGISTRY_IMAGE_REPO_DIGEST)!" deploy/kabanero-subscriptions.yaml > /tmp/kabanero-subscriptions.yaml
 endif
 
 	KABANERO_SUBSCRIPTIONS_YAML=/tmp/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/install.sh
@@ -229,8 +232,15 @@ int-kop-resub:
 	kubectl -n kabanero delete subscription kabanero-operator --ignore-not-found=true && \
 	kubectl -n kabanero delete clusterserviceversion $${CSV} || true
 	# Force a new catalog pod
-	kubectl -n openshift-marketplace delete pod -l olm.catalogSource=kabanero-catalog --ignore-not-found=true
-	kubectl -n kabanero apply -f deploy/kabanero-subscriptions.yaml --selector kabanero.io/install=14-subscription
+	kubectl -n openshift-marketplace delete catalogsource kabanero-catalog --ignore-not-found=true
+ifdef INTERNAL_REGISTRY
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REPOSITORY_REGISTRY_SVC)@$(REGISTRY_IMAGE_SHA)!" deploy/kabanero-subscriptions.yaml | kubectl -n openshift-marketplace apply --selector kabanero.io/install=00-catalogsource -f -
+else 
+	sed -e "s!image: kabanero/kabanero-operator-registry:.*!image: $(REGISTRY_IMAGE_REPO_DIGEST)!"  deploy/kabanero-subscriptions.yaml | kubectl -n openshift-marketplace apply --selector kabanero.io/install=00-catalogsource -f -
+endif
+	kubectl -n kabanero apply --selector kabanero.io/install=14-subscription -f deploy/kabanero-subscriptions.yaml 
+
+
 
 int-config:
 # Update config to correct image

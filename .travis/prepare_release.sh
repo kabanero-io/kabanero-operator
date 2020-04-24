@@ -5,7 +5,8 @@
 IFS=’:’ read -ra REPOSITORY <<< "$REGISTRY_IMAGE"
 
 # Set the tag for the kabanero CatalogSource
-sed -i.bak -e "s,kabanero/kabanero-operator-registry:latest,kabanero/kabanero-operator-registry:$TRAVIS_TAG," deploy/kabanero-subscriptions.yaml
+REGISTRY_IMAGE_REPO_DIGEST=$(docker image inspect kabanero-operator-registry:$TRAVIS_TAG --format="{{index .RepoDigests 0}}")
+sed -i.bak -e 's,kabanero/kabanero-operator-registry:latest,'$REGISTRY_IMAGE_REPO_DIGEST',' deploy/kabanero-subscriptions.yaml
 
 # Set the tag for the install script
 sed -i.bak -e 's/RELEASE=.*/RELEASE="${RELEASE:-'$TRAVIS_TAG'}"/' deploy/install.sh
