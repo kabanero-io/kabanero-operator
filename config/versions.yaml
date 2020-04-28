@@ -93,10 +93,10 @@ related-software:
 
   cli-services:
   - version: "0.9.0"
-    orchestrations: "orchestrations/cli-services/0.1"
+    orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.8.0"
+      tag: "0.9.0-alpha.2"
   - version: "0.8.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
