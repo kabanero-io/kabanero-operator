@@ -31,29 +31,42 @@ var kllog = rlog.Log.WithName("kabanero-landing")
 
 // Deploys resources and customizes to the Openshift web console.
 func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, logger logr.Logger) error {
-	// if enable is false do not deploy the landing page
+	// If enable is false do not deploy the landing page.
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
 		err := cleanupLandingPage(k, c)
 		return err
 	}
+
+	// Resolve the landing software infomation (versions.yaml) with applied overrides (CR instance spec).
 	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.Landing.Version)
 	if err != nil {
 		return err
 	}
 
-	//The context which will be used to render any templates
-	templateContext := rev.Identifiers
+	// If the orchestration version being used has a route that uses passthrough TLS termination, the existing
+	// route might require cleanup. This is done if the previous instance of the landing service configured
+	// the route to use reencrypt TLS termination.
+	usingPassthroughTLS := strings.HasSuffix(rev.OrchestrationPath, "0.1")
+	if usingPassthroughTLS {
+		err = removeTLSCertsFromLandingRoute(k, c)
+		if err != nil {
+			return err
+		}
+	}
 
+	// Apply CLI service resources excluding the deployment, which is applied separatelly.
+	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
+	if err != nil {
+		return err
+	}
+
+	// The context which will be used to render any templates
+	templateContext := rev.Identifiers
 	image, err := imageUriWithOverrides(k.Spec.Landing.Repository, k.Spec.Landing.Tag, k.Spec.Landing.Image, rev)
 	if err != nil {
 		return err
 	}
 	templateContext["image"] = image
-
-	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
-	if err != nil {
-		return err
-	}
 
 	s, err := renderOrchestration(f, templateContext)
 	if err != nil {
@@ -77,7 +90,7 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 	}
 
 	// Only 0.2+ orchestrations support landing page with reencypt tls termination.
-	if !strings.HasSuffix(rev.OrchestrationPath, "0.1") {
+	if !usingPassthroughTLS {
 		err = addTLSConfigToLandingRoute(k, c, rev)
 		if err != nil {
 			return err
@@ -272,7 +285,7 @@ func addTLSConfigToLandingRoute(k *kabanerov1alpha2.Kabanero, c client.Client, r
 		Namespace: k.ObjectMeta.Namespace}, ri)
 
 	if err != nil {
-		return fmt.Errorf("Unable to retrieve route object. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+		return fmt.Errorf("Unable to retrieve landing route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
 	}
 
 	// Add TLS cert/key to route.
@@ -281,7 +294,35 @@ func addTLSConfigToLandingRoute(k *kabanerov1alpha2.Kabanero, c client.Client, r
 
 	err = c.Update(context.Background(), ri)
 	if err != nil {
-		return fmt.Errorf("Unable to update route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+		return fmt.Errorf("Unable to update landing route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+	}
+
+	return nil
+}
+
+// Removes the openshift generated TLS key and certificate from the currently deployed route if they were
+// previously specified.
+func removeTLSCertsFromLandingRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error {
+	// Get the landing route.
+	routeName := "kabanero-landing"
+	ri := &routev1.Route{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      routeName,
+		Namespace: k.ObjectMeta.Namespace}, ri)
+
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve landing route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+	}
+
+	// Remove TLS cert/key from route.
+	if len(ri.Spec.TLS.Key) != 0 || len(ri.Spec.TLS.Certificate) != 0 {
+		ri.Spec.TLS.Key = ""
+		ri.Spec.TLS.Certificate = ""
+
+		err = c.Update(context.Background(), ri)
+		if err != nil {
+			return fmt.Errorf("Unable to update landing route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+		}
 	}
 
 	return nil
