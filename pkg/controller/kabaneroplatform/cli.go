@@ -32,13 +32,24 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
-	// Resolve the CLI service software infomation (versions.yaml) with overrides (CR instance spec).
+	// Resolve the CLI service software infomation (versions.yaml) with applied overrides (CR instance spec).
 	rev, err := resolveSoftwareRevision(k, "cli-services", k.Spec.CliServices.Version)
 	if err != nil {
 		return err
 	}
 
-	// Apply CLI service resources. The deployment resource is applied separately.
+	// If the orchestration version being used has a route that uses passthrough TLS termination, the existing
+	// route might require cleanup. This is done if the previous instance of the CLI service configured
+	// the route to use reencrypt TLS termination.
+	usingPassthroughTLS := strings.HasSuffix(rev.OrchestrationPath, "0.1")
+	if usingPassthroughTLS {
+		err = removeTLSCertsFromCLIRoute(k, cl)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Apply CLI service resources.
 	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
 	if err != nil {
 		return err
@@ -61,8 +72,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
-	processDeploymentEnv := strings.HasSuffix(rev.OrchestrationPath, "0.1")
-	transformedManifest, err := processTransformation(k, m, processDeploymentEnv, reqLogger)
+	transformedManifest, err := processTransformation(k, m, usingPassthroughTLS, reqLogger)
 	if err != nil {
 		return err
 	}
@@ -73,7 +83,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 	}
 
 	// Only 0.2+ orchestrations support CLI services with reencypt tls termination.
-	if !strings.HasSuffix(rev.OrchestrationPath, "0.1") {
+	if !usingPassthroughTLS {
 		addTLSCertsToCLIRoute(k, cl)
 
 		file, err := rev.OpenOrchestration("kabanero-cli-deployment.yaml")
@@ -216,7 +226,7 @@ func addTLSCertsToCLIRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error 
 		Namespace: k.ObjectMeta.Namespace}, ri)
 
 	if err != nil {
-		return fmt.Errorf("Unable to retrieve route object. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+		return fmt.Errorf("Unable to retrieve CLI service route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
 	}
 
 	// Add TLS cert/key to route.
@@ -225,7 +235,35 @@ func addTLSCertsToCLIRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error 
 
 	err = c.Update(context.Background(), ri)
 	if err != nil {
-		return fmt.Errorf("Unable to update route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+		return fmt.Errorf("Unable to update CLI service route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+	}
+
+	return nil
+}
+
+// Removes the openshift generated TLS key and certificate from the currently deployed route if they were
+// previously specified.
+func removeTLSCertsFromCLIRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error {
+	// Get the CLI service route.
+	routeName := "kabanero-cli"
+	ri := &routev1.Route{}
+	err := c.Get(context.Background(), types.NamespacedName{
+		Name:      routeName,
+		Namespace: k.ObjectMeta.Namespace}, ri)
+
+	if err != nil {
+		return fmt.Errorf("Unable to retrieve CLI service route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+	}
+
+	// Remove TLS cert/key from route.
+	if len(ri.Spec.TLS.Key) != 0 || len(ri.Spec.TLS.Certificate) != 0 {
+		ri.Spec.TLS.Key = ""
+		ri.Spec.TLS.Certificate = ""
+
+		err = c.Update(context.Background(), ri)
+		if err != nil {
+			return fmt.Errorf("Unable to update CLI service route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
+		}
 	}
 
 	return nil
