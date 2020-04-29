@@ -20,7 +20,7 @@ import (
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
-	
+
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
