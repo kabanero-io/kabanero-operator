@@ -8,6 +8,9 @@ KABANERO_CUSTOMRESOURCES_YAML="${KABANERO_CUSTOMRESOURCES_YAML:-https://github.c
 SLEEP_LONG="${SLEEP_LONG:-5}"
 SLEEP_SHORT="${SLEEP_SHORT:-2}"
 
+# Optional use Docker images built from master branch (yes/no)
+ENABLE_MASTER_BRANCH="${ENABLE_MASTER_BRANCH:-no}"
+
 # Optional components (yes/no)
 ENABLE_KAPPNAV="${ENABLE_KAPPNAV:-no}"
 
@@ -16,6 +19,7 @@ MAC_EXEC=false
 if [ "$(uname -s)" == "Darwin" ]; then
    MAC_EXEC=true
 fi
+
 
 ### Check prereqs
 
@@ -186,7 +190,14 @@ sleep $SLEEP_LONG
 ### CatalogSource
 
 # Install Kabanero CatalogSource
-oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+if [ "$ENABLE_MASTER_BRANCH" == "yes" ]
+then
+	curl -s -L https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/deploy/kabanero-subscriptions.yaml | sed "s@image: kabanero/kabanero-operator-registry:.*@image: kabanero/kabanero-operator-registry:master@" | oc apply -f - --selector kabanero.io/install=00-catalogsource
+	KABANERO_CUSTOMRESOURCES_YAML="https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/deploy/kabanero-customresources.yaml"
+	SAMPLE_KAB_INSTANCE_URL="https://raw.githubusercontent.com/kabanero-io/kabanero-operator/master/config/samples/default.yaml"
+else
+	oc apply -f $KABANERO_SUBSCRIPTIONS_YAML --selector kabanero.io/install=00-catalogsource
+fi
 sleep $SLEEP_LONG
 
 
@@ -337,9 +348,8 @@ oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pip
 # tekton-pipelines namespace (for use by tekton github webhooks extension)
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
-# Install complete.  give instructions for how to create an instance.
-SAMPLE_KAB_INSTANCE_URL=https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml
-
+# Install complete.  Give instructions for how to create an instance.
+SAMPLE_KAB_INSTANCE_URL="${SAMPLE_KAB_INSTANCE_URL:-https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml}"
 
 # Turn off debugging, and wait 3 seconds for it to flush output, before
 # printing instructions.
