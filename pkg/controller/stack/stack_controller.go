@@ -531,9 +531,9 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 								// Only allow Group: tekton.dev
 								allowed := true
 								for _, resource := range resources {
-									if resource.GroupVersionKind().Group != "tekton.dev" {
+									if (resource.GroupVersionKind().Group != "tekton.dev") && (resource.GroupVersionKind().Group != "triggers.tekton.dev") {
 										value.ActiveAssets[index].Status = assetStatusFailed
-										value.ActiveAssets[index].StatusMessage = "Manifest rejected: contains a Group not equal to tekton.dev"
+										value.ActiveAssets[index].StatusMessage = "Manifest rejected: contains a Group not equal to tekton.dev or triggers.tekton.dev"
 										allowed = false
 									}
 								}
