@@ -1,13 +1,39 @@
-package stack
+package utils
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
+	"net/http"
 	"net/http/httptest"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+// HTTP handler that serves pipeline zips
+type stackHandler struct {
+}
+
+func (ch stackHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	filename := fmt.Sprintf("testdata/%v", req.URL.String())
+	fmt.Printf("Serving %v\n", filename)
+	d, err := ioutil.ReadFile(filename)
+	if err != nil {
+		rw.WriteHeader(http.StatusNotFound)
+	} else {
+		rw.Write(d)
+	}
+}
+
+type fileInfo struct {
+	name   string
+	sha256 string
+}
+
+var basicPipeline = fileInfo{
+	name:   "/basic.pipeline.tar.gz",
+	sha256: "8080076acd8f54ecbb7de132df148d964e5e93921cce983a0f781418b0871573"}
 
 func TestGetManifests(t *testing.T) {
 	// The server that will host the pipeline zip

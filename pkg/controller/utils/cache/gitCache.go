@@ -1,4 +1,4 @@
-package stack
+package cache
 
 import (
 	"context"
@@ -13,7 +13,8 @@ import (
 	"github.com/google/go-github/v29/github"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
-	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -42,7 +43,7 @@ const gitTickerDuration = 30 * time.Minute
 var gitCacheLock sync.Mutex
 
 // Retrieves a stack index file content using GitHub APIs
-func getStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, namespace string, reqLogger logr.Logger) ([]byte, error) {
+func GetStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, namespace string, reqLogger logr.Logger) ([]byte, error) {
 
 	// Get a Github client.
 	gclient, err := getGitClient(c, gitRelease, skipCertVerification, namespace, reqLogger)
@@ -67,7 +68,7 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, s
 
 	// Search all secrets under the given namespace for the one containing the required hostname.
 	annotationKey := "kabanero.io/git-"
-	secret, err := cutils.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, gitRelease.Hostname, annotationKey)
+	secret, err := secret.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, gitRelease.Hostname, annotationKey)
 	if err != nil {
 		newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, gitRelease.Hostname, namespace, err)
 		return nil, newError
@@ -79,7 +80,7 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, s
 		pat, _ = secret.Data["password"]
 	}
 
-	httpClient, err := cutils.GetHTTPClient(pat, transport)
+	httpClient, err := GetHTTPClient(pat, transport)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func getReleaseAsset(gclient *github.Client, assets []github.ReleaseAsset, gitRe
 			gitCacheLock.Lock()
 			if asset.GetID() != 0 && (asset.GetCreatedAt() != github.Timestamp{}) && (asset.GetSize() != 0) {
 				startPurgeTicker.Do(func() {
-					cutils.ScheduleWork(gitTickerDuration, gitCachelog, gitPurgeCache, gitPurgeDuration)
+					timer.ScheduleWork(gitTickerDuration, gitCachelog, gitPurgeCache, gitPurgeDuration)
 				})
 				gitCache[path] = gitCacheData{assetId: asset.GetID(), creationTime: asset.GetCreatedAt().Time, size: asset.GetSize(), data: indexBytes, lastUsed: time.Now()}
 				gitCachelog.Info(fmt.Sprintf("Git data cached. The data is associated with gitRelease containing: %v", path))

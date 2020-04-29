@@ -58,6 +58,21 @@ func (v *kabaneroValidator) validatekabaneroFn(ctx context.Context, kab *kabaner
 		return allowed, reason, err
 	}
 
+	// Make sure any pipelines have a location, and a sha256 set.
+	for _, pipeline := range kab.Spec.Gitops.Pipelines {
+		if len(pipeline.Https.Url) == 0 && pipeline.GitRelease == (kabanerov1alpha2.GitReleaseSpec{}) {
+			reason = fmt.Sprintf("Kabanero %v does not contain a Spec.Gitops.Pipelines[].Https.Url or a populated Spec.Gitops.Pipelines[].GitRelease{}. One of them must be specified. If both are specified, Spec.Gitops.Pipelines[].GitRelease{} takes precedence.", kab.Name)
+			err = fmt.Errorf(reason)
+			return false, reason, err
+		}
+
+		if len(pipeline.Sha256) == 0 {
+			reason = fmt.Sprintf("Kabanero %v Spec.Gitops.Pipelines[].Sha256 is not set.", kab.Name)
+			err = fmt.Errorf(reason)
+			return false, reason, err
+		}
+	}
+
 	return true, "", nil
 }
 

@@ -1,4 +1,4 @@
-package stack
+package utils
 
 import (
 	"archive/tar"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/cache"
 	yml "gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -46,14 +47,14 @@ func DownloadToByte(c client.Client, namespace string, url string, gitRelease ka
 	switch {
 	// GIT:
 	case gitRelease.IsUsable():
-		bytes, err := getStackDataUsingGit(c, gitRelease, skipCertVerification, namespace, reqLogger)
+		bytes, err := cache.GetStackDataUsingGit(c, gitRelease, skipCertVerification, namespace, reqLogger)
 		if err != nil {
 			return nil, err
 		}
 		archiveBytes = bytes
 	// HTTPS:
 	case len(url) != 0:
-		bytes, err := getFromCache(url, skipCertVerification)
+		bytes, err := cache.GetFromCache(url, skipCertVerification)
 		if err != nil {
 			return nil, err
 		}

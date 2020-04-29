@@ -1,4 +1,4 @@
-package stack
+package cache
 
 import (
 	"testing"
@@ -40,7 +40,7 @@ func TestCachePage(t *testing.T) {
 	defer server.Close()
 
 	// Get the page twice... the first time should not cache, the second should cache.
-	data, err := getFromCache(server.URL, false)
+	data, err := GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestCachePage(t *testing.T) {
 		t.Fatal("Response 1 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestCacheChangePage(t *testing.T) {
 	defer server.Close()
 
 	// Get the page thrice... the first time and second time should not cache, the third should cache.
-	data, err := getFromCache(server.URL, false)
+	data, err := GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +104,7 @@ func TestCacheChangePage(t *testing.T) {
 		t.Fatal("Response 1 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestCacheChangePage(t *testing.T) {
 		t.Fatal("Response 2 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestNoCachePage(t *testing.T) {
 	defer server.Close()
 
 	// Get the page twice... 
-	data, err := getFromCache(server.URL, false)
+	data, err := GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestNoCachePage(t *testing.T) {
 		t.Fatal("Response 1 not correct")
 	}
 
-	data, err = getFromCache(server.URL, false)
+	data, err = GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestCachePurge(t *testing.T) {
 	defer server.Close()
 
 	// Get the page twice... the first time should not cache.
-	data, err := getFromCache(server.URL, false)
+	data, err := GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestCachePurge(t *testing.T) {
 	purgeCache(0)
 
 	// Get the page the second time... it should not be cached.
-	data, err = getFromCache(server.URL, false)
+	data, err = GetFromCache(server.URL, false)
 	if err != nil {
 		t.Fatal(err)
 	}
