@@ -43,10 +43,10 @@ const gitTickerDuration = 30 * time.Minute
 var gitCacheLock sync.Mutex
 
 // Retrieves a stack index file content using GitHub APIs
-func GetStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string, reqLogger logr.Logger) ([]byte, error) {
+func GetStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, namespace string, reqLogger logr.Logger) ([]byte, error) {
 
 	// Get a Github client.
-	gclient, err := getGitClient(c, gitRelease, namespace, reqLogger)
+	gclient, err := getGitClient(c, gitRelease, skipCertVerification, namespace, reqLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +61,10 @@ func GetStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleas
 }
 
 // Retrieves a Git client.
-func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, namespace string, reqLogger logr.Logger) (*github.Client, error) {
+func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, namespace string, reqLogger logr.Logger) (*github.Client, error) {
 	var client *github.Client
 
-	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: gitRelease.SkipCertVerification}}
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerification}}
 
 	// Search all secrets under the given namespace for the one containing the required hostname.
 	annotationKey := "kabanero.io/git-"
@@ -104,7 +104,7 @@ func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, n
 	return client, nil
 }
 
-func getReleaseAsset(gclient *github.Client, assets []github.ReleaseAsset, gitRelease kabanerov1alpha2.GitReleaseSpec) ([]byte, error) {
+func getReleaseAsset(gclient *github.Client, assets []github.ReleaseAsset, gitRelease kabanerov1alpha2.GitReleaseInfo) ([]byte, error) {
 	var indexBytes []byte
 
 	// Find the asset identified as repoConf.GitRelease.AssetName and download it.
@@ -149,7 +149,7 @@ func getReleaseAsset(gclient *github.Client, assets []github.ReleaseAsset, gitRe
 }
 
 // Downloads a release asset.
-func downloadReleaseAsset(gclient *github.Client, gitRelease kabanerov1alpha2.GitReleaseSpec, asset github.ReleaseAsset) ([]byte, error) {
+func downloadReleaseAsset(gclient *github.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, asset github.ReleaseAsset) ([]byte, error) {
 	// The asset is being read for the first time or was modified.
 	reader, _, err := gclient.Repositories.DownloadReleaseAsset(context.Background(), gitRelease.Organization, gitRelease.Project, asset.GetID(), http.DefaultClient)
 	if err != nil {

@@ -135,10 +135,10 @@ type GitReleaseSpec struct {
 	SkipCertVerification bool   `json:"skipCertVerification,omitempty"`
 }
 
-// Returns true if the user specified all values in Kabanero.Spec.Stacks.Repositories.GitRelease.
-func (grs GitReleaseSpec) IsUsable() bool {
-	return len(grs.Hostname) != 0 && len(grs.Organization) != 0 && len(grs.Project) != 0 &&
-		len(grs.Release) != 0 && len(grs.AssetName) != 0
+// Returns true if the user specified all values for the release.
+func (gitRelease GitReleaseSpec) IsUsable() bool {
+	return len(gitRelease.Hostname) != 0 && len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
+		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
 }
 
 // KabaneroCliServicesCustomizationSpec defines customization entries for the Kabanero CLI.
@@ -274,7 +274,7 @@ type KabaneroStatus struct {
 type PipelineStatus struct {
 	Name       string         `json:"name,omitEmpty"`
 	Url        string         `json:"url,omitEmpty"`
-	GitRelease GitReleaseSpec `json:"gitRelease,omitEmpty"`
+	GitRelease GitReleaseInfo `json:"gitRelease,omitEmpty"`
 	Digest     string         `json:"digest,omitEmpty"`
 	// +listType=set
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`

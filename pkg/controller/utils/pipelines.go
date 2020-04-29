@@ -27,7 +27,7 @@ const (
 // A key to the pipeline use count map
 type PipelineUseMapKey struct {
 	Url        string
-	GitRelease kabanerov1alpha2.GitReleaseSpec
+	GitRelease kabanerov1alpha2.GitReleaseInfo
 	Digest     string
 }
 
@@ -47,6 +47,9 @@ type pipelineVersion struct {
 	version string
 }
 
+func gitReleaseSpecToGitReleaseInfo(gitRelease kabanerov1alpha2.GitReleaseSpec) kabanerov1alpha2.GitReleaseInfo {
+	return kabanerov1alpha2.GitReleaseInfo{Hostname: gitRelease.Hostname, Organization: gitRelease.Organization, Project: gitRelease.Project, Release: gitRelease.Release, AssetName: gitRelease.AssetName}
+}
 
 func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alpha2.ComponentStatus, targetNamespace string, renderingContext map[string]interface{}, assetOwner metav1.OwnerReference, c client.Client, logger logr.Logger) (PipelineUseMap, error) {
 
@@ -55,7 +58,12 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 	assetUseMap := make(PipelineUseMap)
 	for _, curStatus := range status.GetVersions() {
 		for _, pipeline := range curStatus.GetPipelines() {
-			key := PipelineUseMapKey{Url: pipeline.Url, GitRelease: pipeline.GitRelease, Digest: pipeline.Digest}
+			key := PipelineUseMapKey{Digest: pipeline.Digest}
+			if pipeline.GitRelease.IsUsable() {
+				key.GitRelease = pipeline.GitRelease
+			} else {
+				key.Url = pipeline.Url
+			}
 			value := assetUseMap[key]
 			if value == nil {
 				value = &PipelineUseMapValue{}
@@ -72,14 +80,31 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 	assetsToIncrement := make(map[pipelineVersion]bool)
 	for _, curStatus := range status.GetVersions() {
 		for _, pipeline := range curStatus.GetPipelines() {
-			cur := pipelineVersion{PipelineUseMapKey: PipelineUseMapKey{Url: pipeline.Url, GitRelease: pipeline.GitRelease, Digest: pipeline.Digest}, version: curStatus.GetVersion()}
+			key := PipelineUseMapKey{Digest: pipeline.Digest}
+			if pipeline.GitRelease.IsUsable() {
+				key.GitRelease = pipeline.GitRelease
+			} else {
+				key.Url = pipeline.Url
+			}
+			cur := pipelineVersion{PipelineUseMapKey: key, version: curStatus.GetVersion()}
 			assetsToDecrement[cur] = true
 		}
 	}
 
+	// When processing the pipelines currently referenced in the stack spec, save
+	// off whether we should disable certificate verification checking per-resource.
+	certVerification := make(map[PipelineUseMapKey]bool)
 	for _, curSpec := range spec.GetVersions() {
 		for _, pipeline := range curSpec.GetPipelines() {
-			cur := pipelineVersion{PipelineUseMapKey: PipelineUseMapKey{Url: pipeline.Https.Url, GitRelease: pipeline.GitRelease, Digest: pipeline.Sha256}, version: curSpec.GetVersion()}
+			key := PipelineUseMapKey{Digest: pipeline.Sha256}
+			if pipeline.GitRelease.IsUsable() {
+				key.GitRelease = gitReleaseSpecToGitReleaseInfo(pipeline.GitRelease)
+				certVerification[key] = pipeline.GitRelease.SkipCertVerification
+			} else {
+				key.Url = pipeline.Https.Url
+				certVerification[key] = pipeline.Https.SkipCertVerification
+			}
+			cur := pipelineVersion{PipelineUseMapKey: key, version: curSpec.GetVersion()}
 			if assetsToDecrement[cur] == true {
 				delete(assetsToDecrement, cur)
 			} else {
@@ -126,7 +151,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 		}
 	}
 
-	for _, value := range assetUseMap {
+	for key, value := range assetUseMap {
 		if value.useCount > 0 {
 			logger.Info(fmt.Sprintf("Creating assets with use count %v: %v", value.useCount, value))
 
@@ -143,7 +168,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 				}
 
 				// Retrieve manifests as unstructured.  If we could not get them, skip.
-				manifests, err := GetManifests(c, targetNamespace, value.PipelineStatus, renderingContext, logger)
+				manifests, err := GetManifests(c, targetNamespace, value.PipelineStatus, renderingContext, certVerification[key], logger)
 				if err != nil {
 					logger.Error(err, fmt.Sprintf("Error retrieving archive manifests: %v", value))
 					value.ManifestError = err
@@ -205,7 +230,7 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 							}
 
 							// Retrieve manifests as unstructured
-							manifests, err := GetManifests(c, targetNamespace, value.PipelineStatus, renderingContext, logger)
+							manifests, err := GetManifests(c, targetNamespace, value.PipelineStatus, renderingContext, certVerification[key], logger)
 							if err != nil {
 								logger.Error(err, fmt.Sprintf("Object %v not found and manifests not available: %v", asset.Name, value))
 								value.ActiveAssets[index].Status = AssetStatusFailed

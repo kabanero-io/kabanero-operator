@@ -38,7 +38,12 @@ func reconcileGitopsPipelines(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	// Now update the GitopsStatus to reflect the current state of things.
 	newGitopsStatus := kabanerov1alpha2.GitopsStatus{Ready: "True"}
 	for _, pipeline := range k.Spec.Gitops.Pipelines {
-		key := cutils.PipelineUseMapKey{Url: pipeline.Https.Url, GitRelease: pipeline.GitRelease, Digest: pipeline.Sha256}
+		key := cutils.PipelineUseMapKey{Digest: pipeline.Sha256}
+		if pipeline.GitRelease.IsUsable() {
+			key.GitRelease = gitReleaseSpecToGitReleaseInfo(pipeline.GitRelease)
+		} else {
+			key.Url = pipeline.Https.Url
+		}
 		value := assetUseMap[key]
 		if value == nil {
 			// TODO: ???
@@ -70,6 +75,10 @@ func reconcileGitopsPipelines(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	k.Status.Gitops = newGitopsStatus
 
 	return nil
+}
+
+func gitReleaseSpecToGitReleaseInfo(gitRelease kabanerov1alpha2.GitReleaseSpec) kabanerov1alpha2.GitReleaseInfo {
+	return kabanerov1alpha2.GitReleaseInfo{Hostname: gitRelease.Hostname, Organization: gitRelease.Organization, Project: gitRelease.Project, Release: gitRelease.Release, AssetName: gitRelease.AssetName}
 }
 
 // Removes the cross-namespace objects created during the gitops pipelines deployment

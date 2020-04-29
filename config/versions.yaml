@@ -15,7 +15,7 @@ default: "0.9.0"
 kabanero:
 - version: "0.9.0"
   related-versions: 
-    cli-services: "0.8.0"
+    cli-services: "0.9.0"
     landing: "0.9.0"
     events: "0.1.0"
     collection-controller: "0.9.0"
@@ -91,7 +91,12 @@ related-software:
       repository: "kabanero/landing"
       tag: "0.6.0"
 
-  cli-services: 
+  cli-services:
+  - version: "0.9.0"
+    orchestrations: "orchestrations/cli-services/0.2"
+    identifiers:
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.9.0-alpha.2"
   - version: "0.8.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:

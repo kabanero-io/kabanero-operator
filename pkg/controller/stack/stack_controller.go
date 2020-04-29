@@ -20,7 +20,7 @@ import (
 	sutils "github.com/kabanero-io/kabanero-operator/pkg/controller/stack/utils"
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
-
+	
 	//	corev1 "k8s.io/api/core/v1"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -248,27 +248,10 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
-// A key to the pipeline use count map
-type pipelineUseMapKey struct {
-	url        string
-	gitRelease kabanerov1alpha2.GitReleaseSpec
-	digest     string
-}
 
-// The value in the pipeline use count map
-type pipelineUseMapValue struct {
-	kabanerov1alpha2.PipelineStatus
-	useCount      int64
-	manifests     []cutils.StackAsset
-	manifestError error
+func gitReleaseSpecToGitReleaseInfo(gitRelease kabanerov1alpha2.GitReleaseSpec) kabanerov1alpha2.GitReleaseInfo {
+	return kabanerov1alpha2.GitReleaseInfo{Hostname: gitRelease.Hostname, Organization: gitRelease.Organization, Project: gitRelease.Project, Release: gitRelease.Release, AssetName: gitRelease.AssetName}
 }
-
-// A specific version of a pipeline zip in a specific version of a stack
-type pipelineVersion struct {
-	pipelineUseMapKey
-	version string
-}
-
 func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Client, logger logr.Logger) error {
 
 	// Gather the known stack asset (*-tasks, *-pipeline) substitution data.
@@ -305,7 +288,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 	if err != nil {
 		return err
 	}
-	
+
 	// Now update the StackStatus to reflect the current state of things.
 	newStackStatus := kabanerov1alpha2.StackStatus{}
 	for i, curSpec := range stackResource.Spec.Versions {
@@ -317,7 +300,12 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			newStackVersionStatus.Status = kabanerov1alpha2.StackDesiredStateActive
 
 			for _, pipeline := range curSpec.Pipelines {
-				key := cutils.PipelineUseMapKey{Url: pipeline.Https.Url, GitRelease: pipeline.GitRelease, Digest: pipeline.Sha256}
+				key := cutils.PipelineUseMapKey{Digest: pipeline.Sha256}
+				if pipeline.GitRelease.IsUsable() {
+					key.GitRelease = gitReleaseSpecToGitReleaseInfo(pipeline.GitRelease)
+				} else {
+					key.Url = pipeline.Https.Url
+				}
 				value := assetUseMap[key]
 				if value == nil {
 					// TODO: ???
@@ -353,7 +341,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 			newStackVersionStatus.StatusMessage = "The stack has been deactivated."
 		}
 
-		log.Info(fmt.Sprintf("Updated stack status: %v", newStackVersionStatus))
+		log.Info(fmt.Sprintf("Updated stack status: %+v", newStackVersionStatus))
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
 
@@ -575,4 +563,3 @@ func cleanup(ctx context.Context, stack *kabanerov1alpha2.Stack, c client.Client
 
 	return nil
 }
-

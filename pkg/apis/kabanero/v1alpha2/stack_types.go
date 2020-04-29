@@ -73,6 +73,23 @@ func (sv StackVersion) GetPipelines() []PipelineSpec {
 	return nil
 }
 
+// GitReleaseInfo is all of the GitReleaseSpec information, minus the "skip cert
+// verification" information, which is not relevant for status.
+type GitReleaseInfo struct {
+	Hostname             string `json:"hostname,omitempty"`
+	Organization         string `json:"organization,omitempty"`
+	Project              string `json:"project,omitempty"`
+	Release              string `json:"release,omitempty"`
+	AssetName            string `json:"assetName,omitempty"`
+}
+
+// Returns true if the user specified all values for the release.
+func (gitRelease GitReleaseInfo) IsUsable() bool {
+	return len(gitRelease.Hostname) != 0 && len(gitRelease.Organization) != 0 && len(gitRelease.Project) != 0 &&
+		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
+}
+
+
 // RepositoryAssetStatus defines the observed state of a single asset in a respository, in the stack.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`
