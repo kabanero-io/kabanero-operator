@@ -90,7 +90,7 @@ func (gitRelease GitReleaseInfo) IsUsable() bool {
 }
 
 
-// RepositoryAssetStatus defines the observed state of a single asset in a respository, in the stack.
+// RepositoryAssetStatus defines the observed state of a single asset in a pipelines respository.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`
 	Namespace     string `json:"namespace,omitempty"`

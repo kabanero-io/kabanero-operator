@@ -78,7 +78,7 @@ type InstanceStackConfig struct {
 	Pipelines []PipelineSpec `json:"pipelines,omitempty"`
 }
 
-// PipelineSpec defines the sets of default pipelines for the stacks.
+// PipelineSpec defines a set of pipelines and associated resources for a component.
 type PipelineSpec struct {
 	Id         string            `json:"id,omitempty"`
 	Sha256     string            `json:"sha256,omitempty"`

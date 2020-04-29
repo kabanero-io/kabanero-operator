@@ -491,8 +491,8 @@ spec:
                 properties:
                   pipelines:
                     items:
-                      description: PipelineSpec defines the sets of default pipelines
-                        for the stacks.
+                      description: PipelineSpec defines a set of pipelines and associated
+                        resources for a component.
                       properties:
                         gitRelease:
                           description: GitReleaseSpec defines customization entries
@@ -577,8 +577,8 @@ spec:
                 properties:
                   pipelines:
                     items:
-                      description: PipelineSpec defines the sets of default pipelines
-                        for the stacks.
+                      description: PipelineSpec defines a set of pipelines and associated
+                        resources for a component.
                       properties:
                         gitRelease:
                           description: GitReleaseSpec defines customization entries
@@ -647,8 +647,8 @@ spec:
                           type: string
                         pipelines:
                           items:
-                            description: PipelineSpec defines the sets of default
-                              pipelines for the stacks.
+                            description: PipelineSpec defines a set of pipelines and
+                              associated resources for a component.
                             properties:
                               gitRelease:
                                 description: GitReleaseSpec defines customization
@@ -836,7 +836,7 @@ spec:
                         activeAssets:
                           items:
                             description: RepositoryAssetStatus defines the observed
-                              state of a single asset in a respository, in the stack.
+                              state of a single asset in a pipelines respository.
                             properties:
                               assetDigest:
                                 type: string
