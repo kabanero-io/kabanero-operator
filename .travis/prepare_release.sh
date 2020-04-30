@@ -1,5 +1,26 @@
 #!/bin/bash
 
+# ----------------------------------------------------------------------
+# Push the kabanero operator container to docker hub.
+# ----------------------------------------------------------------------
+make push-image
+
+# ----------------------------------------------------------------------
+# Populate the kabanero operator CSV with "relatedImages" for
+# air-gapped installs.
+# ----------------------------------------------------------------------
+.travis/pre_build_image.sh
+
+# ----------------------------------------------------------------------
+# Build the operator registry, using the modified CSV.
+# ----------------------------------------------------------------------
+make build-registry-image
+make push-registry-image
+
+# ----------------------------------------------------------------------
+# Prepare the files that will get put into the tagged release
+# ----------------------------------------------------------------------
+
 # Split the REGISTRY_IMAGE variable into repository and tag parts
 # e.g. kabanero/kabanero-operator-registry:0.3.0 -> kabanero/kabanero-operator-registry
 IFS=’:’ read -ra REPOSITORY <<< "$REGISTRY_IMAGE"

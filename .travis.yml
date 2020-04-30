@@ -23,28 +23,22 @@ script:
 - make check
 - make build-image
 
-# Publish release
+# Publish release.
+# Note that the script provider only supports a single command, not a
+# list of commands.
 deploy:
 - provider: script
-  script:
-  - make push-image
-  - .travis/pre_build_image.sh
-  - make build-registry-image
-  - make push-registry-image
-  - .travis/prepare_release.sh
+  script: .travis/prepare_release.sh
   on:
      tags: true
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
+  skip_cleanup: true
 - provider: script
-  script:
-  - make push-image
-  - .travis/pre_build_image.sh
-  - make build-registry-image
-  - make push-registry-image
-  - .travis/prepare_release.sh
+  script: .travis/prepare_release.sh
   on:
      branch: master
      condition: ${DOCKER_USERNAME} && ${DOCKER_PASSWORD}
+  skip_cleanup: true
 - provider: releases
   api_key: 
     secure: "oYX+vkYZbMPD6ZrTfgpgG0Hxug9jUP6ogVEEOQJnRw+eU7qUAfZT2pyl7fLwfMVUAum/Gp/uWRXYbohCxtyV18VIjBMbM4lsTrWSrggzq6JlMOd/J8Fx/BkWHDFQ0nx4MlDL8BdJbhUjrSleOKp8mW+yJhxuaq1z87svjZ6jxZeaGRTo5jxBcAmATB+VOKUm0z7cxoZC1p0IyQYhAPEVJ2GQd2/jDhRCJvTp99WTgg5PmUA350rSIObzB1Tf+o+gmUCl+Yi3fE1ITTeGU/lam0CXGGMZnDJVeDg6NGmP2f9hbYGyb5yim2xQoIUOgB21XNRRFydhTZaNy4saHaay5EL4KFDvDZ5CLBEr0y9GF9ODi2hNZ1QmlQ6S+HSQ8KXAKNC1kEYnF2N5f7uakEBtwvr4Y+1AtCFSc9bjPlgy3uGWGgTCjy/swchf8fMp56SmocLHII4enj5ESTGvn2t8efjCq13/sGZJSOKrQ+1CLUlPyG+zi/O456umMBx203rFRaNMkb+aZFFt/nQNzF/kSXegfpV9x70bZPQvqWbZ30jZX7UxaxGef/f+IjDPYvz8aEKA0HZH7goEQfFOZ8NAakZEPyd+I82yQJykAYsXHTMgiAj1VUetQCNqvKUtWp2aG0FtYiTo3uO1f/efq9+Ah8TJcCwyNcUCspScc8owOtI="
