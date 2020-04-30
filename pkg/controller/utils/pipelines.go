@@ -9,7 +9,7 @@ import (
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
-	
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -373,15 +373,14 @@ func DeleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, 
 func getNamespaceForObject(u *unstructured.Unstructured, defaultNamespace string) string {
 	kind := u.GetKind()
 
-	// Presently, TriggerBinding, TriggerTemplate and EventListener objects are created
-	// in the tekton-pipelines namespace.
-	//
-	// TODO (future): Kabanero Eventing will likely want to create these objects in the
-	//                kabanero namespace, since they are not interacting with the Tekton
-	//                Webhook Extension anymore.  We'll need to make this selectable
-	//                somehow, perhaps just using the namespace in the yaml.
+	// The namespace for TriggerBinding, TriggerTemplate and EventListener is decided as follows:
+	// If the entry spec.metadata.namespace has a preset value, continue to use it. Otherwise, use
+	// the input default namespace.
 	if (kind == "TriggerBinding") || (kind == "TriggerTemplate") || (kind == "EventListener") {
-		return "tekton-pipelines"
+		configuredNamespace := u.GetNamespace()
+		if len(configuredNamespace) != 0 {
+			return u.GetNamespace()
+		}
 	}
 
 	return defaultNamespace
