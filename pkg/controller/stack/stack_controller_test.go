@@ -523,7 +523,7 @@ var digest2Pipeline = fileInfo{
 
 var triggerPipeline = fileInfo{
 	name:   "/trigger.pipeline.tar.gz",
-	sha256: "2e8ff2e5c6ce8526edc9ce413876c450383814d4fa6f5f37b690d167433da363"}
+	sha256: "901435c796815bbfdf7dd2f8fd44824c8d76535144af80b84ba0ae2fb65113f1"}
 
 // --------------------------------------------------------------------------------------------------
 // Test stack/stack id validation.
