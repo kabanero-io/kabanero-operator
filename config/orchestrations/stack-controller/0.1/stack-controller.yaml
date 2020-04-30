@@ -118,6 +118,12 @@ spec:
     metadata:
       labels:
         app: kabanero-operator-stack-controller
+        app.kubernetes.io/name: kabanero-operator-stack-controller
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/component: stack-controller
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
     spec:
       serviceAccountName: kabanero-operator-stack-controller
       containers:

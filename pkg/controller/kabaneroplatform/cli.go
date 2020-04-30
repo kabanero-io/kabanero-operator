@@ -61,6 +61,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 	templateContext["image"] = image
+	templateContext["instance"] = k.ObjectMeta.UID
 
 	s, err := renderOrchestration(f, templateContext)
 	if err != nil {

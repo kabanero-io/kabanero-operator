@@ -106,6 +106,12 @@ spec:
     metadata:
       labels:
         name: kabanero-events
+        app.kubernetes.io/name: kabanero-events
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/component: kabanero-events
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
     spec:
       serviceAccountName: kabanero-events
       containers:

@@ -90,6 +90,12 @@ spec:
       labels:
         application: sso
         deploymentConfig: sso
+        app.kubernetes.io/name: sso
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/component: sso
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
       name: sso
     spec:
       containers:
@@ -230,6 +236,12 @@ spec:
       labels:
         application: sso
         deploymentConfig: sso-postgresql
+        app.kubernetes.io/name: sso-postgresql
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/component: postgresql
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
       name: sso-postgresql
     spec:
       containers:
