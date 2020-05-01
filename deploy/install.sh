@@ -338,7 +338,7 @@ oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pip
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Install complete.  give instructions for how to create an instance.
-SAMPLE_KAB_INSTANCE_URL=https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml
+SAMPLE_KAB_INSTANCE_URL="${SAMPLE_KAB_INSTANCE_URL:-https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml}"
 
 
 
