@@ -28,16 +28,16 @@ metadata:
                 {
                   "name": "incubator",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0/kabanero-stack-hub-index.yaml"
+                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.1/kabanero-stack-hub-index.yaml"
                   }
                 }
               ],
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "3f3e440b3eed24273fd43c40208fdd95de6eadeb82b7bb461f52e1e5da7e239d",
+                  "sha256": "bad7d41f69b470d1c78ccc2720e8583e8a1a549dd4ec8e9056e1f2c89d825029",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.1/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -48,11 +48,11 @@ metadata:
           "apiVersion": "kabanero.io/v1alpha1",
           "kind": "Collection",
           "metadata": {
-            "name": "java-microprofile"
+            "name": "java-openliberty"
           },
           "spec": {
             "version": "0.2.11",
-            "name": "java-microprofile",
+            "name": "java-openliberty",
             "desiredState": "inactive"
           }
         },
@@ -60,23 +60,23 @@ metadata:
           "apiVersion": "kabanero.io/v1alpha2",
           "kind": "Stack",
           "metadata": {
-            "name": "java-microprofile"
+            "name": "java-openliberty"
           },
           "spec": {
-            "name": "java-microprofile",
+            "name": "java-openliberty",
             "versions": [
-              { "version": "0.2.26",
+              { "version": "0.2.11",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "3f3e440b3eed24273fd43c40208fdd95de6eadeb82b7bb461f52e1e5da7e239d",
+                    "sha256": "bad7d41f69b470d1c78ccc2720e8583e8a1a549dd4ec8e9056e1f2c89d825029",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.1/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
                 "images": [
-                  { "id": "java-microprofile",
-                    "image": "docker.io/kabanerobeta/java-microprofile:0.2.26"
+                  { "id": "java-openliberty",
+                    "image": "docker.io/appsody/java-openliberty:0.2.11"
                   }
                 ]
               }

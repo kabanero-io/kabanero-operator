@@ -20,10 +20,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.8.0"
+    tag: "0.9.0-rc.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.8.0
+    image: kabanero/kabanero-command-line-services:0.9.0-rc.1
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -62,10 +62,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/landing
-    tag: "0.8.0"
+    tag: "0.9.0-rc.1"
 
     # Overrides the image uri
-    image: kabanero/landing:0.8.0
+    image: kabanero/landing:0.9.0-rc.1
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
@@ -117,12 +117,19 @@ spec:
     repositories: 
     - name: incubator
       https:
-        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0/kabanero-stack-hub-index.yaml
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.1/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 3f3e440b3eed24273fd43c40208fdd95de6eadeb82b7bb461f52e1e5da7e239d
+      sha256: bad7d41f69b470d1c78ccc2720e8583e8a1a549dd4ec8e9056e1f2c89d825029
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.1/default-kabanero-pipelines.tar.gz
+
+  gitops:
+    pipelines:
+    - id: gitops
+      sha256: 8c443103a36f961777969a9a297680bf7be4deb63f584ce007760d480c21ae60
+      https:
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.1/kabanero-gitops-pipelines.tar.gz
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
