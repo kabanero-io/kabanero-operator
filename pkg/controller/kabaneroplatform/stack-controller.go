@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/go-logr/logr"
-	mf "github.com/manifestival/manifestival"
+	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	mfc "github.com/manifestival/controller-runtime-client"
+	mf "github.com/manifestival/manifestival"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -78,7 +78,7 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 	// Create a RoleBinding in the tekton-pipelines namespace that will allow
 	// the stack controller to create triggerbinding and triggertemplate
 	// objects in the tekton-pipelines namespace.
-	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-stack-trigger-rolebinding"
 	templateCtx["kabaneroNamespace"] = k.GetNamespace()
 
 	f, err = rev.OpenOrchestration("stack-controller-tekton.yaml")
