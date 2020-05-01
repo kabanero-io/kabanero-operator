@@ -42,6 +42,8 @@ func reconcileStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero,
 		return err
 	}
 	templateCtx["image"] = image
+	templateCtx["instance"] = k.ObjectMeta.UID
+	templateCtx["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration(scOrchestrationFileName)
 	if err != nil {

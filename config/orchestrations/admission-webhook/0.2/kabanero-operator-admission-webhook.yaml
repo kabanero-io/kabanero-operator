@@ -64,6 +64,13 @@ metadata:
   name: kabanero-operator-admission-webhook
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: kabanero-operator-admission-webhook-serving-cert
+  labels:
+    app.kubernetes.io/name: kabanero-operator-admission-webhook
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: admission-webhook
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   selector:
     name: kabanero-operator-admission-webhook
@@ -93,6 +100,12 @@ spec:
     metadata:
       labels:
         name: kabanero-operator-admission-webhook
+        app.kubernetes.io/name: kabanero-operator-admission-webhook
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: {{ .version }}
+        app.kubernetes.io/component: admission-webhook
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
     spec:
       serviceAccountName: kabanero-operator-admission-webhook
       containers:

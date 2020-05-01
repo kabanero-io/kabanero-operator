@@ -74,6 +74,8 @@ func reconcileAdmissionControllerWebhook(ctx context.Context, k *kabanerov1alpha
 		return err
 	}
 	templateContext["image"] = image
+	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook.yaml")
 	if err != nil {
@@ -177,6 +179,8 @@ func cleanupAdmissionControllerWebhook(k *kabanerov1alpha2.Kabanero, c client.Cl
 	}
 	templateContext["image"] = image
 	templateContext["caBundle"] = ""
+	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration("kabanero-operator-admission-webhook.yaml")
 	if err != nil {

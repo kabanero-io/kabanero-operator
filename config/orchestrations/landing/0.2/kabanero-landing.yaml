@@ -4,6 +4,13 @@ metadata:
   name: kabanero-landing
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: kabanero-landing-service-cert-secret
+  labels:
+    app.kubernetes.io/name: kabanero-landing
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: kabanero-landing
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   selector:
     app: kabanero-landing

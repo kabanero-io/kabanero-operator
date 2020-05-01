@@ -41,6 +41,8 @@ func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl clien
 		return err
 	}
 	templateContext["image"] = image
+	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration("kabanero-events.yaml")
 	if err != nil {
