@@ -484,6 +484,16 @@ func deleteCRWOperatorResources(ctx context.Context, k *kabanerov1alpha2.Kabaner
 		if err != nil {
 			return err
 		}
+
+		// Delete the Tekton role and rolebinding too
+		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindTektonRole, false, "tekton-pipelines")
+		if err != nil {
+			return err
+		}
+		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindTektonBinding, false, "tekton-pipelines")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
