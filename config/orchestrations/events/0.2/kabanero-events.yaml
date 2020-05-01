@@ -1,0 +1,423 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: eventconnections.events.kabanero.io
+spec:
+  group: events.kabanero.io
+  names:
+    kind: EventConnections
+    listKind: EventConnectionsList
+    plural: eventconnections
+    singular: eventconnections
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: EventConnections is the Schema for the eventconnections API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: EventConnectionsSpec defines the desired state of EventConnections
+          properties:
+            connections:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              items:
+                description: ' Connections are from subscriber to publishers    from
+                  sender to receivers'
+                properties:
+                  from:
+                    properties:
+                      mediator:
+                        properties:
+                          destination:
+                            type: string
+                          mediation:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    type: object
+                  to:
+                    items:
+                      properties:
+                        https:
+                          items:
+                            properties:
+                              insecure:
+                                type: boolean
+                              url:
+                                type: string
+                              urlExpression:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                required:
+                - from
+                - to
+                type: object
+              type: array
+          required:
+          - connections
+          type: object
+        status:
+          description: EventConnectionsStatus defines the observed state of EventConnections
+          properties:
+            message:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                code after modifying this file Add custom validation using kubebuilder
+                tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              type: string
+          required:
+          - message
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: eventmediators.events.kabanero.io
+spec:
+  group: events.kabanero.io
+  names:
+    kind: EventMediator
+    listKind: EventMediatorList
+    plural: eventmediators
+    singular: eventmediator
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: EventMediator is the Schema for the eventmediators API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: EventMediatorSpec defines the desired state of EventMediator
+          properties:
+            createListener:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              type: boolean
+            createRoute:
+              type: boolean
+            mediations:
+              description: ImportMediations  *[]string `json:"importMediations,omitempty"`
+                // default is to import everything unless code is specified
+              items:
+                properties:
+                  body:
+                    items:
+                      description: ' Valid combinations are:   1) assignment   2)
+                        if and assignment   3) if and body   4) switch   5) if and
+                        switch   TBD: switch and default'
+                      properties:
+                        =:
+                          type: string
+                        body:
+                          items: {}
+                          type: array
+                        default:
+                          items: {}
+                          type: array
+                        if:
+                          type: string
+                        switch:
+                          items: {}
+                          type: array
+                      type: object
+                    type: array
+                  name:
+                    type: string
+                  selector:
+                    properties:
+                      repositoryType:
+                        properties:
+                          file:
+                            type: string
+                          newVariable:
+                            type: string
+                        required:
+                        - file
+                        - newVariable
+                        type: object
+                      urlPattern:
+                        type: string
+                    type: object
+                  sendTo:
+                    description: Input string `json:"input,omitempty"`
+                    items:
+                      type: string
+                    type: array
+                  variables:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                        valueExpression:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                required:
+                - name
+                type: object
+              type: array
+            repositories:
+              items:
+                properties:
+                  github:
+                    properties:
+                      secret:
+                        type: string
+                      webhookSecret:
+                        type: string
+                    type: object
+                type: object
+              type: array
+          type: object
+        status:
+          description: EventMediatorStatus defines the observed state of EventMediator
+          properties:
+            summary:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                code after modifying this file Add custom validation using kubebuilder
+                tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              items:
+                properties:
+                  input:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  message:
+                    type: string
+                  operation:
+                    type: string
+                  result:
+                    type: string
+                  time:
+                    format: date-time
+                    type: string
+                required:
+                - input
+                - message
+                - operation
+                - result
+                type: object
+              type: array
+          required:
+          - summary
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: events-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: events-operator
+  namespace: kabanero
+subjects:
+- kind: ServiceAccount
+  name: events-operator
+  namespace: kabanero
+roleRef:
+  kind: Role
+  name: events-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: events-operator
+  namespace: kabanero
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - services/finalizers
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - events-operator
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  - deployments
+  verbs:
+  - get
+- apiGroups:
+  - events.kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - route.openshift.io
+  attributeRestrictions: null
+  resources:
+  - routes
+  verbs:
+  - '*'
+- apiGroups:
+  - kabanero.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - triggers.tekton.dev 
+  resources:
+  - eventlisteners
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: events-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: events-operator
+  template:
+    metadata:
+      labels:
+        name: events-operator
+    spec:
+      serviceAccountName: events-operator
+      containers:
+        - name: events-operator
+          # Replace this with the built image name
+          image: {{ .image }}
+#          command:
+#          - events-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "events-operator"
+---
