@@ -98,8 +98,8 @@ spec:
           image: kabanero/che-devfile-registry:0.11.0
 
         # Specifies a custom cluster role to user for the Che workspaces uses the default roles if left blank.
-        # The default value is eclipse-codewind.
-        cheWorkspaceClusterRole: eclipse-codewind
+        # The default value is kabanero-codewind.
+        cheWorkspaceClusterRole: kabanero-codewind
 
         # TLS mode for Che. Make sure you either have public cert, or set selfSignedCert to true. The default value is false.
         tlsSupport: false
