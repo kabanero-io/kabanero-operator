@@ -300,6 +300,7 @@ metadata:
     kabanero.io/install: 25-triggers-role
 rules:
 - apiGroups:
+  - tekton.dev
   - triggers.tekton.dev
   resources:
   - triggerbindings

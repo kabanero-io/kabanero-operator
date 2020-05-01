@@ -68,6 +68,7 @@ rules:
   - get
 - apiGroups:
   - tekton.dev
+  - triggers.tekton.dev
   resources:
   - conditions
   - pipelines
