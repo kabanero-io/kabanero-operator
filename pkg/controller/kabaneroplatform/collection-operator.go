@@ -44,6 +44,7 @@ func reconcileCollectionController(ctx context.Context, k *kabanerov1alpha2.Kaba
 	}
 	templateCtx["image"] = image
 	templateCtx["instance"] = k.ObjectMeta.UID
+	templateCtx["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration(ccOrchestrationFileName)
 	if err != nil {

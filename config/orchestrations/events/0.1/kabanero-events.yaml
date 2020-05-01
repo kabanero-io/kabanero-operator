@@ -4,6 +4,13 @@ metadata:
   name: kabanero-events
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: kabanero-events-serving-cert
+  labels:
+    app.kubernetes.io/name: kabanero-events
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: kabanero-events
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   selector:
     name: kabanero-events
@@ -108,7 +115,7 @@ spec:
         name: kabanero-events
         app.kubernetes.io/name: kabanero-events
         app.kubernetes.io/instance: {{ .instance }}
-        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/version: {{ .version }}
         app.kubernetes.io/component: kabanero-events
         app.kubernetes.io/part-of: kabanero
         app.kubernetes.io/managed-by: kabanero-operator

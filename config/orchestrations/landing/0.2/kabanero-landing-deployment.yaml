@@ -13,7 +13,7 @@ spec:
         app: kabanero-landing
         app.kubernetes.io/name: kabanero-landing
         app.kubernetes.io/instance: {{ .instance }}
-        app.kubernetes.io/version: '0.2'
+        app.kubernetes.io/version: {{ .version }}
         app.kubernetes.io/component: kabanero-landing
         app.kubernetes.io/part-of: kabanero
         app.kubernetes.io/managed-by: kabanero-operator

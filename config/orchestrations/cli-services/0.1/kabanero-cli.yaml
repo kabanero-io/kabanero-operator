@@ -138,7 +138,7 @@ spec:
         app: kabanero-cli
         app.kubernetes.io/name: kabanero-cli
         app.kubernetes.io/instance: {{ .instance }}
-        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/version: {{ .version }}
         app.kubernetes.io/component: kabanero-cli
         app.kubernetes.io/part-of: kabanero
         app.kubernetes.io/managed-by: kabanero-operator

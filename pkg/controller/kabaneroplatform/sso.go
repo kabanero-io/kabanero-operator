@@ -49,6 +49,7 @@ func reconcileSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 	templateContext := make(map[string]interface{})
 	templateContext["ssoAdminSecretName"] = k.Spec.Sso.AdminSecretName
 	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	// OpenShift modifies the spec section of the deployment config after we've deployed it.
 	// That means that manifestival will try and change it back when it runs.  To prevent
@@ -170,6 +171,7 @@ func disableSso(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Clie
 	templateContext["ssoAdminSecretName"] = "default"
 	templateContext["ssoDbSecretName"] = sso_db_secret_name
 	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 	
 	f, err := rev.OpenOrchestration("sso.yaml")
 	if err != nil {

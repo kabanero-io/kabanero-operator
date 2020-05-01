@@ -125,7 +125,7 @@ spec:
         name: kabanero-operator-admission-webhook
         app.kubernetes.io/name: kabanero-operator-admission-webhook
         app.kubernetes.io/instance: {{ .instance }}
-        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/version: {{ .version }}
         app.kubernetes.io/component: admission-webhook
         app.kubernetes.io/part-of: kabanero
         app.kubernetes.io/managed-by: kabanero-operator

@@ -4,6 +4,13 @@ metadata:
   name: kabanero-cli
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: kabanero-cli-service-cert-secret
+  labels:
+    app.kubernetes.io/name: kabanero-cli
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: kabanero-cli
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   selector:
     app: kabanero-cli

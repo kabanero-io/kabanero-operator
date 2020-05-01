@@ -68,6 +68,7 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 	}
 	templateContext["image"] = image
 	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	s, err := renderOrchestration(f, templateContext)
 	if err != nil {
@@ -218,6 +219,7 @@ func cleanupLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	}
 	templateContext["image"] = image
 	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
 	if err != nil {
