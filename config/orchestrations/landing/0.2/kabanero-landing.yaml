@@ -76,6 +76,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - kabanero.io
+  attributeRestrictions: null
+  resources:
+  - kabaneros
+  verbs:
   - create
   - update
   - delete
