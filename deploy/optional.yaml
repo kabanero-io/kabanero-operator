@@ -6,7 +6,7 @@
 #
 
 # -----------------------------------------------------------------------
-# KAppNav 0.8.0
+# KAppNav 0.9.0
 # -----------------------------------------------------------------------
 apiVersion: v1
 kind: Namespace
@@ -104,7 +104,7 @@ spec:
       containers:
         - name: kappnav-operator
           # Replace this with the built image name
-          image: kappnav/operator:0.8.0
+          image: kappnav/operator:0.9.0
           command:
           - kappnav-operator
           imagePullPolicy: Always
@@ -136,7 +136,7 @@ spec:
 
   appNavAPI:
     repository: kappnav/apis
-    tag: 0.8.0
+    tag: 0.9.0
 
   ###############################################################################
   ## kAppNav Controller variables
@@ -144,7 +144,7 @@ spec:
 
   appNavController:
     repository: kappnav/controller
-    tag: 0.8.0
+    tag: 0.9.0
 
   ###############################################################################
   ## kAppNav UI variables
@@ -152,16 +152,7 @@ spec:
 
   appNavUI:
     repository: kappnav/ui
-    tag: 0.8.0
-
-  ###############################################################################
-  ## kAppNav Inventory variables
-  ###############################################################################
-
-  extensionContainers:
-    appNavInv:
-      repository: kappnav/inv
-      tag: 0.8.0
+    tag: 0.9.0
 
   ###############################################################################
   ## Logging variables
@@ -170,3 +161,13 @@ spec:
     apis: info
     operator: info
     controller: info
+    ui: info
+
+  ###############################################################################
+  ## kAppNav Inventory variables
+  ###############################################################################
+
+  extensionContainers:
+    appNavInv:
+      repository: kappnav/inv
+      tag: 0.9.0
