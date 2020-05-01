@@ -337,6 +337,9 @@ oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pip
 # tekton-pipelines namespace (for use by tekton github webhooks extension)
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
+# Create service account to used by pipelines
+oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=26-events-sa
+
 # Install complete.  give instructions for how to create an instance.
 SAMPLE_KAB_INSTANCE_URL=https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml
 
