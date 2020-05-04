@@ -29,6 +29,7 @@ spec:
     name: kabanero-landing
   tls:
     termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
 ---
 apiVersion: v1
 kind: ServiceAccount

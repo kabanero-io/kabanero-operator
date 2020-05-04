@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"math/big"
 	"net/url"
@@ -38,17 +37,6 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
-	// If the orchestration version being used has a route that uses passthrough TLS termination, the existing
-	// route might require cleanup. This is done if the previous instance of the CLI service configured
-	// the route to use reencrypt TLS termination.
-	usingPassthroughTLS := strings.HasSuffix(rev.OrchestrationPath, "0.1")
-	if usingPassthroughTLS {
-		err = removeTLSCertsFromCLIRoute(k, cl)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Apply CLI service resources.
 	f, err := rev.OpenOrchestration("kabanero-cli.yaml")
 	if err != nil {
@@ -74,6 +62,7 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 		return err
 	}
 
+	usingPassthroughTLS := strings.HasSuffix(rev.OrchestrationPath, "0.1")
 	transformedManifest, err := processTransformation(k, m, usingPassthroughTLS, reqLogger)
 	if err != nil {
 		return err
@@ -86,8 +75,6 @@ func reconcileKabaneroCli(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl 
 
 	// Only 0.2+ orchestrations support CLI services with reencypt tls termination.
 	if !usingPassthroughTLS {
-		addTLSCertsToCLIRoute(k, cl)
-
 		file, err := rev.OpenOrchestration("kabanero-cli-deployment.yaml")
 		if err != nil {
 			return err
@@ -187,88 +174,6 @@ func processTransformation(k *kabanerov1alpha2.Kabanero, manifest mf.Manifest, p
 	}
 
 	return manifestTrasformed, nil
-}
-
-// Updates the route with openshift generated TLS key and certificate.
-// The certificate and TLS key were produced by OpenShift and were added to a secret during service creation.
-// The service annotation that triggered the creation of the secret/cert/key is:
-// service.beta.openshift.io/serving-cert-secret-name: kabanero-cli-service-cert-secret
-func addTLSCertsToCLIRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error {
-	// Retrieve the sevice created secret and get the TLS cert/key.
-	secretName := "kabanero-cli-service-cert-secret"
-	secretInstance := &corev1.Secret{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      secretName,
-		Namespace: k.GetNamespace()}, secretInstance)
-
-	if err != nil {
-		return fmt.Errorf("Unable to retrieve a secret object. Secret name: %v. Namespace: %v. Error: %v", secretName, k.GetNamespace(), err)
-	}
-
-	tlskey, ok := secretInstance.Data["tls.key"]
-	if !ok {
-		return fmt.Errorf("The data.tls.key entry under secret %v was not found", secretName)
-	}
-
-	encodedKey := base64.StdEncoding.EncodeToString(tlskey)
-	decodedStringkey, err := base64.StdEncoding.DecodeString(encodedKey)
-
-	tlscrt, ok := secretInstance.Data["tls.crt"]
-	if !ok {
-		return fmt.Errorf("The data.tls.crt entry under secret %v was not found", secretName)
-	}
-	encodedCrt := base64.StdEncoding.EncodeToString(tlscrt)
-	decodedCrtString, err := base64.StdEncoding.DecodeString(encodedCrt)
-
-	// Get the CLI service route.
-	routeName := "kabanero-cli"
-	ri := &routev1.Route{}
-	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      routeName,
-		Namespace: k.ObjectMeta.Namespace}, ri)
-
-	if err != nil {
-		return fmt.Errorf("Unable to retrieve CLI service route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
-	}
-
-	// Add TLS cert/key to route.
-	ri.Spec.TLS.Key = string(decodedStringkey)
-	ri.Spec.TLS.Certificate = string(decodedCrtString)
-
-	err = c.Update(context.Background(), ri)
-	if err != nil {
-		return fmt.Errorf("Unable to update CLI service route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
-	}
-
-	return nil
-}
-
-// Removes the openshift generated TLS key and certificate from the currently deployed route if they were
-// previously specified.
-func removeTLSCertsFromCLIRoute(k *kabanerov1alpha2.Kabanero, c client.Client) error {
-	// Get the CLI service route.
-	routeName := "kabanero-cli"
-	ri := &routev1.Route{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      routeName,
-		Namespace: k.ObjectMeta.Namespace}, ri)
-
-	if err != nil {
-		return fmt.Errorf("Unable to retrieve CLI service route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
-	}
-
-	// Remove TLS cert/key from route.
-	if len(ri.Spec.TLS.Key) != 0 || len(ri.Spec.TLS.Certificate) != 0 {
-		ri.Spec.TLS.Key = ""
-		ri.Spec.TLS.Certificate = ""
-
-		err = c.Update(context.Background(), ri)
-		if err != nil {
-			return fmt.Errorf("Unable to update CLI service route. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
-		}
-	}
-
-	return nil
 }
 
 // Tries to see if the CLI route has been assigned a hostname.
