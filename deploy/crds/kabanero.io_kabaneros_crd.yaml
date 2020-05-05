@@ -878,11 +878,6 @@ spec:
                           type: string
                         url:
                           type: string
-                      required:
-                      - digest
-                      - gitRelease
-                      - name
-                      - url
                       type: object
                     type: array
                   ready:
