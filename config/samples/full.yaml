@@ -152,3 +152,21 @@ spec:
     # Kabanero CLI and Console to administer the stack.
     teams:
     - adminTeam
+
+  # Kabanero events operator configuration
+  events:
+    # The events operator is enabled by default.  It can be disabled
+    # by setting `enable` to `false`.
+    enable: true
+
+    # Overrides the version of the events operator, as defined in
+    # config/versions.yaml
+    version: "0.9.0"
+
+    # Overrides the events-operator image as a separate repository or tag
+    repository: kabanero/events-operator
+    tag: "0.1.0"
+
+    # Overrides the events-operator image uri
+    image: kabanero/events-operator:0.1.0
+    

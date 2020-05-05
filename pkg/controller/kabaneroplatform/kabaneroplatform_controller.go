@@ -549,7 +549,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 	isCRWReady, _ := getCRWStatus(ctx, k, c)
-	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
+	isEventsReady, _ := getEventsStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
 	isGitopsReady, _ := getGitopsStatus(k)
@@ -564,7 +564,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady &&
 		isCRWReady &&
-		isEventsRouteReady &&
+		isEventsReady &&
 		isAdmissionControllerWebhookReady &&
 		isSsoReady &&
 		isGitopsReady
