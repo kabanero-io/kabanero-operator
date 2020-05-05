@@ -150,7 +150,7 @@ func cleanupStackController(ctx context.Context, k *kabanerov1alpha2.Kabanero, c
 	}
 
 	templateCtx := rev.Identifiers
-	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateCtx["name"] = "kabanero-" + k.GetNamespace() + "-stack-trigger-rolebinding"
 	templateCtx["kabaneroNamespace"] = k.GetNamespace()
 
 	f, err := rev.OpenOrchestration("stack-controller-tekton.yaml")
