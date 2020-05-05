@@ -341,7 +341,7 @@ oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-tri
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=26-events-sa
 
 # Install complete.  give instructions for how to create an instance.
-SAMPLE_KAB_INSTANCE_URL=https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml
+SAMPLE_KAB_INSTANCE_URL="${SAMPLE_KAB_INSTANCE_URL:-https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml}"
 
 
 # Turn off debugging, and wait 3 seconds for it to flush output, before
