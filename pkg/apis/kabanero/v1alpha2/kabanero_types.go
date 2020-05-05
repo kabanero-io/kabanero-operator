@@ -189,11 +189,24 @@ type CWRCustomResourceDevFileRegImage struct {
 }
 
 type EventsCustomizationSpec struct {
-	Enable     bool   `json:"enable,omitempty"`
+	Enable     *bool  `json:"enable,omitempty"`
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
 	Tag        string `json:"tag,omitempty"`
+}
+
+// Determines if the Events component should be enabled.  Starting with
+// version 0.9.0 of events, we should be enabling events by default.  In
+// reality this is Kabanero 0.9.0 and later, but it's easier to check if
+// we're using a version of events that is less than 0.9.0, since there is
+// only one version of events that is less than 0.9.0.
+func (ecs EventsCustomizationSpec) IsEnabled(softwareVersion string) bool {
+	if ecs.Enable != nil {
+		return *ecs.Enable
+	}
+
+	return softwareVersion != "0.1.0"
 }
 
 // CollectionControllerSpec defines customization entried for the Kabanero collection controller.
