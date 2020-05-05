@@ -323,6 +323,11 @@ func ActivatePipelines(spec kabanerov1alpha2.ComponentSpec, status kabanerov1alp
 
 // Deletes an asset.  This can mean removing an object owner, or completely deleting it.
 func DeleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, assetOwner metav1.OwnerReference, logger logr.Logger) error {
+	if asset.Status == AssetStatusUnknown || asset.Status == AssetStatusFailed {
+		logger.Info(fmt.Sprintf("Ignoring delete processing for asset with failed or unknown status. Asset name: %v. Namespace %v. Status: %v", asset.Name, asset.Namespace, asset.Status))
+		return nil
+	}
+
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   asset.Group,
@@ -337,7 +342,7 @@ func DeleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, 
 
 	if err != nil {
 		if errors.IsNotFound(err) == false {
-			logger.Error(err, fmt.Sprintf("Unable to check asset name %v", asset.Name))
+			logger.Error(err, fmt.Sprintf("Unable to retrieve asset %v in namespace %v. Status: %v", asset.Name, asset.Namespace, asset.Status))
 			return err
 		}
 	} else {
@@ -353,14 +358,14 @@ func DeleteAsset(c client.Client, asset kabanerov1alpha2.RepositoryAssetStatus, 
 		if len(newOwnerRefs) == 0 {
 			err = c.Delete(context.TODO(), u)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("Unable to delete asset name %v", asset.Name))
+				logger.Error(err, fmt.Sprintf("Unable to delete asset name %v in namespace %v. Status: %v", asset.Name, asset.Namespace, asset.Status))
 				return err
 			}
 		} else {
 			u.SetOwnerReferences(newOwnerRefs)
 			err = c.Update(context.TODO(), u)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("Unable to delete owner reference from %v", asset.Name))
+				logger.Error(err, fmt.Sprintf("Unable to delete owner reference from %v in namespace %v. Status: %v", asset.Name, asset.Namespace, asset.Status))
 				return err
 			}
 		}
