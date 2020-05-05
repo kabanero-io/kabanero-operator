@@ -285,10 +285,10 @@ type KabaneroStatus struct {
 
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
 type PipelineStatus struct {
-	Name       string         `json:"name,omitEmpty"`
-	Url        string         `json:"url,omitEmpty"`
-	GitRelease GitReleaseInfo `json:"gitRelease,omitEmpty"`
-	Digest     string         `json:"digest,omitEmpty"`
+	Name       string         `json:"name,omitempty"`
+	Url        string         `json:"url,omitempty"`
+	GitRelease GitReleaseInfo `json:"gitRelease,omitempty"`
+	Digest     string         `json:"digest,omitempty"`
 	// +listType=set
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
