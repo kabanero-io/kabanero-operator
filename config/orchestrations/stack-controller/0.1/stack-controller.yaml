@@ -82,6 +82,7 @@ rules:
   - tasks
   - triggerbindings
   - triggertemplates
+  - eventlisteners
   verbs:
   - delete
   - get
@@ -89,6 +90,7 @@ rules:
   - list
   - update
   - watch
+  - patch
 - apiGroups:
   - kabanero.io
   resources:
