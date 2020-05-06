@@ -1,6 +1,8 @@
 # kabanero-operator
 The following README pertains to kabanero-operator development.  If you are trying to use the operator to try Kabanero on your cluster, please see the [install instructions](https://kabanero.io/docs/ref/general/installation/installing-kabanero-foundation.html).
 
+We suggest you install from a [release](https://github.com/kabanero-io/kabanero-operator/releases).  However you can also install from master using `deploy/install-master.sh`.  This is inherently unstable since `master` is rebuilt every time a PR is merged, and parts of Kabanero on your cluster may get out of sync over time.
+
 # Status
 [![Build Status](https://travis-ci.org/kabanero-io/kabanero-operator.svg?branch=master)](https://travis-ci.org/kabanero-io/kabanero-operator)
 
