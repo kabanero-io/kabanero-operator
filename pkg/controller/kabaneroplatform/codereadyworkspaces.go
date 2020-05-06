@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	kutils "github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
-	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
@@ -32,12 +32,14 @@ import (
 var crwlog = rlog.Log.WithName("kabanero-codeready-workspaces")
 
 const (
-	crwOrchestrationFilePath       = "orchestrations/codeready-workspaces/0.1"
-	crwYamlNameCodewindClusterRole = "codewind-clusterrole.yaml"
-	crwOperatorCR                  = "codeready-workspaces-cr.yaml"
-	crwOperatorCRNameSuffix        = "codeready-workspaces"
-	crwVersionSoftwareName         = "codeready-workspaces"
-	crwOperatorSubscriptionName    = "codeready-workspaces"
+	crwOrchestrationFilePath         = "orchestrations/codeready-workspaces/0.1"
+	crwYamlNameCodewindClusterRole   = "codewind-clusterrole.yaml"
+	crwYamlNameCodewindTektonRole    = "codewind-tekton-role.yaml"
+	crwYamlNameCodewindTektonBinding = "codewind-tekton-rolebinding.yaml"
+	crwOperatorCR                    = "codeready-workspaces-cr.yaml"
+	crwOperatorCRNameSuffix          = "codeready-workspaces"
+	crwVersionSoftwareName           = "codeready-workspaces"
+	crwOperatorSubscriptionName      = "codeready-workspaces"
 
 	crwVersionOrchDevfileRegRepository = "devfile-reg-repository"
 	crwVersionOrchDevfileRegTag        = "devfile-reg-tag"
@@ -67,10 +69,24 @@ func reconcileCRW(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 
 	templateCtx := unstructured.Unstructured{}.Object
 
-	// Deploy the cluster role with the required permissions for codewind.
-	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwYamlNameCodewindClusterRole, true)
+	// Deploy the Codewind cluster role with the required permissions for codewind.
+	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwYamlNameCodewindClusterRole, true, k.GetNamespace())
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to Apply clusterRole resource. Revision: %v. TemplateCtx: %v", rev, templateCtx))
+		return err
+	}
+
+	// Deploy the Codewind Tekton role
+	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwYamlNameCodewindTektonRole, true, "tekton-pipelines")
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to Apply role resource. Revision: %v. TemplateCtx: %v", rev, templateCtx))
+		return err
+	}
+
+	// Deploy the Codewind Tekton rolebinding
+	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwYamlNameCodewindTektonBinding, true, "tekton-pipelines")
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to Apply rolebinding resource. Revision: %v. TemplateCtx: %v", rev, templateCtx))
 		return err
 	}
 
@@ -110,7 +126,7 @@ func deployCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c clie
 			return err
 		}
 
-		err = processCRWYaml(ctx, k, rev, templateCtx, c, crwOperatorCR, true)
+		err = processCRWYaml(ctx, k, rev, templateCtx, c, crwOperatorCR, true, k.GetNamespace())
 		if err != nil {
 			return err
 		}
@@ -281,7 +297,7 @@ func validateCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, c cl
 }
 
 // Applies or deletes the specified yaml file.
-func processCRWYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versioning.SoftwareRevision, templateCtx map[string]interface{}, c client.Client, fileName string, apply bool) error {
+func processCRWYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versioning.SoftwareRevision, templateCtx map[string]interface{}, c client.Client, fileName string, apply bool, namespace string) error {
 	f, err := rev.OpenOrchestration(fileName)
 	if err != nil {
 		return err
@@ -299,7 +315,7 @@ func processCRWYaml(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev versi
 
 	transforms := []mf.Transformer{
 		mf.InjectOwner(k),
-		mf.InjectNamespace(k.GetNamespace()),
+		mf.InjectNamespace(namespace),
 	}
 
 	m, err := mOrig.Transform(transforms...)
@@ -328,7 +344,7 @@ func isCRWCRDActive() (bool, error) {
 		return false, err
 	}
 
-	err = cutils.Retry(12, 5*time.Second, func() (bool, error) {
+	err = timer.Retry(12, 5*time.Second, func() (bool, error) {
 		active := false
 		crd, err := extClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get("checlusters.org.eclipse.che", metav1.GetOptions{})
 		if err != nil {
@@ -464,7 +480,17 @@ func deleteCRWOperatorResources(ctx context.Context, k *kabanerov1alpha2.Kabaner
 	}
 
 	if len(kiList.Items) == 1 {
-		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindClusterRole, false)
+		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindClusterRole, false, k.GetNamespace())
+		if err != nil {
+			return err
+		}
+
+		// Delete the Tekton role and rolebinding too
+		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindTektonRole, false, "tekton-pipelines")
+		if err != nil {
+			return err
+		}
+		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindTektonBinding, false, "tekton-pipelines")
 		if err != nil {
 			return err
 		}
@@ -479,13 +505,13 @@ func deleteCRWInstance(ctx context.Context, k *kabanerov1alpha2.Kabanero, rev ve
 		return err
 	}
 
-	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwOperatorCR, false)
+	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwOperatorCR, false, k.GetNamespace())
 	if err != nil {
 		return err
 	}
 
 	// Make sure the instance is down. This may take a while. Wait for 2 minutes.
-	err = cutils.Retry(24, 5*time.Second, func() (bool, error) {
+	err = timer.Retry(24, 5*time.Second, func() (bool, error) {
 		deployed, err := isCRWInstanceDeployed(ctx, k, c)
 
 		if err != nil {
@@ -579,7 +605,7 @@ func getCRWCRDevfileRegistryImage(k *kabanerov1alpha2.Kabanero, rev versioning.S
 func getCRWClusterRole(k *kabanerov1alpha2.Kabanero) string {
 	crwcr := k.Spec.CodereadyWorkspaces.Operator.CustomResourceInstance.CheWorkspaceClusterRole
 	if len(crwcr) == 0 {
-		crwcr = "eclipse-codewind"
+		crwcr = "kabanero-codewind"
 	}
 	return crwcr
 }

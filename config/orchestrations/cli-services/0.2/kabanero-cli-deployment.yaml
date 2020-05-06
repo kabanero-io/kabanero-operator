@@ -1,0 +1,80 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kabanero-cli
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kabanero-cli
+  template:
+    metadata:
+      labels:
+        app: kabanero-cli
+        app.kubernetes.io/name: kabanero-cli
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: {{ .version }}
+        app.kubernetes.io/component: kabanero-cli
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
+    spec:
+      containers:
+        - name: kabanero-cli
+          livenessProbe:
+            httpGet:
+              path: /v1/liveliness
+              port: 9443
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            timeoutSeconds: 1
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: AESEncryptionKey
+              valueFrom:
+                secretKeyRef:
+                  name: kabanero-cli-aes-encryption-key-secret
+                  key: AESEncryptionKey
+                  optional: false
+            - name: KABANERO_CLI_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 9443
+              protocol: TCP
+          imagePullPolicy: Always
+          image: {{ .image }}
+          volumeMounts:
+            - name: kabanero-cli-keystores
+              mountPath: /etc/tls/secrets/java.io/kabanero.cli/keystores
+              readOnly: true
+            - name: kabanero-cli-cert-secret
+              mountPath: /etc/tls/secrets/openshift.io/kabanero.cli/certs
+              readOnly: true
+      serviceAccountName: kabanero-cli
+      initContainers:
+        - name: init-kabanero-cli
+          image: {{ .image }}
+          env:
+            - name: keyfile
+              value: /etc/tls/secrets/openshift.io/kabanero.cli/certs/tls.key
+            - name: crtfile
+              value: /etc/tls/secrets/openshift.io/kabanero.cli/certs/tls.crt
+            - name: keystore_pkcs12
+              value: /etc/tls/secrets/java.io/kabanero.cli/keystores/keystore.p12
+            - name: password
+              value: changeit
+          command: ['/bin/bash']
+          args: ['-c', "openssl pkcs12 -export -inkey $keyfile -in $crtfile -out $keystore_pkcs12 -password pass:$password"]
+          volumeMounts:
+            - name: kabanero-cli-keystores
+              mountPath: /etc/tls/secrets/java.io/kabanero.cli/keystores
+            - name: kabanero-cli-cert-secret
+              mountPath: /etc/tls/secrets/openshift.io/kabanero.cli/certs
+      volumes:
+      - name: kabanero-cli-keystores
+      - name: kabanero-cli-cert-secret
+        secret:
+          secretName: kabanero-cli-service-cert-secret

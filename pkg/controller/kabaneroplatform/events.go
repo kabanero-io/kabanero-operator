@@ -21,26 +21,28 @@ import (
 
 func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) error {
 
-	// The Events entry was not configured in the spec.  We should disable it.
-	if k.Spec.Events.Enable == false {
-		cleanupEvents(ctx, k, cl, reqLogger)
-		return nil
-	}
-
-	// Deploy the Kabanero events components - service acct, role, etc
 	rev, err := resolveSoftwareRevision(k, "events", k.Spec.Events.Version)
 	if err != nil {
 		return err
 	}
 
+	// The Events entry was not configured in the spec.  We should disable it.
+	if k.Spec.Events.IsEnabled(rev.Version) == false {
+		cleanupEvents(ctx, k, cl, reqLogger)
+		return nil
+	}
+
 	//The context which will be used to render any templates
 	templateContext := rev.Identifiers
 
+	// Deploy the Kabanero events components - service acct, role, etc
 	image, err := imageUriWithOverrides(k.Spec.Events.Repository, k.Spec.Events.Tag, k.Spec.Events.Image, rev)
 	if err != nil {
 		return err
 	}
 	templateContext["image"] = image
+	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration("kabanero-events.yaml")
 	if err != nil {
@@ -72,10 +74,13 @@ func reconcileEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl clien
 		return err
 	}
 
-	// Create the default events secret, if we don't already have one
-	err = createDefaultEventsSecret(k, cl, reqLogger)
-	if err != nil {
-		return err
+	// Create the default events secret, if we don't already have one.  Only
+	// the initial version of events needs this.
+	if rev.Version == "0.1.0" {
+		err = createDefaultEventsSecret(k, cl, reqLogger)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -149,17 +154,39 @@ func cleanupEvents(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.
 	return nil
 }
 
-// Tries to see if the events route has been assigned a hostname.
-func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
+func getEventsStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
+	rev, err := resolveSoftwareRevision(k, "events", k.Spec.Events.Version)
+	if err != nil {
+		return false, err
+	}
 
 	// If disabled. Nothing to do. No need to display status if disabled.
-	if k.Spec.Events.Enable == false {
+	if k.Spec.Events.IsEnabled(rev.Version) == false {
 		k.Status.Events = nil
 		return true, nil
 	}
 
 	k.Status.Events = &kabanerov1alpha2.EventsStatus{}
 	k.Status.Events.Ready = "False"
+
+	// For version 0.1.0, report on the route status.
+	if rev.Version == "0.1.0" {
+		return getEventsRouteStatus(k, cl, reqLogger)
+	}
+
+	// Otherwise, report on whether the deployment is started/available
+	ready, err := getDeploymentStatus(cl, "events-operator", k.GetNamespace())
+	if ready {
+		k.Status.Events.Ready = "True"
+	} else {
+		k.Status.Events.Message = err.Error()
+	}
+
+	return ready, err
+}
+
+// Tries to see if the events route has been assigned a hostname.
+func getEventsRouteStatus(k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) (bool, error) {
 
 	// Check that the route is accepted
 	eventsRoute := &routev1.Route{}

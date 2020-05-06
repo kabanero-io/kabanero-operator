@@ -2,7 +2,6 @@ package kabaneroplatform
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -12,7 +11,6 @@ import (
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/kabaneroplatform/utils"
 	kabTransforms "github.com/kabanero-io/kabanero-operator/pkg/controller/transforms"
-	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
 	consolev1 "github.com/openshift/api/console/v1"
@@ -31,29 +29,33 @@ var kllog = rlog.Log.WithName("kabanero-landing")
 
 // Deploys resources and customizes to the Openshift web console.
 func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client.Client, logger logr.Logger) error {
-	// if enable is false do not deploy the landing page
+	// If enable is false do not deploy the landing page.
 	if k.Spec.Landing.Enable != nil && *(k.Spec.Landing.Enable) == false {
 		err := cleanupLandingPage(k, c)
 		return err
 	}
+
+	// Resolve the landing software infomation (versions.yaml) with applied overrides (CR instance spec).
 	rev, err := resolveSoftwareRevision(k, "landing", k.Spec.Landing.Version)
 	if err != nil {
 		return err
 	}
 
-	//The context which will be used to render any templates
-	templateContext := rev.Identifiers
+	// Apply CLI service resources excluding the deployment, which is applied separatelly.
+	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
+	if err != nil {
+		return err
+	}
 
+	// The context which will be used to render any templates
+	templateContext := rev.Identifiers
 	image, err := imageUriWithOverrides(k.Spec.Landing.Repository, k.Spec.Landing.Tag, k.Spec.Landing.Image, rev)
 	if err != nil {
 		return err
 	}
 	templateContext["image"] = image
-
-	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
-	if err != nil {
-		return err
-	}
+	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	s, err := renderOrchestration(f, templateContext)
 	if err != nil {
@@ -74,14 +76,6 @@ func deployLandingPage(_ context.Context, k *kabanerov1alpha2.Kabanero, c client
 	err = m.Apply()
 	if err != nil {
 		return err
-	}
-
-	// Only 0.2+ orchestrations support landing page with reencypt tls termination.
-	if !strings.HasSuffix(rev.OrchestrationPath, "0.1") {
-		err = addTLSConfigToLandingRoute(k, c, rev)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Retrieve the kabanero landing URL.
@@ -203,6 +197,8 @@ func cleanupLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 		return err
 	}
 	templateContext["image"] = image
+	templateContext["instance"] = k.ObjectMeta.UID
+	templateContext["version"] = rev.Version
 
 	f, err := rev.OpenOrchestration("kabanero-landing.yaml")
 	if err != nil {
@@ -228,60 +224,6 @@ func cleanupLandingPage(k *kabanerov1alpha2.Kabanero, c client.Client) error {
 	err = m.Delete()
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-// Updates the route with openshift generated TLS key and certificate.
-// The certificate and TLS key were produced by OpenShift and were added to a secret during service creation.
-// The service annotation that triggered the creation of the secret/cert/key is:
-// service.beta.openshift.io/serving-cert-secret-name: kabanero-landing-service-cert-secret
-func addTLSConfigToLandingRoute(k *kabanerov1alpha2.Kabanero, c client.Client, rev versioning.SoftwareRevision) error {
-	// Retrieve the sevice created secret and get the TLS cert/key.
-	secretName := "kabanero-landing-service-cert-secret"
-	secretInstance := &corev1.Secret{}
-	err := c.Get(context.Background(), types.NamespacedName{
-		Name:      secretName,
-		Namespace: k.GetNamespace()}, secretInstance)
-
-	if err != nil {
-		return fmt.Errorf("Unable to retrieve a secret object. Secret name: %v. Namespace: %v. Error: %v", secretName, k.GetNamespace(), err)
-	}
-
-	tlskey, ok := secretInstance.Data["tls.key"]
-	if !ok {
-		return fmt.Errorf("The data.tls.key entry under secret %v was not found", secretName)
-	}
-
-	encodedKey := base64.StdEncoding.EncodeToString(tlskey)
-	decodedStringkey, err := base64.StdEncoding.DecodeString(encodedKey)
-
-	tlscrt, ok := secretInstance.Data["tls.crt"]
-	if !ok {
-		return fmt.Errorf("The data.tls.crt entry under secret %v was not found", secretName)
-	}
-	encodedCrt := base64.StdEncoding.EncodeToString(tlscrt)
-	decodedCrtString, err := base64.StdEncoding.DecodeString(encodedCrt)
-
-	// Get the landing route.
-	routeName := "kabanero-landing"
-	ri := &routev1.Route{}
-	err = c.Get(context.Background(), types.NamespacedName{
-		Name:      routeName,
-		Namespace: k.ObjectMeta.Namespace}, ri)
-
-	if err != nil {
-		return fmt.Errorf("Unable to retrieve route object. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
-	}
-
-	// Add TLS cert/key to route.
-	ri.Spec.TLS.Key = string(decodedStringkey)
-	ri.Spec.TLS.Certificate = string(decodedCrtString)
-
-	err = c.Update(context.Background(), ri)
-	if err != nil {
-		return fmt.Errorf("Unable to update route with secret data. Route Name: %v. Namespace: %v. Error: %v", routeName, k.GetNamespace(), err)
 	}
 
 	return nil

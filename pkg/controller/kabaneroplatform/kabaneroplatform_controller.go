@@ -12,7 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha1"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
+  "github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,6 +53,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "CodeReady Workspaces", function: reconcileCRW},
 	{name: "events", function: reconcileEvents},
 	{name: "sso", function: reconcileSso},
+	{name: "gitops", function: reconcileGitopsPipelines},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -509,6 +510,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 		return err
 	}
 
+	// Cleanup the Gitops pipelines and their cross-namespace objects
+	err = cleanupGitopsPipelines(ctx, k, client, reqLogger)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -542,9 +549,10 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isKabaneroLandingReady, _ := getKabaneroLandingPageStatus(k, c)
 	isKubernetesAppNavigatorReady, _ := getKappnavStatus(k, c)
 	isCRWReady, _ := getCRWStatus(ctx, k, c)
-	isEventsRouteReady, _ := getEventsRouteStatus(k, c, reqLogger)
+	isEventsReady, _ := getEventsStatus(k, c, reqLogger)
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
+	isGitopsReady, _ := getGitopsStatus(k)
 
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
@@ -556,9 +564,10 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isAppsodyReady &&
 		isKubernetesAppNavigatorReady &&
 		isCRWReady &&
-		isEventsRouteReady &&
+		isEventsReady &&
 		isAdmissionControllerWebhookReady &&
-		isSsoReady
+		isSsoReady &&
+		isGitopsReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.Message = ""
@@ -568,7 +577,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	}
 
 	// Update the kabanero instance status in a retriable manner. The instance may have changed.
-	err := cutils.Retry(10, 100*time.Millisecond, func() (bool, error) {
+	err := timer.Retry(10, 100*time.Millisecond, func() (bool, error) {
 		err := c.Status().Update(ctx, k)
 		if err != nil {
 			if errors.IsConflict(err) {

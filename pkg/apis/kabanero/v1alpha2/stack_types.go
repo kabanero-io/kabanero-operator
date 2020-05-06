@@ -1,6 +1,8 @@
 package v1alpha2
 
 import (
+	"strings"
+	
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,6 +39,14 @@ type StackSpec struct {
 	Versions []StackVersion `json:"versions,omitempty"`
 }
 
+func (s StackSpec) GetVersions() []ComponentSpecVersion {
+	ret := make([]ComponentSpecVersion, len(s.Versions))
+	for i, _ := range s.Versions {
+		ret[i] = s.Versions[i]
+	}
+	return ret
+}
+
 // StackVersion defines the desired composition of a specific stack version.
 type StackVersion struct {
 	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
@@ -48,6 +58,19 @@ type StackVersion struct {
 	SkipCertVerification bool           `json:"skipCertVerification,omitempty"`
 	// +listType=set
 	Images []Image `json:"images,omitempty"`
+}
+
+func (sv StackVersion) GetVersion() string {
+	return sv.Version
+}
+
+func (sv StackVersion) GetPipelines() []PipelineSpec {
+	// Only return pipelines if the version is active
+	if !strings.EqualFold(sv.DesiredState, StackDesiredStateInactive) {
+		return sv.Pipelines
+	}
+
+	return nil
 }
 
 // GitReleaseInfo is all of the GitReleaseSpec information, minus the "skip cert
@@ -66,17 +89,8 @@ func (gitRelease GitReleaseInfo) IsUsable() bool {
 		len(gitRelease.Release) != 0 && len(gitRelease.AssetName) != 0
 }
 
-// PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
-type PipelineStatus struct {
-	Name       string         `json:"name,omitEmpty"`
-	Url        string         `json:"url,omitEmpty"`
-	GitRelease GitReleaseInfo `json:"gitRelease,omitEmpty"`
-	Digest     string         `json:"digest,omitEmpty"`
-	// +listType=set
-	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
-}
 
-// RepositoryAssetStatus defines the observed state of a single asset in a respository, in the stack.
+// RepositoryAssetStatus defines the observed state of a single asset in a pipelines respository.
 type RepositoryAssetStatus struct {
 	Name          string `json:"assetName,omitempty"`
 	Namespace     string `json:"namespace,omitempty"`
@@ -97,6 +111,14 @@ type StackStatus struct {
 	Summary  string               `json:"summary,omitempty"`
 }
 
+func (s StackStatus) GetVersions() []ComponentStatusVersion {
+	ret := make([]ComponentStatusVersion, len(s.Versions))
+	for i, _ := range s.Versions {
+		ret[i] = s.Versions[i]
+	}
+	return ret
+}
+
 // StackVersionStatus defines the observed state of a specific stack version.
 type StackVersionStatus struct {
 	Version  string `json:"version,omitempty"`
@@ -107,6 +129,14 @@ type StackVersionStatus struct {
 	StatusMessage string           `json:"statusMessage,omitempty"`
 	// +listType=set
 	Images []ImageStatus `json:"images,omitempty"`
+}
+
+func (sv StackVersionStatus) GetVersion() string {
+	return sv.Version
+}
+
+func (sv StackVersionStatus) GetPipelines() []PipelineStatus {
+	return sv.Pipelines
 }
 
 // Image defines a container image used by a stack

@@ -46,6 +46,25 @@ type KabaneroSpec struct {
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 
 	Sso SsoCustomizationSpec `json:"sso,omitempty"`
+
+	Gitops GitopsSpec `json:"gitops,omitempty"`
+}
+
+type GitopsSpec struct {
+	// +listType=set
+	Pipelines []PipelineSpec `json:"pipelines,omitempty"`
+}
+
+func (gs GitopsSpec) GetVersions() []ComponentSpecVersion {
+	return []ComponentSpecVersion{gs}
+}
+
+func (gs GitopsSpec) GetVersion() string {
+	return "gitops"
+}
+
+func (gs GitopsSpec) GetPipelines() []PipelineSpec {
+	return gs.Pipelines
 }
 
 // InstanceStackConfig defines the customization entries for a set of stacks.
@@ -59,7 +78,7 @@ type InstanceStackConfig struct {
 	Pipelines []PipelineSpec `json:"pipelines,omitempty"`
 }
 
-// PipelineSpec defines the sets of default pipelines for the stacks.
+// PipelineSpec defines a set of pipelines and associated resources for a component.
 type PipelineSpec struct {
 	Id         string            `json:"id,omitempty"`
 	Sha256     string            `json:"sha256,omitempty"`
@@ -170,11 +189,24 @@ type CWRCustomResourceDevFileRegImage struct {
 }
 
 type EventsCustomizationSpec struct {
-	Enable     bool   `json:"enable,omitempty"`
+	Enable     *bool  `json:"enable,omitempty"`
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
 	Tag        string `json:"tag,omitempty"`
+}
+
+// Determines if the Events component should be enabled.  Starting with
+// version 0.9.0 of events, we should be enabling events by default.  In
+// reality this is Kabanero 0.9.0 and later, but it's easier to check if
+// we're using a version of events that is less than 0.9.0, since there is
+// only one version of events that is less than 0.9.0.
+func (ecs EventsCustomizationSpec) IsEnabled(softwareVersion string) bool {
+	if ecs.Enable != nil {
+		return *ecs.Enable
+	}
+
+	return softwareVersion != "0.1.0"
 }
 
 // CollectionControllerSpec defines customization entried for the Kabanero collection controller.
@@ -247,6 +279,37 @@ type KabaneroStatus struct {
 
 	// SSO server status
 	Sso SsoStatus `json:"sso,omitempty"`
+
+	Gitops GitopsStatus `json:"gitops,omitempty"`
+}
+
+// PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
+type PipelineStatus struct {
+	Name       string         `json:"name,omitempty"`
+	Url        string         `json:"url,omitempty"`
+	GitRelease GitReleaseInfo `json:"gitRelease,omitempty"`
+	Digest     string         `json:"digest,omitempty"`
+	// +listType=set
+	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
+}
+
+// The status of the gitops pipelines
+type GitopsStatus struct {
+	Pipelines []PipelineStatus `json:"pipelines,omitempty"`
+	Ready     string `json:"ready,omitempty"`
+	Message   string `json:"message,omitempty"`
+}
+
+func (gs GitopsStatus) GetVersions() []ComponentStatusVersion {
+	return []ComponentStatusVersion{gs}
+}
+
+func (gs GitopsStatus) GetVersion() string {
+	return "gitops"
+}
+
+func (gs GitopsStatus) GetPipelines() []PipelineStatus {
+	return gs.Pipelines
 }
 
 // KabaneroInstanceStatus defines the observed status details of Kabanero operator instance

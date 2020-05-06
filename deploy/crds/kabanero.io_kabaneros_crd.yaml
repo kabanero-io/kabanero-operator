@@ -487,6 +487,46 @@ spec:
                       type: string
                     type: array
                 type: object
+              gitops:
+                properties:
+                  pipelines:
+                    items:
+                      description: PipelineSpec defines a set of pipelines and associated
+                        resources for a component.
+                      properties:
+                        gitRelease:
+                          description: GitReleaseSpec defines customization entries
+                            for a Git release.
+                          properties:
+                            assetName:
+                              type: string
+                            hostname:
+                              type: string
+                            organization:
+                              type: string
+                            project:
+                              type: string
+                            release:
+                              type: string
+                            skipCertVerification:
+                              type: boolean
+                          type: object
+                        https:
+                          description: HttpsProtocolFile defines how to retrieve a
+                            file over https
+                          properties:
+                            skipCertVerification:
+                              type: boolean
+                            url:
+                              type: string
+                          type: object
+                        id:
+                          type: string
+                        sha256:
+                          type: string
+                      type: object
+                    type: array
+                type: object
               governancePolicy:
                 description: GovernancePolicyConfig defines customization entries
                   for governance policies.
@@ -537,8 +577,8 @@ spec:
                 properties:
                   pipelines:
                     items:
-                      description: PipelineSpec defines the sets of default pipelines
-                        for the stacks.
+                      description: PipelineSpec defines a set of pipelines and associated
+                        resources for a component.
                       properties:
                         gitRelease:
                           description: GitReleaseSpec defines customization entries
@@ -607,8 +647,8 @@ spec:
                           type: string
                         pipelines:
                           items:
-                            description: PipelineSpec defines the sets of default
-                              pipelines for the stacks.
+                            description: PipelineSpec defines a set of pipelines and
+                              associated resources for a component.
                             properties:
                               gitRelease:
                                 description: GitReleaseSpec defines customization
@@ -780,6 +820,66 @@ spec:
                     type: array
                   message:
                     type: string
+                  ready:
+                    type: string
+                type: object
+              gitops:
+                description: The status of the gitops pipelines
+                properties:
+                  message:
+                    type: string
+                  pipelines:
+                    items:
+                      description: PipelineStatus defines the observed state of the
+                        assets located within a single pipeline .tar.gz.
+                      properties:
+                        activeAssets:
+                          items:
+                            description: RepositoryAssetStatus defines the observed
+                              state of a single asset in a pipelines respository.
+                            properties:
+                              assetDigest:
+                                type: string
+                              assetName:
+                                type: string
+                              group:
+                                type: string
+                              kind:
+                                type: string
+                              namespace:
+                                type: string
+                              status:
+                                type: string
+                              statusMessage:
+                                type: string
+                              version:
+                                type: string
+                            type: object
+                          type: array
+                        digest:
+                          type: string
+                        gitRelease:
+                          description: GitReleaseInfo is all of the GitReleaseSpec
+                            information, minus the "skip cert verification" information,
+                            which is not relevant for status.
+                          properties:
+                            assetName:
+                              type: string
+                            hostname:
+                              type: string
+                            organization:
+                              type: string
+                            project:
+                              type: string
+                            release:
+                              type: string
+                          type: object
+                        name:
+                          type: string
+                        url:
+                          type: string
+                      type: object
+                    type: array
                   ready:
                     type: string
                 type: object

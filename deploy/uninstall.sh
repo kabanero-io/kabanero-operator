@@ -103,9 +103,8 @@ oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Tekton Dashboard
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-webhooks-extension-release.yaml
-oc delete --ignore-not-found -f https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-dashboard-release.yaml
-
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-dashboard-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=23-cr-network-policy,kabanero.io/namespace!=true
@@ -116,6 +115,8 @@ oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabane
 # Delete service account to used by pipelines
 oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=24-pipeline-sa,kabanero.io/namespace!=true
 
+# Delete service account to used by events
+oc delete -f $KABANERO_CUSTOMRESOURCES_YAML --ignore-not-found --selector kabanero.io/install=26-events-sa,kabanero.io/namespace!=true
 
 # CRDs still exist
 if [ `oc get crds kabaneros.kabanero.io --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then 

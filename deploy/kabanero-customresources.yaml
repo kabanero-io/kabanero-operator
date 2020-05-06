@@ -290,6 +290,18 @@ rules:
   - delete
   - patch
   - watch
+- apiGroups:
+  - openliberty.io
+  resources:
+  - openlibertyapplications
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -301,6 +313,7 @@ metadata:
 rules:
 - apiGroups:
   - tekton.dev
+  - triggers.tekton.dev
   resources:
   - triggerbindings
   - triggertemplates
@@ -313,3 +326,144 @@ rules:
   - delete
   - patch
   - watch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: event-listener
+  namespace: kabanero
+  labels:
+    kabanero.io/install: 26-events-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: event-listener-role 
+  namespace: kabanero
+  labels:
+    kabanero.io/install: 26-events-sa 
+rules:
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  - namespaces
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+  - update
+  - watch
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks
+  - clustertasks
+  - taskruns
+  - pipelines
+  - pipelineruns
+  - pipelineresources
+  - conditions
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - triggers.tekton.dev
+  resources:
+  - eventlisteners
+  - triggerbindings
+  - triggertemplates
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - taskruns/finalizers
+  - pipelineruns/finalizers
+  - tasks/status
+  - clustertasks/status
+  - taskruns/status
+  - pipelines/status
+  - pipelineruns/status
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: event-listener-role-binding
+  labels:
+    kabanero.io/install: 26-events-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: event-listener-role
+subjects:
+- kind: ServiceAccount
+  name: event-listener
+  namespace: kabanero

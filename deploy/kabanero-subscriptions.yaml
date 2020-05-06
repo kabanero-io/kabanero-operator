@@ -7,7 +7,7 @@ metadata:
     kabanero.io/install: 00-catalogsource
 spec:
   sourceType: grpc
-  image: kabanero/kabanero-operator-registry:latest
+  image: kabanero/kabanero-operator-registry:master
   publisher: kabanero.io
   displayName: Kabanero Operators
 ---
@@ -75,10 +75,10 @@ metadata:
   labels:
     kabanero.io/install: 12-subscription
 spec:
-  channel: kabanero-0.8
+  channel: "4.4"
   installPlanApproval: Automatic
   name: serverless-operator
-  source: kabanero-catalog
+  source: redhat-operators
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
@@ -105,7 +105,7 @@ metadata:
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: kabanero-0.8
+  channel: kabanero-0.9
   config:
     resources: {}
   installPlanApproval: Automatic
@@ -121,7 +121,7 @@ metadata:
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: kabanero-0.8
+  channel: kabanero-0.9
   config:
     resources: {}
   installPlanApproval: Automatic

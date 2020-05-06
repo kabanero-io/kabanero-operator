@@ -16,14 +16,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.8.0"
+    version: "0.9.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.8.0"
+    tag: "0.9.0-rc.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.8.0
+    image: kabanero/kabanero-command-line-services:0.9.0-rc.1
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -62,10 +62,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/landing
-    tag: "0.8.0"
+    tag: "0.9.0-rc.1"
 
     # Overrides the image uri
-    image: kabanero/landing:0.8.0
+    image: kabanero/landing:0.9.0-rc.1
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
@@ -98,8 +98,8 @@ spec:
           image: kabanero/che-devfile-registry:0.11.0
 
         # Specifies a custom cluster role to user for the Che workspaces uses the default roles if left blank.
-        # The default value is eclipse-codewind.
-        cheWorkspaceClusterRole: eclipse-codewind
+        # The default value is kabanero-codewind.
+        cheWorkspaceClusterRole: kabanero-codewind
 
         # TLS mode for Che. Make sure you either have public cert, or set selfSignedCert to true. The default value is false.
         tlsSupport: false
@@ -117,12 +117,19 @@ spec:
     repositories: 
     - name: incubator
       https:
-        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.8.0/kabanero-stack-hub-index.yaml
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.1/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 3f3e440b3eed24273fd43c40208fdd95de6eadeb82b7bb461f52e1e5da7e239d
+      sha256: 850dfa631d957ba66978a4701dc08b8bd41cc9ca52c0cde8344941032354a770
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.8.0/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.2/default-kabanero-pipelines.tar.gz
+
+  gitops:
+    pipelines:
+    - id: gitops
+      sha256: 035d4c99f616f346f2452c9a0a14817762c378299c5623b4793401323d1d7828
+      https:
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.2/kabanero-gitops-pipelines.tar.gz
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
@@ -145,3 +152,21 @@ spec:
     # Kabanero CLI and Console to administer the stack.
     teams:
     - adminTeam
+
+  # Kabanero events operator configuration
+  events:
+    # The events operator is enabled by default.  It can be disabled
+    # by setting `enable` to `false`.
+    enable: true
+
+    # Overrides the version of the events operator, as defined in
+    # config/versions.yaml
+    version: "0.9.0"
+
+    # Overrides the events-operator image as a separate repository or tag
+    repository: kabanero/events-operator
+    tag: "0.1.0"
+
+    # Overrides the events-operator image uri
+    image: kabanero/events-operator:0.1.0
+    

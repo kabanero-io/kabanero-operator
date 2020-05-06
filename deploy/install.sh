@@ -49,7 +49,7 @@ fi
 # Check to see if we're upgrading, and if so, that we're at N-1 or N.
 if [ `oc get subscription kabanero-operator -n kabanero --no-headers --ignore-not-found | wc -l` -gt 0 ] ; then
 		CSV=$(oc get subscription kabanero-operator -n kabanero --output=jsonpath={.status.installedCSV})
-    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[78]\..* ]]; then
+    if ! [[ "$CSV" =~ ^kabanero-operator\.v0\.[89]\..* ]]; then
         printf "Cannot upgrade kabanero-operator CSV version $CSV to $RELEASE.  Upgrade is supported from the previous minor release."
         exit 1
     fi
@@ -318,8 +318,8 @@ oc new-project tekton-pipelines || true
 
 openshift_master_default_subdomain=$(oc get ingresses.config.openshift.io cluster --output=jsonpath={.spec.domain})
 
-curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | oc apply -f -
-oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-dashboard-release.yaml
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/{openshift_master_default_subdomain}/${openshift_master_default_subdomain}/" | sed "s/openshift-pipelines/tekton-pipelines/" | oc apply -f -
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1/openshift-tekton-dashboard-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc apply -f -
 
 # Network policy for kabanero and tekton pipelines namespaces
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=23-cr-network-policy
@@ -337,8 +337,11 @@ oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pip
 # tekton-pipelines namespace (for use by tekton github webhooks extension)
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
+# Create service account to used by pipelines
+oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=26-events-sa
+
 # Install complete.  give instructions for how to create an instance.
-SAMPLE_KAB_INSTANCE_URL=https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml
+SAMPLE_KAB_INSTANCE_URL="${SAMPLE_KAB_INSTANCE_URL:-https://github.com/kabanero-io/kabanero-operator/releases/download/${RELEASE}/default.yaml}"
 
 
 # Turn off debugging, and wait 3 seconds for it to flush output, before
