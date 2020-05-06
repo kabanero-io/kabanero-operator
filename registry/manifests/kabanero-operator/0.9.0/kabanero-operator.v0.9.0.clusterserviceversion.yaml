@@ -10,7 +10,7 @@ metadata:
     containerImage: kabanero/kabanero-operator:latest
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
-    olm.skipRange: '>=0.8.0 <0.9.0'
+    olm.skipRange: '>=0.6.1 <0.9.0'
     repository: https://github.com/kabanero-io/kabanero-operator
     support: IBM
     alm-examples: |-
