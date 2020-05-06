@@ -1781,8 +1781,8 @@ func TestReconcileActiveVersionsSkipCertVerify(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Should be an error in the status message"))
 	}
 
-	if !strings.Contains(stackResource.Status.Versions[0].StatusMessage, "\"router-ca\" not found") {
-		t.Fatal(fmt.Sprintf("The error message should contain the string \"\"router-ca\" not found\". Error message: %v", stackResource.Status.Versions[0].StatusMessage))
+	if !strings.Contains(stackResource.Status.Versions[0].StatusMessage, "x509") {
+		t.Fatal(fmt.Sprintf("The error message should contain the string \"x509\". Error message: %v", stackResource.Status.Versions[0].StatusMessage))
 	}
 
 	// Now, try again skipping cert verify.

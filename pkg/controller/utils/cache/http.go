@@ -7,9 +7,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-
+	"sync"
+	
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
 	
+	"github.com/go-logr/logr"
 	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,26 +42,44 @@ func GetHTTPClient(accessToken []byte, transport *http.Transport) (*http.Client,
 	return http.DefaultClient, nil
 }
 
-// Populates a TLS config struct based specified input.
-func GetTLSCConfig(c client.Client, skipCertVerify bool) (*tls.Config, error) {
+// Log mutex
+var logRouterCertError sync.Once
+
+// Log that there was a problem obtaining the default ingress router CA
+// certificate.  Only log once as the same error is likely to happen
+// over and over again.
+func logIngressRouterCertError(logger logr.Logger, err error) {
+	logRouterCertError.Do(func() {
+		logger.Error(err, "Unable to add the default Ingress certificate to the list of trusted certificates")
+	})
+}
+
+// Populates a TLS config struct based specified input.  Returns nil if the
+// default TLS config should be used.
+func GetTLSCConfig(c client.Client, skipCertVerify bool, logger logr.Logger) (*tls.Config, error) {
 	var tlsConfig *tls.Config
 	if skipCertVerify {
 		return &tls.Config{InsecureSkipVerify: skipCertVerify}, nil
 	}
 
+	// Try to get the ingress router CA cert, if it exists.
 	ingressRouterCACert, err := getIngressRouterCACert(c)
 	if err != nil {
+		logIngressRouterCertError(logger, err)
 		return nil, err
 	}
 
 	systemCertPool, err := x509.SystemCertPool()
 	if err != nil {
+		logIngressRouterCertError(logger, err)
 		return nil, err
 	}
 
 	ok := systemCertPool.AppendCertsFromPEM(ingressRouterCACert)
 	if !ok {
-		return nil, fmt.Errorf("Unable to append ingress router certificate to system cert pool.")
+		err = fmt.Errorf("Unable to append ingress router certificate to system cert pool.")
+		logIngressRouterCertError(logger, err)
+		return nil, err
 	}
 	tlsConfig = &tls.Config{RootCAs: systemCertPool}
 

@@ -62,11 +62,9 @@ func GetFromCache(c client.Client, url string, skipCertVerify bool) ([]byte, err
 	}
 
 	// Drive the request. Certificate validation is not disabled by default.
+	// Ignore the error from TLS config - if nil comes back, use the default.
 	transport := &http.Transport{DisableCompression: true}
-	tlsConfig, err := GetTLSCConfig(c, skipCertVerify)
-	if err != nil {
-		return nil, err
-	}
+	tlsConfig, _ := GetTLSCConfig(c, skipCertVerify, cachelog)
 
 	transport.TLSClientConfig = tlsConfig
 

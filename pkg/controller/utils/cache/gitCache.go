@@ -63,11 +63,9 @@ func GetStackDataUsingGit(c client.Client, gitRelease kabanerov1alpha2.GitReleas
 func getGitClient(c client.Client, gitRelease kabanerov1alpha2.GitReleaseInfo, skipCertVerification bool, namespace string, reqLogger logr.Logger) (*github.Client, error) {
 	var client *github.Client
 
-	tlsConfig, err := GetTLSCConfig(c, skipCertVerification)
-	if err != nil {
-		return nil, err
-	}
-
+	// Ignore the error that may come back from GetTLSConfig, and use the
+	// default TLS config.
+	tlsConfig, _ := GetTLSCConfig(c, skipCertVerification, gitCachelog)
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 
 	// Search all secrets under the given namespace for the one containing the required hostname.
