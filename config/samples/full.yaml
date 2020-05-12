@@ -9,14 +9,14 @@ metadata:
 spec:
   # The platform version determines the desired version for all components, but those
   # can be overriden individually as well
-  version: "0.9.0"
+  version: "0.10.0"
 
   targetNamespaces:
   - kabanero
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.9.0"
+    version: "0.10.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
@@ -31,20 +31,9 @@ spec:
     # You can include multiple values in a single entry. For example, 1m30s is equivalent to 90 seconds.
     sessionExpirationSeconds: "1440m"
 
-  collectionController:
-    # Overrides the setting for version on this component
-    version: "0.9.0"
-
-    # Overrides the image as a separate repository or tag
-    repository: kabanero/kabanero-operator
-    tag: "TRAVIS_TAG"
-
-    # Overrides the image uri
-    image: kabanero/kabanero-operator:TRAVIS_TAG
-
   stackController:
     # Overrides the setting for version on this component
-    version: "0.9.0"
+    version: "0.10.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator
@@ -58,7 +47,7 @@ spec:
     enable: true
 
     # Overrides the setting for version on this component
-    version: "0.9.0"
+    version: "0.10.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/landing
@@ -69,7 +58,7 @@ spec:
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
-    version: "0.9.0"
+    version: "0.10.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator
@@ -88,7 +77,7 @@ spec:
         # Image used in Devfile registry deployment.
         devFileRegistryImage:
           # Overrides the setting for version on this component.
-          version: "0.9.0"
+          version: "0.10.0"
 
           # Overrides the image as a separate repository or tag
           repository: kabanero/che-devfile-registry
@@ -161,7 +150,7 @@ spec:
 
     # Overrides the version of the events operator, as defined in
     # config/versions.yaml
-    version: "0.9.0"
+    version: "0.10.0"
 
     # Overrides the events-operator image as a separate repository or tag
     repository: kabanero/events-operator

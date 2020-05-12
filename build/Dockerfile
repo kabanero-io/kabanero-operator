@@ -16,7 +16,6 @@ ENV OPERATOR=/usr/local/bin/kabanero-operator \
 # install operator binary and supporting controllers.
 COPY build/_output/bin/kabanero-operator ${OPERATOR}
 COPY build/_output/bin/kabanero-operator-stack-controller /usr/local/bin/kabanero-operator-stack-controller
-COPY build/_output/bin/kabanero-operator-collection-controller /usr/local/bin/kabanero-operator-collection-controller
 COPY build/_output/bin/admission-webhook /usr/local/bin/admission-webhook
 
 COPY build/bin /usr/local/bin

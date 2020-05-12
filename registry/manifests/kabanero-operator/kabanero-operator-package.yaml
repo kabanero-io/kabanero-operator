@@ -16,5 +16,7 @@ channels:
   currentCSV: kabanero-operator.v0.8.0
 - name: release-0.9
   currentCSV: kabanero-operator.v0.9.0
-defaultChannel: release-0.9
+- name: release-0.10
+  currentCSV: kabanero-operator.v0.10.0
+defaultChannel: release-0.10
 
