@@ -127,6 +127,14 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: kabanero-cli
+  labels:
+    app: kabanero-cli
+    app.kubernetes.io/name: kabanero-cli
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: kabanero-cli
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   replicas: 1
   selector:
