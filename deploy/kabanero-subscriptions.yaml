@@ -169,7 +169,7 @@ metadata:
   labels:
     kabanero.io/install: 14-subscription
 spec:
-  channel: release-0.9
+  channel: release-0.10
   installPlanApproval: Automatic
   name: kabanero-operator
   source: kabanero-catalog

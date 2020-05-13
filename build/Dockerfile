@@ -4,7 +4,7 @@ FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 LABEL vendor="Kabanero" \
       name="Kabanero Operator" \
       summary="Image for Kabanero Operator" \
-      description="This image contains the controller for the Kabanero Foundation and Collection.  See https://github.com/kabanero-io/kabanero-operator/"
+      description="This image contains the controller for the Kabanero Foundation.  See https://github.com/kabanero-io/kabanero-operator/"
 
 # The license must be here for Redhat container certification
 COPY LICENSE /licenses/
