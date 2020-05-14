@@ -333,7 +333,10 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 			// Update the status of the Stack object to reflect the images used
 			for _, img := range curSpec.Images {
-				digest := getStatusImageDigest(c, *stackResource, curSpec, img.Image, logger)
+				digest, err := getStatusImageDigest(c, *stackResource, curSpec, img.Image, logger)
+				if err != nil {
+					newStackVersionStatus.Status = kabanerov1alpha2.StackStateError
+				}
 				newStackVersionStatus.Images = append(newStackVersionStatus.Images, kabanerov1alpha2.ImageStatus{Id: img.Id, Image: img.Image, Digest: digest})
 			}
 		} else {
@@ -366,7 +369,7 @@ func getStackForSpecVersion(spec kabanerov1alpha2.StackVersion, stacks []resolve
 // not the activation digest. More precisely, the digest may not necessarily be the initial activation digest
 // because we allow stack activation despite there being a failure when retrieving the digest and the
 // image/digest may have changed before the next successful retry.
-func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, targetImg string, logger logr.Logger) kabanerov1alpha2.ImageDigest {
+func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, targetImg string, logger logr.Logger) (kabanerov1alpha2.ImageDigest, error) {
 	digest := kabanerov1alpha2.ImageDigest{}
 	foundTargetImage := false
 
@@ -397,17 +400,19 @@ func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack,
 		registry, err := sutils.GetImageRegistry(img)
 		if err != nil {
 			digest.Message = fmt.Sprintf("Unable to parse registry from image: %v. Associated stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+			return digest, err
 		} else {
 			imgDig, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, curSpec.SkipRegistryCertVerification, logger, img)
 			if err != nil {
 				digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v. Associated stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+				return digest, err
 			} else {
 				digest.Activation = imgDig
 			}
 		}
 	}
 
-	return digest
+	return digest, nil
 }
 
 // Retrieves the input image digest from the hosting repository.
