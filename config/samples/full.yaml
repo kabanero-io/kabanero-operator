@@ -169,4 +169,8 @@ spec:
 
     # Overrides the events-operator image uri
     image: kabanero/events-operator:0.1.0
-    
+
+  # Single Sign-on
+  sso:
+    adminSecretName: rhsso-secret
+    enable: false
