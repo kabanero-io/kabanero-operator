@@ -54,6 +54,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "events", function: reconcileEvents},
 	{name: "sso", function: reconcileSso},
 	{name: "gitops", function: reconcileGitopsPipelines},
+	{name: "target namespaces", function: reconcileTargetNamespaces},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -380,13 +381,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 	}
 
-	// Reconcile the targetNamespaces
-	err = reconcileTargetNamespaces(ctx, instance, r.client, reqLogger)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling targetNamespaces")
-		return reconcile.Result{}, err
-	}
-
 	// Deploy feature collection resources.
 	err = reconcileFeaturedStacks(ctx, instance, r.client, reqLogger)
 	if err != nil {
@@ -515,6 +509,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 	if err != nil {
 		return err
 	}
+
+	// Remove the cross-namespace objects that target namespaces use.
+	err = cleanupTargetNamespaces(ctx, k, client)
+	if err != nil {
+		return err
+	}
 	
 	return nil
 }
@@ -553,6 +553,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
 	isGitopsReady, _ := getGitopsStatus(k)
+	isTargetNamespacesReady, _ := getTargetNamespacesStatus(k)
 
 	// Set the overall status.
 	isKabaneroReady := isCollectionControllerReady &&
@@ -567,7 +568,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isEventsReady &&
 		isAdmissionControllerWebhookReady &&
 		isSsoReady &&
-		isGitopsReady
+		isGitopsReady &&
+		isTargetNamespacesReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.Message = ""
