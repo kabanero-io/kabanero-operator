@@ -391,6 +391,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: events-operator
+  labels:
+    name: events-operator
+    app.kubernetes.io/name: events-operator
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: events-operator
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   replicas: 1
   selector:
