@@ -103,7 +103,7 @@ oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Tekton Dashboard
-curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1.2/openshift-tekton-webhooks-extension-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
+curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1.1/openshift-tekton-webhooks-extension-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
 curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1.2/openshift-tekton-dashboard-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
 
 # Delete CustomResources, do not delete namespaces , which can lead to finalizer problems.
