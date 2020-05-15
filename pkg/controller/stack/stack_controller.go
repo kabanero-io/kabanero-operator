@@ -188,10 +188,11 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Force a requeue if there are failed stacks.
-	// This is likely due to a failed image digest lookup
-	// These should be retried, and since they are hosted outside of Kubernetes
-	if errorStacks(instance.Status) && (rr.Requeue == false) {
-		reqLogger.Info("Forcing requeue due to an error in a stack version")
+	// This is likely due to a failed image digest lookup.
+	// These should be retried, and since they are hosted outside of Kubernetes.
+	_, errorSummary := stackSummary(instance.Status)
+	if len(errorSummary) != 0 && (rr.Requeue == false) {
+		reqLogger.Info(fmt.Sprintf("An error was detected on one or more versions of stack %v. Error version summary: [%v]. Forcing requeue.", instance.Name, errorSummary))
 		rr.Requeue = true
 		rr.RequeueAfter = 60 * time.Second
 	}
@@ -213,25 +214,17 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	return false
 }
 
-// Check to see if the status contains any stack versions that are in error state
-func errorStacks(status kabanerov1alpha2.StackStatus) bool {
-	for _, version := range status.Versions {
-		if version.Status == kabanerov1alpha2.StackStateError {
-			return true
-		}
-	}
-	return false
-}
-
-
-
-// Create a stack status summary string
-func stackSummary(status kabanerov1alpha2.StackStatus) string {
+// Creates an stack status summary along with a summary of versions containing errors.
+func stackSummary(status kabanerov1alpha2.StackStatus) (string, string) {
 	var summary = make([]string, len(status.Versions))
+	var errorSummary []string
 	for i, version := range status.Versions {
 		summary[i] = fmt.Sprintf("%v: %v", version.Version, version.Status)
+		if version.Status == kabanerov1alpha2.StackStateError {
+			errorSummary = append(errorSummary, fmt.Sprintf("%v", version.Version))
+		}
 	}
-	return fmt.Sprintf("[ %v ]", strings.Join(summary, ", "))
+	return fmt.Sprintf("[ %v ]", strings.Join(summary, ", ")), fmt.Sprintf(strings.Join(errorSummary, ", "))
 }
 
 // Used internally by ReconcileStack to store matching stacks
@@ -268,7 +261,6 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 
 	return reconcile.Result{}, nil
 }
-
 
 func gitReleaseSpecToGitReleaseInfo(gitRelease kabanerov1alpha2.GitReleaseSpec) kabanerov1alpha2.GitReleaseInfo {
 	return kabanerov1alpha2.GitReleaseInfo{Hostname: gitRelease.Hostname, Organization: gitRelease.Organization, Project: gitRelease.Project, Release: gitRelease.Release, AssetName: gitRelease.AssetName}
@@ -369,7 +361,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
 
-	newStackStatus.Summary = stackSummary(newStackStatus)
+	newStackStatus.Summary, _ = stackSummary(newStackStatus)
 
 	stackResource.Status = newStackStatus
 
