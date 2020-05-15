@@ -11,6 +11,6 @@ spec:
         url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.3/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: d4c62613c52f5e89e3ccc3938d4ae02b7ae2df030ebe7d44533640cb3073062d
+      sha256: 499e70c339d845130519f4bcbe1487c5aaeb5e94b57c8fb241315f33d99e2839
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.4/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.5/default-kabanero-pipelines.tar.gz
