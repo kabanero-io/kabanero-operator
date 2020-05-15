@@ -187,6 +187,15 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 		rr.RequeueAfter = 60 * time.Second
 	}
 
+	// Force a requeue if there are failed stacks.
+	// This is likely due to a failed image digest lookup
+	// These should be retried, and since they are hosted outside of Kubernetes
+	if errorStacks(instance.Status) && (rr.Requeue == false) {
+		reqLogger.Info("Forcing requeue due to an error in a stack version")
+		rr.Requeue = true
+		rr.RequeueAfter = 60 * time.Second
+	}
+
 	return rr, err
 }
 
@@ -203,6 +212,18 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	}
 	return false
 }
+
+// Check to see if the status contains any stack versions that are in error state
+func errorStacks(status kabanerov1alpha2.StackStatus) bool {
+	for _, version := range status.Versions {
+		if version.Status == kabanerov1alpha2.StackStateError {
+			return true
+		}
+	}
+	return false
+}
+
+
 
 // Create a stack status summary string
 func stackSummary(status kabanerov1alpha2.StackStatus) string {
