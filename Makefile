@@ -257,10 +257,10 @@ int-uninstall:
 	KABANERO_SUBSCRIPTIONS_YAML=deploy/kabanero-subscriptions.yaml KABANERO_CUSTOMRESOURCES_YAML=deploy/kabanero-customresources.yaml deploy/uninstall.sh
 
 # Stacks: Can be run in parallel ( -j ). Test manual pipeline run of stacks.
-int-test-stacks: int-test-java-microprofile int-test-java-spring-boot2 int-test-nodejs int-test-nodejs-express int-test-java-openliberty
+int-test-stacks: int-test-quarkus int-test-java-spring-boot2 int-test-nodejs int-test-nodejs-express int-test-java-openliberty
 
-int-test-java-microprofile:
-	tests/10-java-microprofile.sh
+int-test-quarkus:
+	tests/10-quarkus.sh
 
 int-test-java-spring-boot2:
 	tests/11-java-spring-boot2.sh
