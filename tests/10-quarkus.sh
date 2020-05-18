@@ -2,8 +2,8 @@
 
 set -Eeuox pipefail
 
-STACK="java-microprofile"
-APP="sample-java-microprofile" \
+STACK="quarkus"
+APP="sample-quarkus" \
 DOCKER_IMAGE="image-registry.openshift-image-registry.svc:5000/kabanero" \
 APP_REPO="https://github.com/kabanero-io/${APP}/" \
 PIPELINE_RUN="${APP}-build-deploy-pl-run-kabanero" \

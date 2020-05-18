@@ -7,24 +7,24 @@ set -Eeuox pipefail
 namespace=kabanero
 
 # Check stack exists
-if ! oc -n ${namespace} get stack java-microprofile
+if ! oc -n ${namespace} get stack quarkus
 then
-  echo "Missing ${namespace} stack java-microprofile"
+  echo "Missing ${namespace} stack quarkus"
   exit 1
 fi
 
 # Delete stack
-oc -n ${namespace} delete stack java-microprofile --ignore-not-found
+oc -n ${namespace} delete stack quarkus --ignore-not-found
 
 
-echo "Waiting for java-microprofile stack to be recreated by reconciler...."
+echo "Waiting for quarkus stack to be recreated by reconciler...."
 LOOP_COUNT=0
-until oc -n ${namespace} get stack java-microprofile
+until oc -n ${namespace} get stack quarkus
 do
   sleep 5
   LOOP_COUNT=`expr $LOOP_COUNT + 1`
   if [ $LOOP_COUNT -gt 10 ] ; then
-    echo "Timed out waiting for java-microprofile stack to be recreated by reconciler"
+    echo "Timed out waiting for quarkus stack to be recreated by reconciler"
   exit 1
  fi
 done

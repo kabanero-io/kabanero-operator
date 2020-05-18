@@ -11,13 +11,13 @@ SLEEP_SHORT="${SLEEP_SHORT:-2}"
 DOCKER_IMAGE="${DOCKER_IMAGE:-image-registry.openshift-image-registry.svc:5000/kabanero}"
 
 # Appsody project GitHub repository #
-APP_REPO="${APP_REPO:-https://github.com/kabanero-io/sample-java-microprofile/}"
+APP_REPO="${APP_REPO:-https://github.com/kabanero-io/sample-quarkus/}"
 
-APP="${APP:-sample-java-microprofile}"
-PIPELINE_RUN="${PIPELINE_RUN:-java-microprofile-build-deploy-pl-run-kabanero}"
-PIPELINE_REF="${PIPELINE_REF:-java-microprofile-build-deploy-pl}"
-DOCKER_IMAGE_REF="${DOCKER_IMAGE_REF:-java-microprofile-docker-image}"
-GITHUB_SOURCE_REF="${GITHUB_SOURCE_REF:-java-microprofile-git-source}"
+APP="${APP:-sample-quarkus}"
+PIPELINE_RUN="${PIPELINE_RUN:-quarkus-build-deploy-pl-run-kabanero}"
+PIPELINE_REF="${PIPELINE_REF:-quarkus-build-deploy-pl}"
+DOCKER_IMAGE_REF="${DOCKER_IMAGE_REF:-quarkus-docker-image}"
+GITHUB_SOURCE_REF="${GITHUB_SOURCE_REF:-quarkus-git-source}"
 
 ### Tekton Example ###
 namespace=kabanero
