@@ -28,16 +28,16 @@ metadata:
                 {
                   "name": "incubator",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.3/kabanero-stack-hub-index.yaml"
+                    "url": "https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0/kabanero-stack-hub-index.yaml"
                   }
                 }
               ],
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "499e70c339d845130519f4bcbe1487c5aaeb5e94b57c8fb241315f33d99e2839",
+                  "sha256": "63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.5/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -68,9 +68,9 @@ metadata:
               { "version": "0.2.11",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "499e70c339d845130519f4bcbe1487c5aaeb5e94b57c8fb241315f33d99e2839",
+                    "sha256": "63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.5/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],

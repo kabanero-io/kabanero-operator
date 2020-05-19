@@ -20,10 +20,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.9.0-rc.5"
+    tag: "0.9.0"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.9.0-rc.5
+    image: kabanero/kabanero-command-line-services:0.9.0
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -62,10 +62,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/landing
-    tag: "0.9.0-rc.1"
+    tag: "0.9.0"
 
     # Overrides the image uri
-    image: kabanero/landing:0.9.0-rc.1
+    image: kabanero/landing:0.9.0
 
   admissionControllerWebhook:
     # Overrides the setting for version on this component
@@ -117,19 +117,19 @@ spec:
     repositories: 
     - name: incubator
       https:
-        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.3/kabanero-stack-hub-index.yaml
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 499e70c339d845130519f4bcbe1487c5aaeb5e94b57c8fb241315f33d99e2839
+      sha256: 63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.5/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz
 
   gitops:
     pipelines:
     - id: gitops
-      sha256: ae6f353073253c3ca7f861172cdc872c26446451ad07dd3f3996e406e793a0c8
+      sha256: 683e8a05482a166ad4d76b6358227d3807a66e7edd8bc80483d6a88bca6c4095
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.5/kabanero-gitops-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/kabanero-gitops-pipelines.tar.gz
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:
