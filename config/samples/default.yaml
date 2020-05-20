@@ -8,9 +8,9 @@ spec:
     repositories:
     - name: central
       https:
-        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0-rc.1/kabanero-stack-hub-index.yaml
+        url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 850dfa631d957ba66978a4701dc08b8bd41cc9ca52c0cde8344941032354a770
+      sha256: 63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0-rc.2/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz

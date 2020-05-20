@@ -84,6 +84,12 @@ metadata:
     application: sso
     rhsso: 7.3.2.GA
     template: sso73-x509-postgresql-persistent
+    app.kubernetes.io/name: sso
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: '0.1'
+    app.kubernetes.io/component: sso
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
   name: sso
 spec:
   replicas: 1
@@ -230,6 +236,12 @@ metadata:
     application: sso
     rhsso: 7.3.2.GA
     template: sso73-x509-postgresql-persistent
+    app.kubernetes.io/name: sso-postgresql
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: postgresql
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
   name: sso-postgresql
 spec:
   replicas: 1

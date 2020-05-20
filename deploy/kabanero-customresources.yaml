@@ -457,6 +457,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: event-listener-role-binding
+  namespace: kabanero
   labels:
     kabanero.io/install: 26-events-sa
 roleRef:

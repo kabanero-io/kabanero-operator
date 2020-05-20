@@ -1,0 +1,47 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kabanero-cli
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kabanero-cli
+  template:
+    metadata:
+      labels:
+        app: kabanero-cli
+        app.kubernetes.io/name: kabanero-cli
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: {{ .version }}
+        app.kubernetes.io/component: kabanero-cli
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
+    spec:
+      containers:
+        - name: kabanero-cli
+          env:
+            - name: AESEncryptionKey
+              valueFrom:
+                secretKeyRef:
+                  name: kabanero-cli-aes-encryption-key-secret
+                  key: AESEncryptionKey
+                  optional: false
+            - name: KABANERO_CLI_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 9443
+              protocol: TCP
+          imagePullPolicy: Always
+          image: {{ .image }}
+          volumeMounts:
+            - name: kabanero-cli-cert-secret
+              mountPath: /etc/tls/secrets/openshift.io/kabanero.cli/certs
+              readOnly: true
+      serviceAccountName: kabanero-cli
+      volumes:
+      - name: kabanero-cli-cert-secret
+        secret:
+          secretName: kabanero-cli-service-cert-secret

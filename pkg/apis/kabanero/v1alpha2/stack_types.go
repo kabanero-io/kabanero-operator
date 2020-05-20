@@ -18,6 +18,10 @@ const (
 	// It indicates that the stack needs to be deactivated.
 	StackDesiredStateInactive = "inactive"
 
+	// StackStateError represents a stack status error state.
+	// It indicates that the stack did not complete an activation process
+	StackStateError = "error"
+
 	// Stack digest policy: strict.
 	StackPolicyStrictDigest = "strictDigest"
 

@@ -84,12 +84,12 @@ related-software:
     orchestrations: "orchestrations/landing/0.2"
     identifiers:
       repository: "kabanero/landing"
-      tag: "0.9.0-rc.1"
+      tag: "0.9.0"
   - version: "0.9.0"
     orchestrations: "orchestrations/landing/0.2"
     identifiers:
       repository: "kabanero/landing"
-      tag: "0.9.0-rc.1"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/landing/0.1"
     identifiers:
@@ -107,16 +107,21 @@ related-software:
       tag: "0.6.0"
 
   cli-services:
+  - version: "go-prototype"
+    orchestrations: "orchestrations/cli-services/0.3"
+    identifiers:
+      repository: "davco01a/kabanero-command-line-services"
+      tag: "latest"
   - version: "0.10.0"
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.9.0-rc.1"
+      tag: "0.9.0"
   - version: "0.9.0"
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.9.0-rc.1"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/cli-services/0.1"
     identifiers:
@@ -199,7 +204,7 @@ related-software:
       repository: "kabanero/kabanero-operator-collection-controller"
       tag: "0.6.0"
 
-  stack-controller:
+  stack-controller: 
   - version: "0.10.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:

@@ -2,6 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kabanero-cli
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: kabanero-cli-service-cert-secret
+  labels:
+    app.kubernetes.io/name: kabanero-cli
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: kabanero-cli
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   selector:
     app: kabanero-cli
@@ -19,7 +28,8 @@ spec:
     kind: Service
     name: kabanero-cli
   tls:
-    termination: passthrough
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -122,61 +132,3 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: kabanero-cli
----
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-  name: kabanero-cli
-  labels:
-    app: kabanero-cli
-    app.kubernetes.io/name: kabanero-cli
-    app.kubernetes.io/instance: {{ .instance }}
-    app.kubernetes.io/version: {{ .version }}
-    app.kubernetes.io/component: kabanero-cli
-    app.kubernetes.io/part-of: kabanero
-    app.kubernetes.io/managed-by: kabanero-operator
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: kabanero-cli
-  template:
-    metadata:
-      labels:
-        app: kabanero-cli
-        app.kubernetes.io/name: kabanero-cli
-        app.kubernetes.io/instance: {{ .instance }}
-        app.kubernetes.io/version: {{ .version }}
-        app.kubernetes.io/component: kabanero-cli
-        app.kubernetes.io/part-of: kabanero
-        app.kubernetes.io/managed-by: kabanero-operator
-    spec:
-      containers:
-        - name: kabanero-cli
-          livenessProbe:
-            httpGet:
-              path: /v1/liveliness
-              port: 9443
-              scheme: HTTPS
-            initialDelaySeconds: 60
-            timeoutSeconds: 1
-            periodSeconds: 30
-            successThreshold: 1
-            failureThreshold: 3
-          env:
-            - name: AESEncryptionKey
-              valueFrom:
-                secretKeyRef:
-                  name: kabanero-cli-aes-encryption-key-secret
-                  key: AESEncryptionKey
-                  optional: false
-            - name: KABANERO_CLI_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-          ports:
-            - containerPort: 9443
-              protocol: TCP
-          imagePullPolicy: Always
-          image: {{ .image }}
-      serviceAccountName: kabanero-cli
