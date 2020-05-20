@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -11,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -21,8 +23,9 @@ import (
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
 
-	//	corev1 "k8s.io/api/core/v1"
+	"github.com/docker/docker/registry"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8runtime "k8s.io/apimachinery/pkg/runtime"
@@ -441,30 +444,29 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 	// If a secret was found, retrieve the needed information from it.
 	var password []byte
 	var username []byte
+	var dockerconfig []byte
+	var dockerconfigjson []byte
+
 	if secret != nil {
 		logr.Info(fmt.Sprintf("Secret used for image registry access: %v. Secret annotations: %v", secret.GetName(), secret.Annotations))
-		username, _ = secret.Data["username"]
-		password, _ = secret.Data["password"]
+		username, _ = secret.Data[corev1.BasicAuthUsernameKey]
+		password, _ = secret.Data[corev1.BasicAuthPasswordKey]
+		dockerconfig, _ = secret.Data[corev1.DockerConfigKey]
+		dockerconfigjson, _ = secret.Data[corev1.DockerConfigJsonKey]
 	}
 
 	// Create the authenticator mechanism to use for authentication.
 	authenticator := authn.Anonymous
 	if len(username) != 0 && len(password) != 0 {
-		encodedPwd := base64.StdEncoding.EncodeToString([]byte(password))
-		decodedPwdBytes, err := base64.StdEncoding.DecodeString(encodedPwd)
+		authenticator, err = getBasicSecAuth(username, password)
 		if err != nil {
 			return "", err
 		}
-
-		encodedUname := base64.StdEncoding.EncodeToString([]byte(username))
-		decodedUnameBytes, err := base64.StdEncoding.DecodeString(encodedUname)
+	} else if len(dockerconfig) != 0 || len(dockerconfigjson) != 0 {
+		authenticator, err = getDockerCfgSecAuth(dockerconfigjson, dockerconfig, imgRegistry, logr)
 		if err != nil {
 			return "", err
 		}
-
-		authenticator = authn.FromConfig(authn.AuthConfig{
-			Username: string(decodedUnameBytes),
-			Password: string(decodedPwdBytes)})
 	}
 
 	// Retrieve the image manifest.
@@ -495,6 +497,92 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 
 	// Return the actual digest part only.
 	return h.Hex, nil
+}
+
+// Returns an authenticator object containing basic authentication credentials.
+func getBasicSecAuth(username []byte, password []byte) (authn.Authenticator, error) {
+	authenticator := authn.FromConfig(authn.AuthConfig{
+		Username: string(username),
+		Password: string(password)})
+
+	return authenticator, nil
+}
+
+// Returns an authenticator object containing docker config credentials.
+// It handles both legacy .dockercfg file data and docker.json file data.
+func getDockerCfgSecAuth(dockerconfigjson []byte, dockerconfig []byte, imgRegistry string, reqLogger logr.Logger) (authn.Authenticator, error) {
+	// Read the docker config data into a configFile object.
+	var dcf *configfile.ConfigFile
+	if len(dockerconfigjson) != 0 {
+		cf, err := config.LoadFromReader(strings.NewReader(string(dockerconfigjson)))
+		if err != nil {
+			return nil, fmt.Errorf(fmt.Sprintf("Unable to load/map docker config data. Error: %v", err))
+		}
+		dcf = cf
+	} else {
+		cf, err := config.LegacyLoadFromReader(strings.NewReader(string(dockerconfig)))
+		if err != nil {
+			return nil, fmt.Errorf(fmt.Sprintf("Unable to load/map legacy docker config data. Error: %v", err))
+		}
+		dcf = cf
+	}
+
+	// Resolve the key that will be used to search for the server name entry in the docker config data.
+	key := resolveDockerConfRegKey(imgRegistry)
+
+	// If the docker config entry in the secret does not have an authentication entry, default
+	// to Anonymous authentication.
+	if !dcf.ContainsAuth() {
+		reqLogger.Info(fmt.Sprintf("Security credentials for server name: %v could not be found. The docker config data did not contain any authentication information.", key))
+		return authn.Anonymous, nil
+	}
+
+	// Get the security credentials for the given key (servername).
+	// The credentials are obtained from the credential store if one setup/configured; otherwise, they are obtained
+	// from the docker config data that was read.
+	// Note that it is very important that if the image being read contains the registry name as prefix,
+	// the registry name must match the server name used when the docker login was issued. For example, if
+	// private server: mysevername:5000 is used when issuing a docker login command, it is expected
+	// that the part of the image representing the registry should be mysevername:5000 (i.e.
+	// mysevername:5000/path/my-image:1.0.0)
+	cfg, err := dcf.GetAuthConfig(key)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to retrieve credentials from credentials for server name: Key: %v, Error: %v", key, err)
+	}
+
+	// No match was found for the server name key. Default to anonymous authentication.
+	if cfg == (types.AuthConfig{}) {
+		reqLogger.Info(fmt.Sprintf("Security credentials for server name: %v could not be found. The credential store or docker config data did not contain the security credentials for the mentioned server.", key))
+		return authn.Anonymous, nil
+	}
+
+	// Security credentials were found.
+	authenticator := authn.FromConfig(authn.AuthConfig{
+		Username:      cfg.Username,
+		Password:      cfg.Password,
+		Auth:          cfg.Auth,
+		IdentityToken: cfg.IdentityToken,
+		RegistryToken: cfg.RegistryToken,
+	})
+
+	return authenticator, nil
+}
+
+// Resolve the server name key to be used when searching for the server name entry in the
+// the docker config data or the credential store.
+func resolveDockerConfRegKey(imgRegistry string) string {
+	var key string
+	switch imgRegistry {
+	// Docker registry: When logging in to the docker registry, the server name can be either:
+	// nothing, docker.io, index.docker.io, or registry-1.docker.io.
+	// They are all translated to: https://index.docker.io/v1/ as the server name.
+	case registry.IndexName, registry.IndexHostname, registry.DefaultV2Registry.Hostname():
+		key = registry.IndexServer
+	default:
+		key = imgRegistry
+	}
+
+	return key
 }
 
 // Drives stack instance deletion processing. This includes creating a finalizer, handling
