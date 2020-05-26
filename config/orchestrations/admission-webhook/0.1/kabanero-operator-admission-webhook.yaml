@@ -114,6 +114,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kabanero-operator-admission-webhook
+  labels:
+    name: kabanero-operator-admission-webhook
+    app.kubernetes.io/name: kabanero-operator-admission-webhook
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: admission-webhook
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
 spec:
   replicas: 1
   selector:

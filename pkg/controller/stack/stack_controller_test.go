@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -181,7 +183,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{stackVersion026},
 		},
 		Status: kabanerov1alpha2.StackStatus{
@@ -241,7 +243,10 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	stackResourceT3.Spec.Versions[0].Images[0].Image = badImage026
 	stackResourceT3.Status.Versions[0].Images[0].Digest.Activation = ""
 	stackResourceT3.Status.Versions[0].Images[0].Digest.Message = ""
-	digest := getStatusImageDigest(client, *stackResourceT3, stackVersion026, badImage026, sctlog)
+	digest, err := getStatusImageDigest(client, *stackResourceT3, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
 	if digest == (kabanerov1alpha2.ImageDigest{}) {
 		t.Fatal("The digest structure should have a message. Digest: ", digest)
 	}
@@ -262,7 +267,10 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	stackResourceT4.Spec.Versions[0].Images[0].Image = badImage026
 	stackResourceT4.Status = kabanerov1alpha2.StackStatus{}
 
-	digest = getStatusImageDigest(client, *stackResourceT4, stackVersion026, badImage026, sctlog)
+	digest, err = getStatusImageDigest(client, *stackResourceT4, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
 	if digest == (kabanerov1alpha2.ImageDigest{}) {
 		t.Fatal("The digest structure should have a message. Digest: ", digest)
 	}
@@ -285,7 +293,10 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	stackResourceT5.Status.Versions[0].Images[0].Digest.Activation = ""
 	stackResourceT5.Status.Versions[0].Images[0].Digest.Message = testMsg6
 
-	digest = getStatusImageDigest(client, *stackResourceT5, stackVersion026, badImage026, sctlog)
+	digest, err = getStatusImageDigest(client, *stackResourceT5, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
 	if digest == (kabanerov1alpha2.ImageDigest{}) {
 		t.Fatal("The digest structure should have a message. Digest: ", digest)
 	}
@@ -346,7 +357,10 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	}
 
 	// Make targetted calls to getStatusImageDigest.
-	digest = getStatusImageDigest(client, *stackResourceT6, stackVersion026, badImage026, sctlog)
+	digest, err = getStatusImageDigest(client, *stackResourceT6, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
 	if digest == (kabanerov1alpha2.ImageDigest{}) {
 		t.Fatal("The digest structure should have a message. Digest: ", digest)
 	}
@@ -360,11 +374,13 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 		t.Fatal("The message in stackResourceT6.Status.Versions[0].Images[0].Digest.Message does not have the expected content. Message: ", digest.Message)
 	}
 
-	digest = getStatusImageDigest(client, *stackResourceT6, stackVersion027, badImage027, sctlog)
+	digest, err = getStatusImageDigest(client, *stackResourceT6, stackVersion027, badImage027, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
 	if digest == (kabanerov1alpha2.ImageDigest{}) {
 		t.Fatal("The digest structure should have a message. Digest: ", digest)
 	}
-
 	if len(digest.Activation) != 0 {
 		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT6.Status.Versions[1].Images[0] should not have an activation digest. Digest found: %v", stackResourceT6.Status.Versions[1].Images[0].Digest.Activation))
 	}
@@ -660,6 +676,180 @@ func TestStackIDValidation(t *testing.T) {
 
 	if err != nil {
 		t.Fatal(fmt.Sprintf("An error was NOT expected. Stack Id: %v is valid. Error: %v", validID, err))
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
+// Test docker registry helper methods
+// --------------------------------------------------------------------------------------------------
+func TestBasicSecAuth(t *testing.T) {
+	username := "testusername"
+	password := "testpasword"
+	authenticator, err := getBasicSecAuth([]byte(username), []byte(password))
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. username and password are valied. Error: %v", err))
+	}
+
+	authconfig, err := authenticator.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Error: %v", err))
+	}
+
+	if authconfig.Username != string(username) {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v.", authconfig.Username, username))
+	}
+
+	if authconfig.Password != string(password) {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v.", authconfig.Password, password))
+	}
+}
+
+func TestDockerCfgSecAuth(t *testing.T) {
+	// Test 1. No Security credentials present in docker config.
+	dockercfgjsonData1 := "{}"
+	authenticator1, err := getDockerCfgSecAuth([]byte(dockercfgjsonData1), []byte{}, "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The Anonymous authenticator is expected. Error: %v", err))
+	}
+
+	if authenticator1 != authn.Anonymous {
+		t.Fatal(fmt.Sprintf("The Anonymous authenticator is expected. Authenticator received: %v", authenticator1))
+	}
+
+	authconfig1, err := authenticator1.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Error: %v", err))
+	}
+
+	if *authconfig1 != (authn.AuthConfig{}) {
+		t.Fatal(fmt.Sprintf("An empty AuthConfig structure was expected. Found authconfig: %v. Expected Authconfig: %v", authconfig1, &authn.AuthConfig{}))
+	}
+
+	// Test 2. Server name key not present in docker config data.
+	dockercfgjsonData2 := `{"auths":{"https://index.docker.io/v1/":{"username":"testusername","password":"testpassword","auth":"dGVzdHVzZXJuYW1lOnRlc3RwYXNzd29yZA==","email":"test@company.com"}}}`
+	authenticator2, err := getDockerCfgSecAuth([]byte(dockercfgjsonData2), []byte{}, "bad.serer.name.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The Anonymous authenticator is expected. Error: %v", err))
+	}
+
+	if authenticator2 != authn.Anonymous {
+		t.Fatal(fmt.Sprintf("The Anonymous authenticator is expected. Authenticator received: %v", authenticator2))
+	}
+
+	// Test 3. Credential store not setup, but configured.
+	dockercfgjsonData3 := `{"auths":{"https://index.docker.io/v1/":{},"my.registry.io:5000":{}},"credsStore": "pass"}`
+	dockercfgjson3 := base64.StdEncoding.EncodeToString([]byte(dockercfgjsonData3))
+	_, err = getDockerCfgSecAuth([]byte(dockercfgjson3), []byte{}, "my.registry.io:5000", sctlog)
+	if err == nil {
+		if !strings.Contains(err.Error(), "executable file not found in $PATH") {
+			t.Fatal(fmt.Sprintf("An error explaining that there is no cred store executable setup should have been issued. Error: %v", err))
+		}
+	}
+
+	// Test 4. Valid docker config.
+	dockercfgjsonData4 := `{"auths":{"https://index.docker.io/v1/":{"username":"testusername","password":"testpassword","auth":"dGVzdHVzZXJuYW1lOnRlc3RwYXNzd29yZA==","email":"test@company.com"},"quay.io":{"auth":"cXVheXVzZXJuYW1lNDpxdWF5cGFzc3dvcmQ0","email":"test@quay.company.com"}}}`
+	authenticator4, err := getDockerCfgSecAuth([]byte(dockercfgjsonData4), []byte{}, "https://index.docker.io/v1/", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	authconfig4, err := authenticator4.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", authenticator4, err))
+	}
+
+	uname4 := "testusername"
+	if authconfig4.Username != uname4 {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig4.Username, uname4, authconfig4))
+	}
+
+	pwd4 := "testpassword"
+	if authconfig4.Password != pwd4 {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig4.Password, pwd4, authconfig4))
+	}
+
+	// Test second entry in config.
+	qauthenticator4, err := getDockerCfgSecAuth([]byte(dockercfgjsonData4), []byte{}, "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	qauthconfig4, err := qauthenticator4.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", authenticator4, err))
+	}
+
+	quname := "quayusername4"
+	if qauthconfig4.Username != quname {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig4.Username, quname, qauthconfig4))
+	}
+
+	qpwd := "quaypassword4"
+	if qauthconfig4.Password != qpwd {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig4.Password, qpwd, qauthconfig4))
+	}
+
+	// Test 5. Valid legacy docker config.
+	dockercfgData5 := `{"my.registry.io:5000":{"auth":"dGVzdHVzZXJuYW1lNTp0ZXN0cGFzc3dvcmQ1","email":"test@company.com"},"quay.io":{"auth":"cXVheXVzZXJuYW1lNTpxdWF5cGFzc3dvcmQ1","email":"test@quay.company.com"}}`
+	authenticator5, err := getDockerCfgSecAuth([]byte{}, []byte(dockercfgData5), "my.registry.io:5000", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	authconfig5, err := authenticator5.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", authenticator5, err))
+	}
+
+	uname5 := "testusername5"
+	if authconfig5.Username != uname5 {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig5.Username, uname5, authconfig5))
+	}
+
+	pwd5 := "testpassword5"
+	if authconfig5.Password != pwd5 {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig5.Password, pwd5, authconfig5))
+	}
+
+	// Test second entry in config.
+	qauthenticator5, err := getDockerCfgSecAuth([]byte{}, []byte(dockercfgData5), "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	qauthconfig5, err := qauthenticator5.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", qauthenticator5, err))
+	}
+
+	quname5 := "quayusername5"
+	if qauthconfig5.Username != quname5 {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig5.Username, quname5, qauthconfig5))
+	}
+
+	qpwd5 := "quaypassword5"
+	if qauthconfig5.Password != qpwd5 {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig5.Password, qpwd5, qauthconfig5))
+	}
+
+	// Test 6. No Security credentials present in legacy docker config.
+	dockercfgData6 := "{}"
+	authenticator6, err := getDockerCfgSecAuth([]byte{}, []byte(dockercfgData6), "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The Anonymous authenticator is expected. Error: %v", err))
+	}
+
+	if authenticator6 != authn.Anonymous {
+		t.Fatal(fmt.Sprintf("The Anonymous authenticator is expected. Authenticator received: %v", authenticator1))
+	}
+
+	authconfig6, err := authenticator6.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Error: %v", err))
+	}
+
+	if *authconfig6 != (authn.AuthConfig{}) {
+		t.Fatal(fmt.Sprintf("An empty AuthConfig structure was expected. Found authconfig: %v. Expected Authconfig: %v", authconfig6, &authn.AuthConfig{}))
 	}
 }
 

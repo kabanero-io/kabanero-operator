@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -11,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -21,8 +23,9 @@ import (
 	cutils "github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/secret"
 
-	//	corev1 "k8s.io/api/core/v1"
+	"github.com/docker/docker/registry"
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8runtime "k8s.io/apimachinery/pkg/runtime"
@@ -187,6 +190,16 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 		rr.RequeueAfter = 60 * time.Second
 	}
 
+	// Force a requeue if there are failed stacks.
+	// This is likely due to a failed image digest lookup.
+	// These should be retried, and since they are hosted outside of Kubernetes.
+	_, errorSummary := stackSummary(instance.Status)
+	if len(errorSummary) != 0 && (rr.Requeue == false) {
+		reqLogger.Info(fmt.Sprintf("An error was detected on one or more versions of stack %v. Error version summary: [%v]. Forcing requeue.", instance.Name, errorSummary))
+		rr.Requeue = true
+		rr.RequeueAfter = 60 * time.Second
+	}
+
 	return rr, err
 }
 
@@ -204,13 +217,17 @@ func failedAssets(status kabanerov1alpha2.StackStatus) bool {
 	return false
 }
 
-// Create a stack status summary string
-func stackSummary(status kabanerov1alpha2.StackStatus) string {
+// Creates an stack status summary along with a summary of versions containing errors.
+func stackSummary(status kabanerov1alpha2.StackStatus) (string, string) {
 	var summary = make([]string, len(status.Versions))
+	var errorSummary []string
 	for i, version := range status.Versions {
 		summary[i] = fmt.Sprintf("%v: %v", version.Version, version.Status)
+		if version.Status == kabanerov1alpha2.StackStateError {
+			errorSummary = append(errorSummary, fmt.Sprintf("%v", version.Version))
+		}
 	}
-	return fmt.Sprintf("[ %v ]", strings.Join(summary, ", "))
+	return fmt.Sprintf("[ %v ]", strings.Join(summary, ", ")), fmt.Sprintf(strings.Join(errorSummary, ", "))
 }
 
 // Used internally by ReconcileStack to store matching stacks
@@ -247,7 +264,6 @@ func (r *ReconcileStack) ReconcileStack(c *kabanerov1alpha2.Stack) (reconcile.Re
 
 	return reconcile.Result{}, nil
 }
-
 
 func gitReleaseSpecToGitReleaseInfo(gitRelease kabanerov1alpha2.GitReleaseSpec) kabanerov1alpha2.GitReleaseInfo {
 	return kabanerov1alpha2.GitReleaseInfo{Hostname: gitRelease.Hostname, Organization: gitRelease.Organization, Project: gitRelease.Project, Release: gitRelease.Release, AssetName: gitRelease.AssetName}
@@ -333,7 +349,10 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 
 			// Update the status of the Stack object to reflect the images used
 			for _, img := range curSpec.Images {
-				digest := getStatusImageDigest(c, *stackResource, curSpec, img.Image, logger)
+				digest, err := getStatusImageDigest(c, *stackResource, curSpec, img.Image, logger)
+				if err != nil {
+					newStackVersionStatus.Status = kabanerov1alpha2.StackStateError
+				}
 				newStackVersionStatus.Images = append(newStackVersionStatus.Images, kabanerov1alpha2.ImageStatus{Id: img.Id, Image: img.Image, Digest: digest})
 			}
 		} else {
@@ -345,7 +364,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 		newStackStatus.Versions = append(newStackStatus.Versions, newStackVersionStatus)
 	}
 
-	newStackStatus.Summary = stackSummary(newStackStatus)
+	newStackStatus.Summary, _ = stackSummary(newStackStatus)
 
 	stackResource.Status = newStackStatus
 
@@ -366,7 +385,7 @@ func getStackForSpecVersion(spec kabanerov1alpha2.StackVersion, stacks []resolve
 // not the activation digest. More precisely, the digest may not necessarily be the initial activation digest
 // because we allow stack activation despite there being a failure when retrieving the digest and the
 // image/digest may have changed before the next successful retry.
-func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, targetImg string, logger logr.Logger) kabanerov1alpha2.ImageDigest {
+func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack, curSpec kabanerov1alpha2.StackVersion, targetImg string, logger logr.Logger) (kabanerov1alpha2.ImageDigest, error) {
 	digest := kabanerov1alpha2.ImageDigest{}
 	foundTargetImage := false
 
@@ -397,17 +416,19 @@ func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack,
 		registry, err := sutils.GetImageRegistry(img)
 		if err != nil {
 			digest.Message = fmt.Sprintf("Unable to parse registry from image: %v. Associated stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+			return digest, err
 		} else {
 			imgDig, err := retrieveImageDigest(c, stackResource.GetNamespace(), registry, curSpec.SkipRegistryCertVerification, logger, img)
 			if err != nil {
 				digest.Message = fmt.Sprintf("Unable to retrieve stack activation digest for image: %v. Associated stack: %v %v. Error: %v", img, stackResource.Spec.Name, curSpec.Version, err)
+				return digest, err
 			} else {
 				digest.Activation = imgDig
 			}
 		}
 	}
 
-	return digest
+	return digest, nil
 }
 
 // Retrieves the input image digest from the hosting repository.
@@ -423,30 +444,29 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 	// If a secret was found, retrieve the needed information from it.
 	var password []byte
 	var username []byte
+	var dockerconfig []byte
+	var dockerconfigjson []byte
+
 	if secret != nil {
 		logr.Info(fmt.Sprintf("Secret used for image registry access: %v. Secret annotations: %v", secret.GetName(), secret.Annotations))
-		username, _ = secret.Data["username"]
-		password, _ = secret.Data["password"]
+		username, _ = secret.Data[corev1.BasicAuthUsernameKey]
+		password, _ = secret.Data[corev1.BasicAuthPasswordKey]
+		dockerconfig, _ = secret.Data[corev1.DockerConfigKey]
+		dockerconfigjson, _ = secret.Data[corev1.DockerConfigJsonKey]
 	}
 
 	// Create the authenticator mechanism to use for authentication.
 	authenticator := authn.Anonymous
 	if len(username) != 0 && len(password) != 0 {
-		encodedPwd := base64.StdEncoding.EncodeToString([]byte(password))
-		decodedPwdBytes, err := base64.StdEncoding.DecodeString(encodedPwd)
+		authenticator, err = getBasicSecAuth(username, password)
 		if err != nil {
 			return "", err
 		}
-
-		encodedUname := base64.StdEncoding.EncodeToString([]byte(username))
-		decodedUnameBytes, err := base64.StdEncoding.DecodeString(encodedUname)
+	} else if len(dockerconfig) != 0 || len(dockerconfigjson) != 0 {
+		authenticator, err = getDockerCfgSecAuth(dockerconfigjson, dockerconfig, imgRegistry, logr)
 		if err != nil {
 			return "", err
 		}
-
-		authenticator = authn.FromConfig(authn.AuthConfig{
-			Username: string(decodedUnameBytes),
-			Password: string(decodedPwdBytes)})
 	}
 
 	// Retrieve the image manifest.
@@ -477,6 +497,92 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 
 	// Return the actual digest part only.
 	return h.Hex, nil
+}
+
+// Returns an authenticator object containing basic authentication credentials.
+func getBasicSecAuth(username []byte, password []byte) (authn.Authenticator, error) {
+	authenticator := authn.FromConfig(authn.AuthConfig{
+		Username: string(username),
+		Password: string(password)})
+
+	return authenticator, nil
+}
+
+// Returns an authenticator object containing docker config credentials.
+// It handles both legacy .dockercfg file data and docker.json file data.
+func getDockerCfgSecAuth(dockerconfigjson []byte, dockerconfig []byte, imgRegistry string, reqLogger logr.Logger) (authn.Authenticator, error) {
+	// Read the docker config data into a configFile object.
+	var dcf *configfile.ConfigFile
+	if len(dockerconfigjson) != 0 {
+		cf, err := config.LoadFromReader(strings.NewReader(string(dockerconfigjson)))
+		if err != nil {
+			return nil, fmt.Errorf(fmt.Sprintf("Unable to load/map docker config data. Error: %v", err))
+		}
+		dcf = cf
+	} else {
+		cf, err := config.LegacyLoadFromReader(strings.NewReader(string(dockerconfig)))
+		if err != nil {
+			return nil, fmt.Errorf(fmt.Sprintf("Unable to load/map legacy docker config data. Error: %v", err))
+		}
+		dcf = cf
+	}
+
+	// Resolve the key that will be used to search for the server name entry in the docker config data.
+	key := resolveDockerConfRegKey(imgRegistry)
+
+	// If the docker config entry in the secret does not have an authentication entry, default
+	// to Anonymous authentication.
+	if !dcf.ContainsAuth() {
+		reqLogger.Info(fmt.Sprintf("Security credentials for server name: %v could not be found. The docker config data did not contain any authentication information.", key))
+		return authn.Anonymous, nil
+	}
+
+	// Get the security credentials for the given key (servername).
+	// The credentials are obtained from the credential store if one setup/configured; otherwise, they are obtained
+	// from the docker config data that was read.
+	// Note that it is very important that if the image being read contains the registry name as prefix,
+	// the registry name must match the server name used when the docker login was issued. For example, if
+	// private server: mysevername:5000 is used when issuing a docker login command, it is expected
+	// that the part of the image representing the registry should be mysevername:5000 (i.e.
+	// mysevername:5000/path/my-image:1.0.0)
+	cfg, err := dcf.GetAuthConfig(key)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to retrieve credentials from credentials for server name: Key: %v, Error: %v", key, err)
+	}
+
+	// No match was found for the server name key. Default to anonymous authentication.
+	if cfg == (types.AuthConfig{}) {
+		reqLogger.Info(fmt.Sprintf("Security credentials for server name: %v could not be found. The credential store or docker config data did not contain the security credentials for the mentioned server.", key))
+		return authn.Anonymous, nil
+	}
+
+	// Security credentials were found.
+	authenticator := authn.FromConfig(authn.AuthConfig{
+		Username:      cfg.Username,
+		Password:      cfg.Password,
+		Auth:          cfg.Auth,
+		IdentityToken: cfg.IdentityToken,
+		RegistryToken: cfg.RegistryToken,
+	})
+
+	return authenticator, nil
+}
+
+// Resolve the server name key to be used when searching for the server name entry in the
+// the docker config data or the credential store.
+func resolveDockerConfRegKey(imgRegistry string) string {
+	var key string
+	switch imgRegistry {
+	// Docker registry: When logging in to the docker registry, the server name can be either:
+	// nothing, docker.io, index.docker.io, or registry-1.docker.io.
+	// They are all translated to: https://index.docker.io/v1/ as the server name.
+	case registry.IndexName, registry.IndexHostname, registry.DefaultV2Registry.Hostname():
+		key = registry.IndexServer
+	default:
+		key = imgRegistry
+	}
+
+	return key
 }
 
 // Drives stack instance deletion processing. This includes creating a finalizer, handling
