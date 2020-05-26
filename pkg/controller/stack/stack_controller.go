@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	imagev1 "github.com/openshift/api/image/v1"
 )
 
 var log = logf.Log.WithName("controller_stack")
@@ -122,6 +123,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
 	}
+
+	// Index ImageStreams by status.publicDockerImageRepository
+	if err := mgr.GetFieldIndexer().IndexField(&imagev1.ImageStream{}, "status.publicDockerImageRepository", func(rawObj k8runtime.Object) []string {
+		imagestream := rawObj.(*imagev1.ImageStream)
+		return []string{imagestream.Status.PublicDockerImageRepository }
+	}); err != nil {
+		return err
+	}
+
 
 	return nil
 }
@@ -433,12 +443,46 @@ func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack,
 
 // Retrieves the input image digest from the hosting repository.
 func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, skipCertVerification bool, logr logr.Logger, image string) (string, error) {
-	// Search all secrets under the given namespace for the one containing the required hostname.
-	annotationKey := "kabanero.io/docker-"
-	secret, err := secret.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistry, annotationKey)
+	imagetocheck := image
+	imgRegistrytocheck := imgRegistry
+	
+	// Check if the image is in the local registry - imagestream using the external route
+	// If it is using the local registry, use the SA token for auth
+	imagestreamlist := &imagev1.ImageStreamList{}
+	err := c.List(context.TODO(), imagestreamlist, client.MatchingFields{"status.publicDockerImageRepository": image})
 	if err != nil {
-		newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, imgRegistry, namespace, err)
-		return "", newError
+		if !errors.IsNotFound(err) {
+			newError := fmt.Errorf("Unable to Get ImageStreamList while searching for image %v: %v", imgRegistrytocheck, err)
+			return "", newError
+		}
+	}
+
+	dsecret := &corev1.Secret{}
+	// Should only find one image locally, if so, get the svc repository from Status.DockerImageRepository
+	// Use the service account dockercfg secret for auth, there is a matching key for the svc repository
+	if len(imagestreamlist.Items) != 0 {
+		imagetocheck = imagestreamlist.Items[0].Status.DockerImageRepository
+		imgRegistrytocheck, err := sutils.GetImageRegistry(imagetocheck)
+		if err != nil {
+			newError := fmt.Errorf("Unable to parse registry from image: %v. Error: %v", imgRegistrytocheck, err)
+			return "", newError
+		}
+		annotationKey := "kubernetes.io/service-account.name"
+		serviceAccount := "kabanero-operator-stack-controller"
+		dsecret, err = secret.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, serviceAccount, annotationKey)
+		if err != nil {
+			newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, serviceAccount, namespace, err)
+			return "", newError
+		}
+	} else {
+	// Otherwise, this is not an internal image
+	// Search all secrets under the given namespace for the one containing the annotation with the required hostname.
+		annotationKey := "kabanero.io/docker-"
+		dsecret, err = secret.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistrytocheck, annotationKey)
+		if err != nil {
+			newError := fmt.Errorf("Unable to find secret matching annotation values: %v and %v in namespace %v Error: %v", annotationKey, imgRegistrytocheck, namespace, err)
+			return "", newError
+		}
 	}
 
 	// If a secret was found, retrieve the needed information from it.
@@ -447,12 +491,12 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 	var dockerconfig []byte
 	var dockerconfigjson []byte
 
-	if secret != nil {
-		logr.Info(fmt.Sprintf("Secret used for image registry access: %v. Secret annotations: %v", secret.GetName(), secret.Annotations))
-		username, _ = secret.Data[corev1.BasicAuthUsernameKey]
-		password, _ = secret.Data[corev1.BasicAuthPasswordKey]
-		dockerconfig, _ = secret.Data[corev1.DockerConfigKey]
-		dockerconfigjson, _ = secret.Data[corev1.DockerConfigJsonKey]
+	if dsecret != nil {
+		logr.Info(fmt.Sprintf("Secret used for image registry access: %v. Secret annotations: %v", dsecret.GetName(), dsecret.Annotations))
+		username, _ = dsecret.Data[corev1.BasicAuthUsernameKey]
+		password, _ = dsecret.Data[corev1.BasicAuthPasswordKey]
+		dockerconfig, _ = dsecret.Data[corev1.DockerConfigKey]
+		dockerconfigjson, _ = dsecret.Data[corev1.DockerConfigJsonKey]
 	}
 
 	// Create the authenticator mechanism to use for authentication.
@@ -463,14 +507,14 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 			return "", err
 		}
 	} else if len(dockerconfig) != 0 || len(dockerconfigjson) != 0 {
-		authenticator, err = getDockerCfgSecAuth(dockerconfigjson, dockerconfig, imgRegistry, logr)
+		authenticator, err = getDockerCfgSecAuth(dockerconfigjson, dockerconfig, imgRegistrytocheck, logr)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	// Retrieve the image manifest.
-	ref, err := name.ParseReference(image, name.WeakValidation)
+	ref, err := name.ParseReference(imagetocheck, name.WeakValidation)
 	if err != nil {
 		return "", err
 	}
