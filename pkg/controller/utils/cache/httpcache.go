@@ -71,8 +71,12 @@ func GetFromCache(c client.Client, url string, skipCertVerify bool) ([]byte, err
 	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
 
-	// If something went horribly wrong, tell the user.
+	// If something went horribly wrong, tell the user.  If we were using the
+	// default TLS config, make that part of the error message.
 	if err != nil {
+		if tlsConfig == nil {
+			return nil, fmt.Errorf("HTTP request error while using the default TLS configuration: %v", err.Error())
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
