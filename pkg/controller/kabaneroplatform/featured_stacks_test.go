@@ -192,7 +192,7 @@ func createKabanero(repositoryUrl string) *kabanerov1alpha2.Kabanero {
 				Repositories: []kabanerov1alpha2.RepositoryConfig{
 					kabanerov1alpha2.RepositoryConfig{
 						Name:  "default",
-						Https: kabanerov1alpha2.HttpsProtocolFile{Url: repositoryUrl},
+						Https: kabanerov1alpha2.HttpsProtocolFile{Url: repositoryUrl, SkipCertVerification: true},
 					},
 				},
 			},
@@ -285,7 +285,7 @@ func TestReconcileFeaturedStacksTwoRepositories(t *testing.T) {
 	stackUrl := server.URL + defaultIndexName
 	stackUrlTwo := server.URL + secondIndexName
 	k := createKabanero(stackUrl)
-	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stackUrlTwo}})
+	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stackUrlTwo, SkipCertVerification: true}})
 
 	err := reconcileFeaturedStacks(ctx, k, cl, featuredTestLogger)
 	if err != nil {
@@ -537,9 +537,10 @@ func TestResolveFeaturedStacksTwoRepositories(t *testing.T) {
 	stack_index_url := server.URL + defaultIndexName
 	stack_index_url_two := server.URL + secondIndexName
 	k := createKabanero(stack_index_url)
-	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stack_index_url_two}})
+	k.Spec.Stacks.Repositories = append(k.Spec.Stacks.Repositories, kabanerov1alpha2.RepositoryConfig{Name: "two", Https: kabanerov1alpha2.HttpsProtocolFile{Url: stack_index_url_two, SkipCertVerification: true}})
+	cl := unitTestClient{make(map[string]*kabanerov1alpha2.Stack)}
 
-	stacks, err := featuredStacks(k, nil, featuredTestLogger)
+	stacks, err := featuredStacks(k, cl, featuredTestLogger)
 	if err != nil {
 		t.Fatal("Could not resolve the featured stacks from the default index", err)
 	}

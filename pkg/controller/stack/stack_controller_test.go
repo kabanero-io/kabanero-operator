@@ -183,7 +183,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	stackResource := kabanerov1alpha2.Stack{
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
-			Name:     "java-microprofile",
+			Name: "java-microprofile",
 			Versions: []kabanerov1alpha2.StackVersion{stackVersion026},
 		},
 		Status: kabanerov1alpha2.StackStatus{
@@ -873,7 +873,7 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     "default",
 					Sha256: basicPipeline.sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl, SkipCertVerification: true},
 				}},
 				Images: []kabanerov1alpha2.Image{{
 					Id:    "default",
@@ -1002,7 +1002,7 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1247,7 +1247,7 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1439,7 +1439,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1675,7 +1675,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1777,7 +1777,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 				Images: []kabanerov1alpha2.Image{{
 					Id:    defaultImage.Id,
@@ -1972,7 +1972,7 @@ func TestReconcileActiveVersionsSkipCertVerify(t *testing.T) {
 	}
 
 	if !strings.Contains(stackResource.Status.Versions[0].StatusMessage, "x509") {
-		t.Fatal(fmt.Sprintf("The error message should contain the string \"x509\": %v", stackResource.Status.Versions[0].StatusMessage))
+		t.Fatal(fmt.Sprintf("The error message should contain the string \"x509\". Error message: %v", stackResource.Status.Versions[0].StatusMessage))
 	}
 
 	// Now, try again skipping cert verify.
@@ -2048,7 +2048,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
@@ -2057,7 +2057,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 			},
@@ -2177,7 +2177,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
@@ -2186,7 +2186,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 			},
