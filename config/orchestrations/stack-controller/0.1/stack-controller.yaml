@@ -97,6 +97,14 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - image.openshift.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: v1
 kind: ServiceAccount

@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	imagev1 "github.com/openshift/api/image/v1"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -90,6 +91,11 @@ func main() {
 	}
 
 	if err := pipelinev1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := imagev1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

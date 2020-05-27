@@ -459,7 +459,7 @@ func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, 
 	
 	// domain & path (no tag/digest)
 	imagename := namedtagged.Name()
-	
+
 	// tag
 	tagged, _ := namedtagged.(reference.Tagged)
 	imagetag := tagged.Tag()
