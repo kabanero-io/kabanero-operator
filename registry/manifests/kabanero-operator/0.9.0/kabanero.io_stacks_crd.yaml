@@ -1,0 +1,210 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: stacks.kabanero.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .metadata.creationTimestamp
+    description: CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations.
+    name: Age
+    type: date
+  - JSONPath: .status.summary
+    description: Stack summary.
+    name: Summary
+    type: string
+  group: kabanero.io
+  names:
+    kind: Stack
+    listKind: StackList
+    plural: stacks
+    singular: stack
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: Stack is the Schema for the stack API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: StackSpec defines the desired composition of a Stack
+          properties:
+            name:
+              type: string
+            versions:
+              items:
+                description: StackVersion defines the desired composition of a specific
+                  stack version.
+                properties:
+                  desiredState:
+                    type: string
+                  images:
+                    items:
+                      description: Image defines a container image used by a stack
+                      properties:
+                        id:
+                          type: string
+                        image:
+                          type: string
+                      type: object
+                    type: array
+                  pipelines:
+                    items:
+                      description: PipelineSpec defines a set of pipelines and associated
+                        resources for a component.
+                      properties:
+                        gitRelease:
+                          description: GitReleaseSpec defines customization entries
+                            for a Git release.
+                          properties:
+                            assetName:
+                              type: string
+                            hostname:
+                              type: string
+                            organization:
+                              type: string
+                            project:
+                              type: string
+                            release:
+                              type: string
+                            skipCertVerification:
+                              type: boolean
+                          type: object
+                        https:
+                          description: HttpsProtocolFile defines how to retrieve a
+                            file over https
+                          properties:
+                            skipCertVerification:
+                              type: boolean
+                            url:
+                              type: string
+                          type: object
+                        id:
+                          type: string
+                        sha256:
+                          type: string
+                      type: object
+                    type: array
+                  skipCertVerification:
+                    type: boolean
+                  skipRegistryCertVerification:
+                    type: boolean
+                  version:
+                    type: string
+                type: object
+              type: array
+          type: object
+        status:
+          description: StackStatus defines the observed state of a stack
+          properties:
+            statusMessage:
+              type: string
+            summary:
+              type: string
+            versions:
+              items:
+                description: StackVersionStatus defines the observed state of a specific
+                  stack version.
+                properties:
+                  images:
+                    items:
+                      description: ImageStatus defines a container image status used
+                        by a stack
+                      properties:
+                        digest:
+                          description: ImageDigest defines a container image digest
+                            used by a stack
+                          properties:
+                            activation:
+                              type: string
+                            message:
+                              type: string
+                          type: object
+                        id:
+                          type: string
+                        image:
+                          type: string
+                      type: object
+                    type: array
+                  location:
+                    type: string
+                  pipelines:
+                    items:
+                      description: PipelineStatus defines the observed state of the
+                        assets located within a single pipeline .tar.gz.
+                      properties:
+                        activeAssets:
+                          items:
+                            description: RepositoryAssetStatus defines the observed
+                              state of a single asset in a pipelines respository.
+                            properties:
+                              assetDigest:
+                                type: string
+                              assetName:
+                                type: string
+                              group:
+                                type: string
+                              kind:
+                                type: string
+                              namespace:
+                                type: string
+                              status:
+                                type: string
+                              statusMessage:
+                                type: string
+                              version:
+                                type: string
+                            type: object
+                          type: array
+                        digest:
+                          type: string
+                        gitRelease:
+                          description: GitReleaseInfo is all of the GitReleaseSpec
+                            information, minus the "skip cert verification" information,
+                            which is not relevant for status.
+                          properties:
+                            assetName:
+                              type: string
+                            hostname:
+                              type: string
+                            organization:
+                              type: string
+                            project:
+                              type: string
+                            release:
+                              type: string
+                          type: object
+                        name:
+                          type: string
+                        url:
+                          type: string
+                      type: object
+                    type: array
+                  status:
+                    type: string
+                  statusMessage:
+                    type: string
+                  version:
+                    type: string
+                type: object
+              type: array
+          type: object
+      type: object
+  version: v1alpha2
+  versions:
+  - name: v1alpha2
+    served: true
+    storage: true
