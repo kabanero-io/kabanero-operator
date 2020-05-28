@@ -3,7 +3,7 @@ kind: Kabanero
 metadata:
   name: kabanero
 spec:
-  version: "0.9.0"
+  version: "0.9.1"
   stacks:
     repositories:
     - name: central
@@ -11,6 +11,6 @@ spec:
         url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479
+      sha256: 1348e90cc3269b6e65837f71011bef6f0dc662781a41442cb5ce3714cb91b890
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.2/default-kabanero-pipelines.tar.gz
