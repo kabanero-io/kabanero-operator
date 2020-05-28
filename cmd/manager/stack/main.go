@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	pipelinev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	//imagev1 "github.com/openshift/api/image/v1"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -93,6 +94,22 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	// Use pr to work around issue
+	// https://github.com/kubernetes-sigs/controller-runtime/issues/362
+	// https://github.com/openshift/api/issues/270
+	// https://github.com/openshift/api/pull/461
+	if err := AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	/*
+	if err := imagev1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+  */
 
 	// Setup all Controllers
 	if err := stack.AddToManager(mgr); err != nil {
