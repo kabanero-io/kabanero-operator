@@ -302,6 +302,54 @@ rules:
   - delete
   - patch
   - watch
+- apiGroups:
+  -  apps.openshift.io
+  resources:
+  - serviceBindingRequests
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  -  kafka.strimzi.io
+  resources:
+  - kafka
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - serviceMonitor
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - postgresql.baiju.dev
+  resources:
+  - database
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
