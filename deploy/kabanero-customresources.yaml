@@ -367,7 +367,7 @@ rules:
 - apiGroups:
   - integreatly.org
   resources:
-  - grafanaDashboard
+  - grafanadashboards
   verbs:
   - get
   - list
