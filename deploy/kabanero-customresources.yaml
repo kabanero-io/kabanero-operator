@@ -364,6 +364,18 @@ rules:
   - delete
   - patch
   - watch
+- apiGroups:
+  - integreatly.org
+  resources:
+  - grafanaDashboard
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
