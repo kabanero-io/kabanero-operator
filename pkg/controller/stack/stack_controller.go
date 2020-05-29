@@ -344,6 +344,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					// If we had a problem loading the pipeline manifests, say so.
 					if value.ManifestError != nil {
 						newStackVersionStatus.StatusMessage = value.ManifestError.Error()
+						newStackVersionStatus.Status = kabanerov1alpha2.StackStateError
 					}
 				}
 			}
