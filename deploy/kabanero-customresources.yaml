@@ -377,9 +377,10 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - [""] # core API group
+  - "" # core API group
   resources:
-  - ["secrets", "configmaps"]
+  - secrets
+  - configmaps
   verbs:
   - get
   - list
