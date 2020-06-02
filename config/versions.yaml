@@ -236,3 +236,6 @@ related-software:
   serving:
   - version: "0.9.0"
     orchestrations: "orchestrations/serving/0.1"
+    identifiers:
+      repository: "FROM_POD"
+      tag: "FROM_POD"

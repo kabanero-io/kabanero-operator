@@ -13,5 +13,11 @@ func response(w http.ResponseWriter, r *http.Request) {
 
 func main() {
   http.HandleFunc("/",response)
-  log.Fatal(http.ListenAndServeTLS(":443","/tmp/serving-certs/tls.crt","/tmp/serving-certs/tls.key",nil))
+  log.Fatal(http.ListenAndServeTLS(":8443","/tmp/serving-certs/tls.crt","/tmp/serving-certs/tls.key",nil))
 }
+
+// Watch Stacks
+
+// Build registry from Stack spec
+
+// Regenerate index.json
