@@ -549,6 +549,17 @@ spec:
                   version:
                     type: string
                 type: object
+              serving:
+                properties:
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
               sso:
                 properties:
                   adminSecretName:

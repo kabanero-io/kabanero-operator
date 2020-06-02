@@ -77,6 +77,17 @@ spec:
 
     # Overrides the image uri
     image: kabanero/kabanero-operator:TRAVIS_TAG
+
+  serving:
+    # Overrides the setting for version on this component
+    version: "0.9.0"
+
+    # Overrides the image as a separate repository or tag
+    repository: kabanero/kabanero-operator
+    tag: "TRAVIS_TAG"
+
+    # Overrides the image uri
+    image: kabanero/kabanero-operator:TRAVIS_TAG
     
   codeReadyWorkspaces:
     # CodeReadyWorkspaces CR instance deployment is disabled by default. To enable it, set the enable value to true. 

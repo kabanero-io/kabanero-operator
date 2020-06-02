@@ -45,6 +45,8 @@ type KabaneroSpec struct {
 
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 
+	Serving ServingSpec `json:"serving,omitempty"`
+
 	Sso SsoCustomizationSpec `json:"sso,omitempty"`
 
 	Gitops GitopsSpec `json:"gitops,omitempty"`
@@ -226,6 +228,13 @@ type StackControllerSpec struct {
 }
 
 type AdmissionControllerWebhookCustomizationSpec struct {
+	Version    string `json:"version,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Tag        string `json:"tag,omitempty"`
+}
+
+type ServingSpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`

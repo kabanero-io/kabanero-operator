@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-operator-serving
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: kabanero-operator-serving-cert
+  labels:
+    app.kubernetes.io/name: kabanero-operator-serving
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: serving
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
+spec:
+  selector:
+    name: kabanero-operator-serving
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kabanero-operator-serving
+spec:
+  to:
+    kind: Service
+    name: kabanero-operator-serving
+  tls:
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kabanero-operator-serving
+  labels:
+    name: kabanero-operator-serving
+    app.kubernetes.io/name: kabanero-operator-serving
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: serving
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kabanero-operator-serving
+  template:
+    metadata:
+      labels:
+        name: kabanero-operator-serving
+        app.kubernetes.io/name: kabanero-operator-serving
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: {{ .version }}
+        app.kubernetes.io/component: serving
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
+    spec:
+      containers:
+        - name: kabanero-operator-serving
+          image: {{ .image }}
+          imagePullPolicy: Always
+          command:
+          - /usr/local/bin/serving
+          env:
+            - name: KABANERO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+          - mountPath: /tmp/serving-certs
+            name: kabanero-operator-serving-cert
+            readOnly: true
+      volumes:
+      - name: kabanero-operator-serving-cert
+        secret:
+          secretName: kabanero-operator-serving-cert

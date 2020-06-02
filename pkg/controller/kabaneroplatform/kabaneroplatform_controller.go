@@ -54,6 +54,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "events", function: reconcileEvents},
 	{name: "sso", function: reconcileSso},
 	{name: "gitops", function: reconcileGitopsPipelines},
+	{name: "serving", function: reconcileServing},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -515,7 +516,13 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 	if err != nil {
 		return err
 	}
-	
+
+	// Cleanup the Serving and their cross-namespace objects
+	err = cleanupServing(k, client, reqLogger)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
