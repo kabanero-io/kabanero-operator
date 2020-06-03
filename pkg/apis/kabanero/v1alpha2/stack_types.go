@@ -61,7 +61,9 @@ type StackVersion struct {
 	DesiredState         string         `json:"desiredState,omitempty"`
 	SkipCertVerification bool           `json:"skipCertVerification,omitempty"`
 	// +listType=set
-	Images []Image `json:"images,omitempty"`
+	Images               []Image        `json:"images,omitempty"`
+	Devfile              string         `json:"devfile,omitempty"`
+	Metafile             string         `json:"metafile,omitempty"`
 }
 
 func (sv StackVersion) GetVersion() string {
