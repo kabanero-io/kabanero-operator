@@ -89,12 +89,12 @@ metadata:
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: kabanero-0.9
+  channel: ocp-4.4
   config:
     resources: {}
   installPlanApproval: Automatic
-  name: openshift-pipelines-operator
-  source: kabanero-catalog
+  name: openshift-pipelines-operator-rh
+  source: redhat-operators
   sourceNamespace: openshift-marketplace
 ---
 apiVersion: operators.coreos.com/v1alpha1
@@ -105,7 +105,7 @@ metadata:
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: kabanero-0.9
+  channel: kabanero-0.10
   config:
     resources: {}
   installPlanApproval: Automatic
@@ -121,7 +121,7 @@ metadata:
   labels:
     kabanero.io/install: 13-subscription
 spec:
-  channel: kabanero-0.9
+  channel: kabanero-0.10
   config:
     resources: {}
   installPlanApproval: Automatic

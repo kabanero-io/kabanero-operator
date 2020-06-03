@@ -5,7 +5,9 @@ go 1.13
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/go-semver v0.3.0
+	github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017
 	github.com/docker/distribution v2.7.1+incompatible
+	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.3.1

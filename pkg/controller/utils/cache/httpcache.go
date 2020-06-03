@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	rlog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -43,7 +43,7 @@ var cacheLock sync.Mutex
 // Returns the requested resource, either from the cache, or from the
 // remote server.  The cache is not meant to be a "high performance" or
 // "heavily concurrent" cache.
-func GetFromCache(url string, skipCertVerify bool) ([]byte, error) {
+func GetFromCache(c client.Client, url string, skipCertVerify bool) ([]byte, error) {
 
 	// Build the request.
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -62,17 +62,21 @@ func GetFromCache(url string, skipCertVerify bool) ([]byte, error) {
 	}
 
 	// Drive the request. Certificate validation is not disabled by default.
+	// Ignore the error from TLS config - if nil comes back, use the default.
 	transport := &http.Transport{DisableCompression: true}
-	if skipCertVerify {
-		config := &tls.Config{InsecureSkipVerify: skipCertVerify}
-		transport.TLSClientConfig = config
-	}
+	tlsConfig, _ := GetTLSCConfig(c, skipCertVerify, cachelog)
+
+	transport.TLSClientConfig = tlsConfig
 
 	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
 
-	// If something went horribly wrong, tell the user.
+	// If something went horribly wrong, tell the user.  If we were using the
+	// default TLS config, make that part of the error message.
 	if err != nil {
+		if tlsConfig == nil {
+			return nil, fmt.Errorf("HTTP request error while using the default TLS configuration: %v", err.Error())
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()

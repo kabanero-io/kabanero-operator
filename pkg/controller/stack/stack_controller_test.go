@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,6 +150,16 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 	v026Digest := "026abcde"
 	v027Digest := "027abcde"
 
+	stackVersion026 := kabanerov1alpha2.StackVersion{
+		Version:      "0.2.6",
+		DesiredState: "active",
+		Pipelines:    []kabanerov1alpha2.PipelineSpec{},
+		Images: []kabanerov1alpha2.Image{{
+			Id:    "java-microprofile-026",
+			Image: "my-test-repo.io/kabanero/java-microprofile-026",
+		}},
+	}
+
 	stackVersion027 := kabanerov1alpha2.StackVersion{
 		Version:   "0.2.7",
 		Pipelines: []kabanerov1alpha2.PipelineSpec{},
@@ -172,15 +184,7 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{UID: myuid, Namespace: "kabanero"},
 		Spec: kabanerov1alpha2.StackSpec{
 			Name: "java-microprofile",
-			Versions: []kabanerov1alpha2.StackVersion{{
-				Version:      "0.2.6",
-				DesiredState: "active",
-				Pipelines:    []kabanerov1alpha2.PipelineSpec{},
-				Images: []kabanerov1alpha2.Image{{
-					Id:    "java-microprofile-026",
-					Image: "my-test-repo.io/kabanero/java-microprofile-026",
-				}},
-			}},
+			Versions: []kabanerov1alpha2.StackVersion{stackVersion026},
 		},
 		Status: kabanerov1alpha2.StackStatus{
 			Versions: []kabanerov1alpha2.StackVersionStatus{{
@@ -234,152 +238,157 @@ func TestImageActivationDigestInStackStatus(t *testing.T) {
 
 	// Test 3: Activation digest never set. Invalid image. Expectation: A message should be generated and reported.
 	// This test exercises the code path that attempts to get this digest.
+	badImage026 := "my_test_repo.io:5000/kabanero/java-microprofile-026"
 	stackResourceT3 := stackResource.DeepCopy()
-	stackResourceT3.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT3.Spec.Versions[0].Images[0].Image = badImage026
 	stackResourceT3.Status.Versions[0].Images[0].Digest.Activation = ""
 	stackResourceT3.Status.Versions[0].Images[0].Digest.Message = ""
-	err = reconcileActiveVersions(stackResourceT3, client, sctlog)
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
+	digest, err := getStatusImageDigest(client, *stackResourceT3, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
 	}
-
-	if len(stackResourceT3.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+	if digest == (kabanerov1alpha2.ImageDigest{}) {
+		t.Fatal("The digest structure should have a message. Digest: ", digest)
+	}
+	if len(digest.Activation) != 0 {
 		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT3.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT3.Status.Versions[0].Images[0].Digest.Activation))
 	}
-
-	if len(stackResourceT3.Status.Versions[0].Images[0].Digest.Message) == 0 {
+	if len(digest.Message) == 0 {
 		t.Fatal(fmt.Sprintf("The digest for stackResourceT3.Status.Versions[0].Images[0] does not have an expected error message."))
 	}
-
-	// Test 4: Same as test3 with multiple versions.
-	stackResourceT4 := stackResource.DeepCopy()
-	stackResourceT4.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
-	stackResourceT4.Status.Versions[0].Images[0].Digest.Activation = ""
-	stackResourceT4.Status.Versions[0].Images[0].Digest.Message = ""
-
-	stackVersion027T4 := *stackVersion027.DeepCopy()
-	stackVersion027StatusT4 := *stackVersion027Status.DeepCopy()
-	stackResourceT4.Spec.Versions = append(stackResourceT4.Spec.Versions, stackVersion027T4)
-	stackResourceT4.Status.Versions = append(stackResourceT4.Status.Versions, stackVersion027StatusT4)
-	stackResourceT4.Spec.Versions[1].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-027"
-	stackResourceT4.Status.Versions[1].Images[0].Digest.Activation = ""
-	stackResourceT4.Status.Versions[1].Images[0].Digest.Message = ""
-
-	err = reconcileActiveVersions(stackResourceT4, client, sctlog)
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
+	if !(strings.Contains(digest.Message, "image") && strings.Contains(digest.Message, "invalid reference format")) {
+		t.Fatal("The message in stackResourceT3.Status.Versions[0].Images[0].Digest.Message does not have the expected content. Message: ", digest.Message)
 	}
 
-	if len(stackResourceT4.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+	// Test 4: New stack. No status. Invalid image. Expectation: A digest struct with a message should be created. No activation digest.
+	// This test exercises the code path that attempts to get this digest.
+	badImage026 = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	stackResourceT4 := stackResource.DeepCopy()
+	stackResourceT4.Spec.Versions[0].Images[0].Image = badImage026
+	stackResourceT4.Status = kabanerov1alpha2.StackStatus{}
+
+	digest, err = getStatusImageDigest(client, *stackResourceT4, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
+	if digest == (kabanerov1alpha2.ImageDigest{}) {
+		t.Fatal("The digest structure should have a message. Digest: ", digest)
+	}
+	if len(digest.Activation) != 0 {
 		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT4.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT4.Status.Versions[0].Images[0].Digest.Activation))
 	}
-
-	if len(stackResourceT4.Status.Versions[0].Images[0].Digest.Message) == 0 {
+	if len(digest.Message) == 0 {
 		t.Fatal(fmt.Sprintf("The digest for stackResourceT4.Status.Versions[0].Images[0] does not have an expected error message."))
 	}
-
-	if len(stackResourceT4.Status.Versions[1].Images[0].Digest.Activation) != 0 {
-		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT4.Status.Versions[1].Images[0] should not have an activation digest. Digest found: %v", stackResourceT4.Status.Versions[1].Images[0].Digest.Activation))
+	if !(strings.Contains(digest.Message, "image") && strings.Contains(digest.Message, "invalid reference format")) {
+		t.Fatal("The message in stackResourceT4.Status.Versions[0].Images[0].Digest.Message does not have the expected content. Message: ", digest.Message)
 	}
 
-	if len(stackResourceT4.Status.Versions[1].Images[0].Digest.Message) == 0 {
-		t.Fatal(fmt.Sprintf("The digest for stackResourceT4.Status.Versions[1].Images[0] does not have an expected error message."))
-	}
-
-	// Test 5: New stack. No status. Invalid image. Expectation: A digest struct with a message should be created. No activation digest.
+	// Test 5: Stack with digest error message in status. Invalid image. Expectation: The message in the digest should change to invalid image message.
 	// This test exercises the code path that attempts to get this digest.
+	badImage026 = "my_test_repo.io:5000/kabanero/java-microprofile-026"
+	testMsg6 := "testDigestMessageError"
 	stackResourceT5 := stackResource.DeepCopy()
-	stackResourceT5.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
-	stackResourceT5.Status = kabanerov1alpha2.StackStatus{}
+	stackResourceT5.Spec.Versions[0].Images[0].Image = badImage026
+	stackResourceT5.Status.Versions[0].Images[0].Digest.Activation = ""
+	stackResourceT5.Status.Versions[0].Images[0].Digest.Message = testMsg6
 
-	err = reconcileActiveVersions(stackResourceT5, client, sctlog)
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
+	digest, err = getStatusImageDigest(client, *stackResourceT5, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
 	}
-
-	if len(stackResourceT5.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+	if digest == (kabanerov1alpha2.ImageDigest{}) {
+		t.Fatal("The digest structure should have a message. Digest: ", digest)
+	}
+	if len(digest.Activation) != 0 {
 		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT5.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT5.Status.Versions[0].Images[0].Digest.Activation))
 	}
-
-	if len(stackResourceT5.Status.Versions[0].Images[0].Digest.Message) == 0 {
+	if len(digest.Message) == 0 {
 		t.Fatal(fmt.Sprintf("The digest for stackResourceT5.Status.Versions[0].Images[0] does not have an expected error message."))
 	}
+	if digest.Message == testMsg6 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT5.Status.Versions[0].Images[0] does not have an expected error message stating invalid image. Message found: %v", testMsg6))
+	}
+	if !(strings.Contains(digest.Message, "image") && strings.Contains(digest.Message, "invalid reference format")) {
+		t.Fatal("The message in stackResourceT5.Status.Versions[0].Images[0].Digest.Message does not have the expected content. Message: ", digest.Message)
+	}
 
-	// Test 6: Stack with digest error message in status. Invalid image. Expectation: The message in the digest should change to invalid image message.
-	// This test exercises the code path that attempts to get this digest.
-	testMsg6 := "testDigestMessageError"
+	// Test 6: Stack deactivate and activate sequence. Bad image. Expectation: On activate, because we are using a common
+	// image parser, there should be a failure during image parsing before the digest is processed.
+	// More targetted calls to getStatusImageDigest with an invalid image, should cause the creation of a digest struct with
+	// a message. No activation digest.
+	badImage026 = "my-test_repo.io:5000/kabanero/java-microprofile-026"
+	badImage027 := "my-test_repo.io:5000/kabanero/java-microprofile-027"
 	stackResourceT6 := stackResource.DeepCopy()
-	stackResourceT6.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
-	stackResourceT6.Status.Versions[0].Images[0].Digest.Activation = ""
-	stackResourceT6.Status.Versions[0].Images[0].Digest.Message = testMsg6
-	stackResourceT6.Status = kabanerov1alpha2.StackStatus{}
+	stackResourceT6.Spec.Versions[0].Images[0].Image = badImage026
+	stackResourceT6.Spec.Versions[0].DesiredState = "inactive"
+	stackVersion027T6 := *stackVersion027.DeepCopy()
+	stackVersion027StatusT6 := *stackVersion027Status.DeepCopy()
+	stackResourceT6.Spec.Versions = append(stackResourceT6.Spec.Versions, stackVersion027T6)
+	stackResourceT6.Status.Versions = append(stackResourceT6.Status.Versions, stackVersion027StatusT6)
+	stackResourceT6.Spec.Versions[1].Images[0].Image = badImage027
+	stackResourceT6.Spec.Versions[1].DesiredState = "inactive"
 
+	// Deactivate:
 	err = reconcileActiveVersions(stackResourceT6, client, sctlog)
 	if err != nil {
 		t.Fatal("Returned error: " + err.Error())
 	}
 
-	if len(stackResourceT6.Status.Versions[0].Images[0].Digest.Activation) != 0 {
+	if stackResourceT6.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive && len(stackResourceT6.Status.Versions) != 0 {
+		t.Fatal(fmt.Sprintf("Stack version stackResourceT6 was not deactivated. Stack version: %v", stackResourceT6.Status.Versions[0]))
+	}
+
+	// Activate. It should fail because we are now using a common image parser that will fail activation when parsing
+	// the image to remove the tag.
+	stackResourceT6.Spec.Versions[0].DesiredState = "active"
+	stackResourceT6.Spec.Versions[1].DesiredState = "active"
+
+	err = reconcileActiveVersions(stackResourceT6, client, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported.")
+	} else if !(strings.Contains(err.Error(), "image") && strings.Contains(err.Error(), "invalid reference format")) {
+		t.Fatal("An error reporting an invalid image should have been reported. Error: ", err)
+	}
+
+	// Make sure the stack is still inactive. No version information should be present.
+	if stackResourceT6.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive && len(stackResourceT6.Status.Versions) != 0 {
+		t.Fatal(fmt.Sprintf("Stack version stackResourceT6 was not deactivated. Stack version: %v", stackResourceT6.Status.Versions[0]))
+	}
+
+	// Make targetted calls to getStatusImageDigest.
+	digest, err = getStatusImageDigest(client, *stackResourceT6, stackVersion026, badImage026, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
+	}
+	if digest == (kabanerov1alpha2.ImageDigest{}) {
+		t.Fatal("The digest structure should have a message. Digest: ", digest)
+	}
+	if len(digest.Activation) != 0 {
 		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT6.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT6.Status.Versions[0].Images[0].Digest.Activation))
 	}
-
-	if len(stackResourceT6.Status.Versions[0].Images[0].Digest.Message) == 0 {
+	if len(digest.Message) == 0 {
 		t.Fatal(fmt.Sprintf("The digest for stackResourceT6.Status.Versions[0].Images[0] does not have an expected error message."))
 	}
-
-	if stackResourceT6.Status.Versions[0].Images[0].Digest.Message == testMsg6 {
-		t.Fatal(fmt.Sprintf("The digest for stackResourceT6.Status.Versions[0].Images[0] does not have an expected error message stating invalid image. Message found: %v", testMsg6))
+	if !(strings.Contains(digest.Message, "image") && strings.Contains(digest.Message, "invalid reference format")) {
+		t.Fatal("The message in stackResourceT6.Status.Versions[0].Images[0].Digest.Message does not have the expected content. Message: ", digest.Message)
 	}
 
-	// Test 7: Stack deactivate and activate sequence. Bad image. Expectation: On activate, a digest struct with a message should be created. No activation digest.
-	// This test exercises the code path that attempts to get this digest.
-	stackResourceT7 := stackResource.DeepCopy()
-	stackResourceT7.Spec.Versions[0].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-026"
-	stackResourceT7.Spec.Versions[0].DesiredState = "inactive"
-	stackVersion027T7 := *stackVersion027.DeepCopy()
-	stackVersion027StatusT7 := *stackVersion027Status.DeepCopy()
-	stackResourceT7.Spec.Versions = append(stackResourceT7.Spec.Versions, stackVersion027T7)
-	stackResourceT7.Status.Versions = append(stackResourceT7.Status.Versions, stackVersion027StatusT7)
-	stackResourceT7.Spec.Versions[1].Images[0].Image = "my-test-repo.io:5000/kabanero/java-microprofile-027"
-	stackResourceT7.Spec.Versions[1].DesiredState = "inactive"
-
-	// Deactivate:
-	err = reconcileActiveVersions(stackResourceT7, client, sctlog)
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
+	digest, err = getStatusImageDigest(client, *stackResourceT6, stackVersion027, badImage027, sctlog)
+	if err == nil {
+		t.Fatal("An error should have been reported. Digest: ", digest)
 	}
-
-	if stackResourceT7.Status.Versions[0].Status != kabanerov1alpha2.StackDesiredStateInactive && len(stackResourceT7.Status.Versions[0].Images) != 0 {
-		t.Fatal(fmt.Sprintf("Stack version stackResourceT7.Status.Versions[0] was not deactivated. Stack version: %v", stackResourceT7.Status.Versions[0]))
-
+	if digest == (kabanerov1alpha2.ImageDigest{}) {
+		t.Fatal("The digest structure should have a message. Digest: ", digest)
 	}
-	if stackResourceT7.Status.Versions[1].Status != kabanerov1alpha2.StackDesiredStateInactive && len(stackResourceT7.Status.Versions[1].Images) != 0 {
-		t.Fatal(fmt.Sprintf("Stack version stackResourceT7.Status.Versions[1] was not deactivated. Stack version: %v", stackResourceT7.Status.Versions[1]))
+	if len(digest.Activation) != 0 {
+		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT6.Status.Versions[1].Images[0] should not have an activation digest. Digest found: %v", stackResourceT6.Status.Versions[1].Images[0].Digest.Activation))
 	}
-
-	// Activate.
-	stackResourceT7.Spec.Versions[0].DesiredState = "active"
-	stackResourceT7.Spec.Versions[1].DesiredState = "active"
-
-	err = reconcileActiveVersions(stackResourceT7, client, sctlog)
-	if err != nil {
-		t.Fatal("Returned error: " + err.Error())
+	if len(digest.Message) == 0 {
+		t.Fatal(fmt.Sprintf("The digest for stackResourceT6.Status.Versions[1].Images[0] does not have an expected error message."))
 	}
-
-	if len(stackResourceT7.Status.Versions[0].Images[0].Digest.Activation) != 0 {
-		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT7.Status.Versions[0].Images[0] should not have an activation digest. Digest found: %v", stackResourceT7.Status.Versions[0].Images[0].Digest.Activation))
-	}
-
-	if len(stackResourceT7.Status.Versions[0].Images[0].Digest.Message) == 0 {
-		t.Fatal(fmt.Sprintf("The digest for stackResourceT7.Status.Versions[0].Images[0] does not have an expected error message."))
-	}
-
-	if len(stackResourceT7.Status.Versions[1].Images[0].Digest.Activation) != 0 {
-		t.Fatal(fmt.Sprintf("The activation digest for stackResourceT7.Status.Versions[1].Images[0] should not have an activation digest. Digest found: %v", stackResourceT7.Status.Versions[1].Images[0].Digest.Activation))
-	}
-
-	if len(stackResourceT7.Status.Versions[1].Images[0].Digest.Message) == 0 {
-		t.Fatal(fmt.Sprintf("The digest for stackResourceT7.Status.Versions[1].Images[0] does not have an expected error message."))
+	if !(strings.Contains(digest.Message, "image") && strings.Contains(digest.Message, "invalid reference format")) {
+		t.Fatal("The message in stackResourceT6.Status.Versions[1].Images[0].Digest.Message does not have the expected content. Message: ", digest.Message)
 	}
 }
 
@@ -671,6 +680,180 @@ func TestStackIDValidation(t *testing.T) {
 }
 
 // --------------------------------------------------------------------------------------------------
+// Test docker registry helper methods
+// --------------------------------------------------------------------------------------------------
+func TestBasicSecAuth(t *testing.T) {
+	username := "testusername"
+	password := "testpasword"
+	authenticator, err := getBasicSecAuth([]byte(username), []byte(password))
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. username and password are valied. Error: %v", err))
+	}
+
+	authconfig, err := authenticator.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Error: %v", err))
+	}
+
+	if authconfig.Username != string(username) {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v.", authconfig.Username, username))
+	}
+
+	if authconfig.Password != string(password) {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v.", authconfig.Password, password))
+	}
+}
+
+func TestDockerCfgSecAuth(t *testing.T) {
+	// Test 1. No Security credentials present in docker config.
+	dockercfgjsonData1 := "{}"
+	authenticator1, err := getDockerCfgSecAuth([]byte(dockercfgjsonData1), []byte{}, "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The Anonymous authenticator is expected. Error: %v", err))
+	}
+
+	if authenticator1 != authn.Anonymous {
+		t.Fatal(fmt.Sprintf("The Anonymous authenticator is expected. Authenticator received: %v", authenticator1))
+	}
+
+	authconfig1, err := authenticator1.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Error: %v", err))
+	}
+
+	if *authconfig1 != (authn.AuthConfig{}) {
+		t.Fatal(fmt.Sprintf("An empty AuthConfig structure was expected. Found authconfig: %v. Expected Authconfig: %v", authconfig1, &authn.AuthConfig{}))
+	}
+
+	// Test 2. Server name key not present in docker config data.
+	dockercfgjsonData2 := `{"auths":{"https://index.docker.io/v1/":{"username":"testusername","password":"testpassword","auth":"dGVzdHVzZXJuYW1lOnRlc3RwYXNzd29yZA==","email":"test@company.com"}}}`
+	authenticator2, err := getDockerCfgSecAuth([]byte(dockercfgjsonData2), []byte{}, "bad.serer.name.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The Anonymous authenticator is expected. Error: %v", err))
+	}
+
+	if authenticator2 != authn.Anonymous {
+		t.Fatal(fmt.Sprintf("The Anonymous authenticator is expected. Authenticator received: %v", authenticator2))
+	}
+
+	// Test 3. Credential store not setup, but configured.
+	dockercfgjsonData3 := `{"auths":{"https://index.docker.io/v1/":{},"my.registry.io:5000":{}},"credsStore": "pass"}`
+	dockercfgjson3 := base64.StdEncoding.EncodeToString([]byte(dockercfgjsonData3))
+	_, err = getDockerCfgSecAuth([]byte(dockercfgjson3), []byte{}, "my.registry.io:5000", sctlog)
+	if err == nil {
+		if !strings.Contains(err.Error(), "executable file not found in $PATH") {
+			t.Fatal(fmt.Sprintf("An error explaining that there is no cred store executable setup should have been issued. Error: %v", err))
+		}
+	}
+
+	// Test 4. Valid docker config.
+	dockercfgjsonData4 := `{"auths":{"https://index.docker.io/v1/":{"username":"testusername","password":"testpassword","auth":"dGVzdHVzZXJuYW1lOnRlc3RwYXNzd29yZA==","email":"test@company.com"},"quay.io":{"auth":"cXVheXVzZXJuYW1lNDpxdWF5cGFzc3dvcmQ0","email":"test@quay.company.com"}}}`
+	authenticator4, err := getDockerCfgSecAuth([]byte(dockercfgjsonData4), []byte{}, "https://index.docker.io/v1/", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	authconfig4, err := authenticator4.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", authenticator4, err))
+	}
+
+	uname4 := "testusername"
+	if authconfig4.Username != uname4 {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig4.Username, uname4, authconfig4))
+	}
+
+	pwd4 := "testpassword"
+	if authconfig4.Password != pwd4 {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig4.Password, pwd4, authconfig4))
+	}
+
+	// Test second entry in config.
+	qauthenticator4, err := getDockerCfgSecAuth([]byte(dockercfgjsonData4), []byte{}, "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	qauthconfig4, err := qauthenticator4.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", authenticator4, err))
+	}
+
+	quname := "quayusername4"
+	if qauthconfig4.Username != quname {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig4.Username, quname, qauthconfig4))
+	}
+
+	qpwd := "quaypassword4"
+	if qauthconfig4.Password != qpwd {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig4.Password, qpwd, qauthconfig4))
+	}
+
+	// Test 5. Valid legacy docker config.
+	dockercfgData5 := `{"my.registry.io:5000":{"auth":"dGVzdHVzZXJuYW1lNTp0ZXN0cGFzc3dvcmQ1","email":"test@company.com"},"quay.io":{"auth":"cXVheXVzZXJuYW1lNTpxdWF5cGFzc3dvcmQ1","email":"test@quay.company.com"}}`
+	authenticator5, err := getDockerCfgSecAuth([]byte{}, []byte(dockercfgData5), "my.registry.io:5000", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	authconfig5, err := authenticator5.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", authenticator5, err))
+	}
+
+	uname5 := "testusername5"
+	if authconfig5.Username != uname5 {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig5.Username, uname5, authconfig5))
+	}
+
+	pwd5 := "testpassword5"
+	if authconfig5.Password != pwd5 {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", authconfig5.Password, pwd5, authconfig5))
+	}
+
+	// Test second entry in config.
+	qauthenticator5, err := getDockerCfgSecAuth([]byte{}, []byte(dockercfgData5), "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The docker config type authenticator is expected. Error: %v", err))
+	}
+
+	qauthconfig5, err := qauthenticator5.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Authenticator: %v. Error: %v", qauthenticator5, err))
+	}
+
+	quname5 := "quayusername5"
+	if qauthconfig5.Username != quname5 {
+		t.Fatal(fmt.Sprintf("The user name set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig5.Username, quname5, qauthconfig5))
+	}
+
+	qpwd5 := "quaypassword5"
+	if qauthconfig5.Password != qpwd5 {
+		t.Fatal(fmt.Sprintf("The password set in the authenticator object: %v is not the expected one: %v. AuthConfig: %v", qauthconfig5.Password, qpwd5, qauthconfig5))
+	}
+
+	// Test 6. No Security credentials present in legacy docker config.
+	dockercfgData6 := "{}"
+	authenticator6, err := getDockerCfgSecAuth([]byte{}, []byte(dockercfgData6), "quay.io", sctlog)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected. The Anonymous authenticator is expected. Error: %v", err))
+	}
+
+	if authenticator6 != authn.Anonymous {
+		t.Fatal(fmt.Sprintf("The Anonymous authenticator is expected. Authenticator received: %v", authenticator1))
+	}
+
+	authconfig6, err := authenticator6.Authorization()
+	if err != nil {
+		t.Fatal(fmt.Sprintf("An error was NOT expected when driving authorization on the authenticator. Error: %v", err))
+	}
+
+	if *authconfig6 != (authn.AuthConfig{}) {
+		t.Fatal(fmt.Sprintf("An empty AuthConfig structure was expected. Found authconfig: %v. Expected Authconfig: %v", authconfig6, &authn.AuthConfig{}))
+	}
+}
+
+// --------------------------------------------------------------------------------------------------
 // Test that initial stack activation works
 // --------------------------------------------------------------------------------------------------
 func TestReconcileActiveVersionsInitial(t *testing.T) {
@@ -690,7 +873,7 @@ func TestReconcileActiveVersionsInitial(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     "default",
 					Sha256: basicPipeline.sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl, SkipCertVerification: true},
 				}},
 				Images: []kabanerov1alpha2.Image{{
 					Id:    "default",
@@ -819,7 +1002,7 @@ func TestReconcileActiveVersionsUpgrade(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1064,7 +1247,7 @@ func TestReconcileActiveVersionsSharedAsset(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1256,7 +1439,7 @@ func TestReconcileActiveVersionsRecreatedDeletedAssets(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1492,7 +1675,7 @@ func TestReconcileActiveVersionsBadAsset(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 			}},
 		},
@@ -1594,7 +1777,7 @@ func TestReconcileActiveVersionsWithTriggers(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id:     desiredStack.Pipelines[0].Id,
 					Sha256: desiredStack.Pipelines[0].Sha256,
-					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url},
+					Https:  kabanerov1alpha2.HttpsProtocolFile{Url: desiredStack.Pipelines[0].Url, SkipCertVerification: true},
 				}},
 				Images: []kabanerov1alpha2.Image{{
 					Id:    defaultImage.Id,
@@ -1789,7 +1972,7 @@ func TestReconcileActiveVersionsSkipCertVerify(t *testing.T) {
 	}
 
 	if !strings.Contains(stackResource.Status.Versions[0].StatusMessage, "x509") {
-		t.Fatal(fmt.Sprintf("The error message should contain the string \"x509\": %v", stackResource.Status.Versions[0].StatusMessage))
+		t.Fatal(fmt.Sprintf("The error message should contain the string \"x509\". Error message: %v", stackResource.Status.Versions[0].StatusMessage))
 	}
 
 	// Now, try again skipping cert verify.
@@ -1865,7 +2048,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
@@ -1874,7 +2057,7 @@ func TestReconcileActiveVersionsInternalTwoInitial(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 			},
@@ -1994,7 +2177,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[0].stack.Pipelines[0].Id,
 						Sha256: stacks[0].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[0].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 				kabanerov1alpha2.StackVersion{
@@ -2003,7 +2186,7 @@ func TestReconcileActiveVersionsInternalTwoInitialDiffPipelines(t *testing.T) {
 					Pipelines: []kabanerov1alpha2.PipelineSpec{{
 						Id:     stacks[1].stack.Pipelines[0].Id,
 						Sha256: stacks[1].stack.Pipelines[0].Sha256,
-						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url},
+						Https:  kabanerov1alpha2.HttpsProtocolFile{Url: stacks[1].stack.Pipelines[0].Url, SkipCertVerification: true},
 					}},
 				},
 			},
