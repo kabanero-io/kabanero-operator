@@ -1,7 +1,9 @@
 package kabaneroplatform
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	
@@ -10,7 +12,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -82,30 +84,35 @@ func reconcileTargetNamespaces(ctx context.Context, k *kabanerov1alpha2.Kabanero
 		Controller: &ownerIsController,
 	}
 
-	// Compute the new, deleted, and common namespace names
+	// Be sure each requested namespace exists.  This will catch namespaces added to the list, as well as
+	// namespaces that were deleted but not removed from the targetNamespaces list.
 	specTargetNamespaces := sets.NewString(getTargetNamespaces(k.Spec.TargetNamespaces, k.GetNamespace())...)
+	var errorNamespaces []string
+	for namespace, _ := range specTargetNamespaces {
+		exists, err := namespaceExists(ctx, namespace, cl)
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Could not check status of namespace %v", namespace))
+			errorNamespaces = append(errorNamespaces, namespace)
+		}
+		if exists == false {
+			reqLogger.Error(nil, fmt.Sprintf("Target namespace %v does not exist", namespace))
+			errorNamespaces = append(errorNamespaces, namespace)
+		}
+	}
+
+	for _, namespace := range errorNamespaces {
+		delete(specTargetNamespaces, namespace)
+	}
+
+	// TODO: did I do this right?  need to process the namespaces, then look at errorNamespaces and
+	//       generate an error message for namespaces that did not exist.  Once we have a watch set
+	//       up, that should take care of partially active lists, and the delete case.
+	
+	// Compute the new, deleted, and common namespace names
 	statusTargetNamespaces := sets.NewString(getTargetNamespaces(k.Status.TargetNamespaces.Namespaces, k.GetNamespace())...)
 	oldNamespaces := statusTargetNamespaces.Difference(specTargetNamespaces)
 	newNamespaces := specTargetNamespaces.Difference(statusTargetNamespaces)
 	unchangedNamespaces := specTargetNamespaces.Intersection(statusTargetNamespaces)
-
-	// For new namespaces, be sure they exist.
-	for namespace, _ := range newNamespaces {
-		exists, err := namespaceExists(ctx, namespace, cl)
-		if err != nil {
-			// Caller will log the error.  Just update the status and return.
-			k.Status.TargetNamespaces.Ready = "False"
-			k.Status.TargetNamespaces.Message = fmt.Sprintf("Could not check status of namespace %v: %v", namespace, err.Error())
-			return err
-		}
-		if exists == false {
-			// Caller will log the error.  Just update the status and return.
-			err = fmt.Errorf("targetNamespace %v does not exist", namespace)
-			k.Status.TargetNamespaces.Ready = "False"
-			k.Status.TargetNamespaces.Message = err.Error()
-			return err
-		}
-	}
 
 	// Create the templates
 	bindingTemplates := createBindingTemplates(k.GetNamespace())
@@ -144,9 +151,28 @@ func reconcileTargetNamespaces(ctx context.Context, k *kabanerov1alpha2.Kabanero
 	}
 
 	// Update the Status to reflect the new target namespaces.
-	k.Status.TargetNamespaces.Namespaces = k.Spec.TargetNamespaces
-	k.Status.TargetNamespaces.Ready = "True"
-	k.Status.TargetNamespaces.Message = ""
+	k.Status.TargetNamespaces.Namespaces = nil
+	for _, namespace := range k.Spec.TargetNamespaces {
+		isErrorNamespace := false
+		for _, errorNamespace := range errorNamespaces {
+			if errorNamespace == namespace {
+				isErrorNamespace = true
+				break
+			}
+		}
+		if isErrorNamespace == false {
+			k.Status.TargetNamespaces.Namespaces = append(k.Status.TargetNamespaces.Namespaces, namespace)
+		}
+	}
+
+	if len(errorNamespaces) == 0 {
+		k.Status.TargetNamespaces.Ready = "True"
+		k.Status.TargetNamespaces.Message = ""
+	} else {
+		k.Status.TargetNamespaces.Ready = "False"
+		k.Status.TargetNamespaces.Message = fmt.Sprintf("The following namespaces could not be processed: %v", strings.Join(errorNamespaces, ","))
+		return errors.New(k.Status.TargetNamespaces.Message)
+	}
 
 	return nil
 }
@@ -164,7 +190,7 @@ func namespaceExists(ctx context.Context, inNamespace string, cl client.Client) 
 		return true, nil
 	}
 
-	if errors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		return false, nil
 	}
 

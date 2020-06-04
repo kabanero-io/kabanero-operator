@@ -193,12 +193,8 @@ func TestReconcileTargetNamespacesNamespaceNotExist(t *testing.T) {
 
 	// Make sure the kabanero status was not updated with the target namespace,
 	// since it did not exist.
-	if len(k.Status.TargetNamespaces.Namespaces) != 1 {
-		t.Fatal(fmt.Sprintf("Kabanero status should have 1 target namespace, but has %v: %v", len(k.Status.TargetNamespaces.Namespaces), k.Status.TargetNamespaces.Namespaces))
-	}
-
-	if k.Status.TargetNamespaces.Namespaces[0] != activeNamespace {
-		t.Fatal(fmt.Sprintf("Kabanero status target namespace should be %v, but is %v", activeNamespace, k.Status.TargetNamespaces.Namespaces[0]))
+	if len(k.Status.TargetNamespaces.Namespaces) != 0 {
+		t.Fatal(fmt.Sprintf("Kabanero status should have 0 target namespace, but has %v: %v", len(k.Status.TargetNamespaces.Namespaces), k.Status.TargetNamespaces.Namespaces))
 	}
 
 	if k.Status.TargetNamespaces.Ready != "False" {
@@ -209,15 +205,9 @@ func TestReconcileTargetNamespacesNamespaceNotExist(t *testing.T) {
 		t.Fatal("Kabanero target namespace status contains no error message")
 	}
 
-	// Make sure the RoleBinding map did not get updated.
-	if len(client.objs) != 1 {
-		t.Fatal(fmt.Sprintf("Should have created one RoleBinding, but created %v: %#v", len(client.objs), client.objs))
-	}
-
-	for key, _ := range client.objs {
-		if key.Namespace != activeNamespace {
-			t.Fatal(fmt.Sprintf("Should have created RoleBinding in %v namespace, but created in %v namespace", activeNamespace, key.Namespace))
-		}
+	// Make sure the RoleBinding map got cleared.
+	if len(client.objs) != 0 {
+		t.Fatal(fmt.Sprintf("Should have created 0 RoleBindings, but created %v: %#v", len(client.objs), client.objs))
 	}
 
 	// OK, now create the namespace and make sure things resolve as per normal.
@@ -255,6 +245,64 @@ func TestReconcileTargetNamespacesNamespaceNotExist(t *testing.T) {
 		if key.Namespace != targetNamespace {
 			t.Fatal(fmt.Sprintf("After NS create, should have created RoleBinding in %v namespace, but created in %v namespace", targetNamespace, key.Namespace))
 		}
+	}
+}
+
+// Apply the role bindings to a namespace that does not exist.
+func TestTargetNamespacesGotDeleted(t *testing.T) {
+	targetNamespace1 := "fred"
+	targetNamespace2 := "george"
+	activeNamespace1 := "fred"
+	activeNamespace2 := "george"
+
+	k := kabanerov1alpha2.Kabanero{
+		ObjectMeta: metav1.ObjectMeta{Name: "kabanero", Namespace: "kabanero"},
+		Spec: kabanerov1alpha2.KabaneroSpec{
+			TargetNamespaces: []string{targetNamespace1, targetNamespace2},
+		},
+		Status: kabanerov1alpha2.KabaneroStatus {
+			TargetNamespaces: kabanerov1alpha2.TargetNamespaceStatus {
+				Namespaces: []string{activeNamespace1, activeNamespace2},
+				Ready: "True",
+			},
+		},
+	}
+
+	// Set up pre-existing objects
+	existingNamespaces := make(map[string]bool)
+	existingNamespaces[activeNamespace1] = true
+	existingRoleBinding := client.ObjectKey{Name: "kabanero-pipeline-deploy-rolebinding", Namespace: activeNamespace1}
+	existingRoleBindings := make(map[client.ObjectKey]bool)
+	existingRoleBindings[existingRoleBinding] = true
+	client := targetnamespaceTestClient{existingRoleBindings, existingNamespaces}
+	
+	err := reconcileTargetNamespaces(context.TODO(), &k, client, nslog)
+
+	if err == nil {
+		t.Fatal("Did not return an error, but should have because namespace \"george\" does not exist")
+	}
+
+	// Make sure the kabanero status was not updated with the target namespace,
+	// since it did not exist.
+	if len(k.Status.TargetNamespaces.Namespaces) != 1 {
+		t.Fatal(fmt.Sprintf("Kabanero status should have 1 target namespace, but has %v: %v", len(k.Status.TargetNamespaces.Namespaces), k.Status.TargetNamespaces.Namespaces))
+	}
+
+	if k.Status.TargetNamespaces.Namespaces[0] != "fred" {
+		t.Fatal(fmt.Sprintf("Kabanero status target namespace is not \"fred\", but is %v", k.Status.TargetNamespaces.Namespaces[0]))
+	}
+	
+	if k.Status.TargetNamespaces.Ready != "False" {
+		t.Fatal(fmt.Sprintf("Kabanero target namespace status is not False: %v", k.Status.TargetNamespaces.Ready))
+	}
+
+	if len(k.Status.TargetNamespaces.Message) == 0 {
+		t.Fatal("Kabanero target namespace status contains no error message")
+	}
+
+	// Make sure the RoleBinding map got cleared.
+	if len(client.objs) != 1 {
+		t.Fatal(fmt.Sprintf("Should have created 1 RoleBindings, but created %v: %#v", len(client.objs), client.objs))
 	}
 }
 
