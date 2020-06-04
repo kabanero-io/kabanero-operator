@@ -19,6 +19,92 @@ spec:
     port: 443
     targetPort: 8443
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-operator-serving
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - services/finalizers
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - "get"
+  - "create"
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  - deployments
+  verbs:
+  - get
+- apiGroups:
+  - kabanero.io
+  resources:
+  - "*"
+  verbs:
+  - "get"
+  - "list"
+  - "watch"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-operator-serving
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kabanero-operator-serving
+subjects:
+- kind: ServiceAccount
+  name: kabanero-operator-serving
+roleRef:
+  kind: Role
+  name: kabanero-operator-serving
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -59,6 +145,7 @@ spec:
         app.kubernetes.io/part-of: kabanero
         app.kubernetes.io/managed-by: kabanero-operator
     spec:
+      serviceAccount: kabanero-operator-serving
       containers:
         - name: kabanero-operator-serving
           image: {{ .image }}
@@ -66,10 +153,16 @@ spec:
           command:
           - /usr/local/bin/serving
           env:
-            - name: KABANERO_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+          - name: WATCH_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: "kabanero-operator-serving"
           volumeMounts:
           - mountPath: /tmp/serving-certs
             name: kabanero-operator-serving-cert

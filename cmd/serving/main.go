@@ -6,22 +6,23 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
+	// "runtime"
 	"strings"
+	"net/http"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
-	"github.com/kabanero-io/kabanero-operator/pkg/serving"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/serving"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	// sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -39,13 +40,6 @@ var (
 	operatorMetricsPort int32 = 8686
 )
 var log = logf.Log.WithName("cmd")
-
-func printVersion() {
-	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))
-	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
-}
 
 func main() {
 	// Add the zap logger flag set to the CLI. The flag set must
@@ -68,8 +62,6 @@ func main() {
 	// uniform and structured logs.
 	logf.SetLogger(zap.Logger())
 
-	printVersion()
-
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
@@ -85,7 +77,7 @@ func main() {
 
 	ctx := context.TODO()
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "memcached-operator-lock")
+	err = leader.Become(ctx, "serving-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -122,7 +114,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := serving.AddToManager(mgr); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -130,23 +122,44 @@ func main() {
 	// Add the Metrics Service
 	addMetrics(ctx, cfg)
 
-	// Start serving devfiles index
-  fs := http.FileServer(http.Dir("/devfiles"))
-  http.Handle("/", fs)
-  log.Println("Starting Devfile registry on port :8443...")
-  err := http.ListenAndServeTLS(":8443","/tmp/serving-certs/tls.crt","/tmp/serving-certs/tls.key",nil)
-  if err != nil {
-    log.Fatal(err)
-  }
+	//Start HTTTPS & Cmd
+	errs := Run(mgr)
 
-	log.Info("Starting the Cmd.")
-
-	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	// Run until channel receives error
+	select {
+	case err := <-errs:
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+
 }
+
+func Run(mgr manager.Manager) chan error {
+
+	errs := make(chan error)
+
+	// Start serving devfiles index
+	go func() {
+		fs := http.FileServer(http.Dir("/devfiles"))
+		http.Handle("/", fs)
+		log.Info("Starting Devfile registry on port :8443...")
+		if err := http.ListenAndServeTLS(":8443","/tmp/serving-certs/tls.crt","/tmp/serving-certs/tls.key",nil); err != nil {
+			errs <- err
+		}
+	}()
+
+	// Start the Cmd
+	go func() {
+		log.Info("Starting the Cmd.")
+		if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+			errs <- err
+		}
+	}()
+
+	return errs
+}
+
+
 
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
 // the Prometheus operator

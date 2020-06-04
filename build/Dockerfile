@@ -20,6 +20,7 @@ COPY build/_output/bin/kabanero-operator-collection-controller /usr/local/bin/ka
 COPY build/_output/bin/admission-webhook /usr/local/bin/admission-webhook
 COPY build/_output/bin/serving /usr/local/bin/serving
 
+RUN mkdir /devfiles && chmod +777 /devfiles
 
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup

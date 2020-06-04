@@ -1,4 +1,4 @@
-package stack
+package serving
 
 import (
 	"context"
@@ -20,7 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	
-	d2index "github.com/elsony/devfile2-registry/tools/cmd/index"
+	// d2index "github.com/elsony/devfile2-registry/tools/cmd/index"
+	"encoding/json"
 )
 
 var log = logf.Log.WithName("controller_stack")
@@ -89,55 +90,77 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	// Copy the yaml from the Stack to local devfile registry
-	for _, version := range instance.Spec.Versions {
+	basePath := "/devfiles"
+	stackPath := fmt.Sprintf("%v/%v", basePath, instance.ObjectMeta.Name)
+	os.Mkdir(basePath, os.ModePerm)
+
+	// Clean all files for this stack: a version may be removed or Stack deletion
+	os.RemoveAll(stackPath)
 	
-		basePath := "/devfiles"
-		devfile := fmt.Sprintf("%v/eclipse/%v/%v/devfile.yaml", basePath, instance.ObjectMeta.Name, version.Version)
-		metafile := fmt.Sprintf("%v/eclipse/%v/%v/meta.yaml", basePath, instance.ObjectMeta.Name, version.Version)
-		
-		f, err := os.Create(devfile)
-		if err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Error creating devfile %v", devfile))
+	beingDeleted := !instance.DeletionTimestamp.IsZero()
+
+	if !beingDeleted {
+		// Copy the yaml from the Stack to local devfile registry if it exists
+		for _, version := range instance.Spec.Versions {
+			if (len(version.Devfile) !=0) && (len(version.Metafile) !=0) {
+				versionPath := fmt.Sprintf("%v/%v", stackPath, version.Version)
+				devfile := fmt.Sprintf("%v/devfile.yaml", versionPath)
+				metafile := fmt.Sprintf("%v/meta.yaml", versionPath)
+				
+				os.MkdirAll(versionPath, os.ModePerm)
+				
+				f, err := os.Create(devfile)
+				if err != nil {
+					reqLogger.Error(err, fmt.Sprintf("Error creating devfile %v", devfile))
+				}
+				defer f.Close()
+				_, err = f.WriteString(version.Devfile)
+				if err != nil {
+					reqLogger.Error(err, fmt.Sprintf("Error writing devfile %v", devfile))
+				}
+				f.Sync()
+				
+				f, err = os.Create(metafile)
+				if err != nil {
+					reqLogger.Error(err, fmt.Sprintf("Error creating metafile %v", metafile))
+				}
+				defer f.Close()
+				_, err = f.WriteString(version.Devfile)
+				if err != nil {
+					reqLogger.Error(err, fmt.Sprintf("Error writing metafile %v", metafile))
+				}
+				f.Sync()
+			}
 		}
-		defer f.Close()
-		_, err = f.WriteString(version.Devfile)
-		if err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Error writing devfile %v", devfile))
-		}
-		f.Sync()
-		
-		f, err = os.Create(metafile)
-		if err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Error creating metafile %v", metafile))
-		}
-		defer f.Close()
-		_, err = f.WriteString(version.Devfile)
-		if err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Error writing metafile %v", metafile))
-		}
-		f.Sync()
-		
 	}
 	
 	// Regenerate the index
 	indexfile := fmt.Sprintf("%v/index.json", basePath)
-	index, err := d2index.genIndex(basePath)
+	index, err := genIndex(basePath)
 	if err != nil {
 		reqLogger.Error(err, "Error generating devfile index")
+		return reconcile.Result{}, err
 	}
-	b, err := json.MarshalIndent(index, "", "  ")
-	if err != nil {
-		reqLogger.Error(err, "Error during marshal index")
+	var b []byte
+	
+	if len(index) !=0 {
+		b, err = json.MarshalIndent(index, "", "  ")
+		if err != nil {
+			reqLogger.Error(err, "Error during marshal index")
+			return reconcile.Result{}, err
+		}
 	}
-	f, err = os.Create(indexfile)
+	
+	f, err := os.Create(indexfile)
 	if err != nil {
 		reqLogger.Error(err, fmt.Sprintf("Error creating indexfile %v", indexfile))
+		return reconcile.Result{}, err
 	}
 	defer f.Close()
 	_, err = f.Write(b)
 	if err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Error writing indexfile %v", metafile))
+		reqLogger.Error(err, fmt.Sprintf("Error writing indexfile %v", indexfile))
+		return reconcile.Result{}, err
 	}
 	f.Sync()
 

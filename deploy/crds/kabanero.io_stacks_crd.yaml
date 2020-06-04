@@ -51,6 +51,8 @@ spec:
                 properties:
                   desiredState:
                     type: string
+                  devfile:
+                    type: string
                   images:
                     items:
                       description: Image defines a container image used by a stack
@@ -61,6 +63,8 @@ spec:
                           type: string
                       type: object
                     type: array
+                  metafile:
+                    type: string
                   pipelines:
                     items:
                       description: PipelineSpec defines a set of pipelines and associated

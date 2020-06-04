@@ -8,6 +8,7 @@ require (
 	github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7
+	github.com/elsony/devfile2-registry/tools v0.0.0-20200603181527-db339ef8dd30
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.3.1
@@ -26,7 +27,7 @@ require (
 	github.com/tektoncd/operator v0.0.0-20191017104520-be5a46fc149a
 	github.com/tektoncd/pipeline v0.10.1
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	gopkg.in/yaml.v2 v2.2.5
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.17.0
 	k8s.io/apiextensions-apiserver v0.0.0
 	k8s.io/apimachinery v0.17.1
