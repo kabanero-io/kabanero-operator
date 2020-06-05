@@ -125,7 +125,7 @@ func (r *ReconcileStack) Reconcile(request reconcile.Request) (reconcile.Result,
 					reqLogger.Error(err, fmt.Sprintf("Error creating metafile %v", metafile))
 				}
 				defer f.Close()
-				_, err = f.WriteString(version.Devfile)
+				_, err = f.WriteString(version.Metafile)
 				if err != nil {
 					reqLogger.Error(err, fmt.Sprintf("Error writing metafile %v", metafile))
 				}
