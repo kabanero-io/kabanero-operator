@@ -5,7 +5,7 @@ import (
 	//"flag"
 	// "fmt"
 	"io/ioutil"
-	//"log"
+	// "log"
 	"path/filepath"
 
 	"github.com/elsony/devfile2-registry/tools/types"
@@ -15,6 +15,7 @@ import (
 // genIndex generate new index from meta.yaml files in dir.
 // meta.yaml file is expected to be in dir/<stack>/<version>/meta.yaml
 func genIndex(dir string) ([]types.MetaIndex, error) {
+	reqLogger := log.WithValues("Request.Namespace", "", "Request.Name", "")
 
 	var index []types.MetaIndex
 
@@ -32,6 +33,8 @@ func genIndex(dir string) ([]types.MetaIndex, error) {
 			for _, versiondir := range versiondirs {
 				var meta types.Meta
 				metaFile, err := ioutil.ReadFile(filepath.Join(dir, stackdir.Name(), versiondir.Name(), "meta.yaml"))
+				reqLogger.Info(filepath.Join(dir, stackdir.Name(), versiondir.Name(), "meta.yaml"))
+				reqLogger.Info(string(metaFile))
 				if err != nil {
 					return nil, err
 				}
@@ -39,6 +42,7 @@ func genIndex(dir string) ([]types.MetaIndex, error) {
 				if err != nil {
 					return nil, err
 				}
+				reqLogger.Info(fmt.Sprintf("%v", meta)
 
 				self := filepath.Join(stackdir.Name(), versiondir.Name(), "devfile.yaml")
 
@@ -48,6 +52,7 @@ func genIndex(dir string) ([]types.MetaIndex, error) {
 						Self: self,
 					},
 				}
+				reqLogger.Info(fmt.Sprintf("%v", metaIndex)
 				index = append(index, metaIndex)
 			}
 		}
