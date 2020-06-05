@@ -16,14 +16,14 @@ spec:
 
   cliServices:
     # Overrides the setting for version on this component
-    version: "0.9.0"
+    version: "0.9.1"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.9.0"
+    tag: "0.9.1-rc.2"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.9.0
+    image: kabanero/kabanero-command-line-services:0.9.1-rc.2
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
