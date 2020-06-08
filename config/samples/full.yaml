@@ -120,16 +120,16 @@ spec:
         url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 1348e90cc3269b6e65837f71011bef6f0dc662781a41442cb5ce3714cb91b890
+      sha256: 61281610991b7e21ed64b97cba0fbd15e1647b48cc9e3eb5e66474519aed4f7b
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.2/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.3/default-kabanero-pipelines.tar.gz
 
   gitops:
     pipelines:
     - id: gitops
-      sha256: 2b0f31cfb31f49454e68542deb301a98c409d8c2a233c6b8a32eb476090c2cd6
+      sha256: ffb2df99b5e4cfb3e634afd4f0d851cb43d039e52ed5e0866fd4ffac41b288e8
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.2/kabanero-gitops-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.3/kabanero-gitops-pipelines.tar.gz
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:

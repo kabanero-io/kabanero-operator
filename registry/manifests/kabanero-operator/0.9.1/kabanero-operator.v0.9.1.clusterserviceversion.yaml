@@ -35,9 +35,9 @@ metadata:
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "1348e90cc3269b6e65837f71011bef6f0dc662781a41442cb5ce3714cb91b890",
+                  "sha256": "61281610991b7e21ed64b97cba0fbd15e1647b48cc9e3eb5e66474519aed4f7b",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.2/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.3/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -68,9 +68,9 @@ metadata:
               { "version": "0.2.11",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "1348e90cc3269b6e65837f71011bef6f0dc662781a41442cb5ce3714cb91b890",
+                    "sha256": "61281610991b7e21ed64b97cba0fbd15e1647b48cc9e3eb5e66474519aed4f7b",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.2/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.3/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
