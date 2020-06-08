@@ -36,7 +36,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: TLS_PORT
-              value: 9443
+              value: "9443"
             - name: TLS_CERTIFICATE
               value: /etc/tls/secrets/openshift.io/kabanero.cli/certs/tls.crt
             - name: TLS_PRIVATE_KEY
