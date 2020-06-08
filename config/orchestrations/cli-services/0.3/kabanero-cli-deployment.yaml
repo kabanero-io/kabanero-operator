@@ -31,6 +31,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: TLS_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: TLS_PORT
+              value: 9443
+            - name: TLS_CERTIFICATE
+              value: /etc/tls/secrets/openshift.io/kabanero.cli/certs/tls.crt
+            - name: TLS_PRIVATE_KEY
+              value: /etc/tls/secrets/openshift.io/kabanero.cli/certs/tls.key
           ports:
             - containerPort: 9443
               protocol: TCP
