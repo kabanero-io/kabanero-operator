@@ -135,6 +135,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
               events:
                 properties:
@@ -163,6 +164,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
               landing:
                 description: KabaneroLandingCustomizationSpec defines customization
@@ -177,6 +179,7 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
               tekton:
                 description: TektonCustomizationSpec defines customization entries
                   for Tekton
@@ -253,6 +256,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   ready:
                     type: string
                 type: object
@@ -275,6 +279,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   ready:
                     type: string
                 type: object
@@ -296,6 +301,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   errorMessage:
                     type: string
                   ready:
@@ -304,6 +310,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
               knativeEventing:
                 description: Knative eventing instance readiness status.
@@ -486,6 +493,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
               gitops:
                 properties:
@@ -526,6 +534,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
               governancePolicy:
                 description: GovernancePolicyConfig defines customization entries
@@ -623,6 +632,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   repositories:
                     items:
                       description: RepositoryConfig defines customization entries
@@ -693,8 +703,10 @@ spec:
                                 type: string
                             type: object
                           type: array
+                          x-kubernetes-list-type: set
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   skipRegistryCertVerification:
                     type: boolean
                 type: object
@@ -702,6 +714,7 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
               triggers:
                 items:
                   description: TriggerSpec defines the sets of default triggers for
@@ -739,6 +752,7 @@ spec:
                       type: string
                   type: object
                 type: array
+                x-kubernetes-list-type: set
               version:
                 type: string
             type: object
@@ -771,6 +785,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   message:
                     type: string
                   ready:
@@ -829,6 +844,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   message:
                     type: string
                   ready:
@@ -867,6 +883,7 @@ spec:
                                 type: string
                             type: object
                           type: array
+                          x-kubernetes-list-type: set
                         digest:
                           type: string
                         gitRelease:
@@ -912,6 +929,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   message:
                     type: string
                   ready:
@@ -920,6 +938,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
               landing:
                 description: Kabanero Landing page readiness status.

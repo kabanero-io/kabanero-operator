@@ -20,7 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	
-	// d2index "github.com/elsony/devfile2-registry/tools/cmd/index"
+	// Prefer to import index func when it's moved to a pkg
+	// d2index "github.com/odo-devfiles/registry/tools/cmd/index"
 	"encoding/json"
 )
 

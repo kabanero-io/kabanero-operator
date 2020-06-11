@@ -63,6 +63,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   metafile:
                     type: string
                   pipelines:
@@ -102,6 +103,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   skipCertVerification:
                     type: boolean
                   skipRegistryCertVerification:
@@ -110,6 +112,7 @@ spec:
                     type: string
                 type: object
               type: array
+              x-kubernetes-list-type: set
           type: object
         status:
           description: StackStatus defines the observed state of a stack
@@ -143,6 +146,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   location:
                     type: string
                   pipelines:
@@ -173,6 +177,7 @@ spec:
                                 type: string
                             type: object
                           type: array
+                          x-kubernetes-list-type: set
                         digest:
                           type: string
                         gitRelease:
@@ -197,6 +202,7 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   status:
                     type: string
                   statusMessage:
@@ -205,6 +211,7 @@ spec:
                     type: string
                 type: object
               type: array
+              x-kubernetes-list-type: set
           type: object
       type: object
   version: v1alpha2

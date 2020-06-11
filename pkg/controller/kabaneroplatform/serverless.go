@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	knsv1alpha1 "github.com/knative/serving-operator/pkg/apis/serving/v1alpha1"
+	knsv1alpha1 "knative.dev/operator/pkg/apis/operator/v1alpha1"
 	olmapiv1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

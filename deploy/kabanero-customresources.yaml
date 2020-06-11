@@ -317,9 +317,9 @@ rules:
   - patch
   - watch
 - apiGroups:
-  -  apps.openshift.io
+  - apps.openshift.io
   resources:
-  - serviceBindingRequests
+  - servicebindingrequests
   verbs:
   - get
   - list
@@ -329,9 +329,10 @@ rules:
   - patch
   - watch
 - apiGroups:
-  -  kafka.strimzi.io
+  - kafka.strimzi.io
   resources:
-  - kafka
+  - kafkas
+  - kafkatopics
   verbs:
   - get
   - list
@@ -343,7 +344,7 @@ rules:
 - apiGroups:
   - monitoring.coreos.com
   resources:
-  - serviceMonitor
+  - servicemonitors
   verbs:
   - get
   - list
@@ -355,7 +356,32 @@ rules:
 - apiGroups:
   - postgresql.baiju.dev
   resources:
-  - database
+  - databases
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - integreatly.org
+  resources:
+  - grafanadashboards
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - "" # core API group
+  resources:
+  - secrets
+  - configmaps
   verbs:
   - get
   - list

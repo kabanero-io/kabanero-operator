@@ -8,6 +8,8 @@ import (
 	//"log"
 	"path/filepath"
 
+	// Should be odo-devfiles after migration cleanup
+	// "github.com/odo-devfiles/registry/tools/types"
 	"github.com/elsony/devfile2-registry/tools/types"
 	"gopkg.in/yaml.v2"
 )
