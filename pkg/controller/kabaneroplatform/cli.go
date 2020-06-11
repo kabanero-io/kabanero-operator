@@ -173,7 +173,7 @@ func processTransformation(k *kabanerov1alpha2.Kabanero, manifest mf.Manifest, p
 		return nil, err
 	}
 
-	return manifestTrasformed, nil
+	return &manifestTrasformed, nil
 }
 
 // Tries to see if the CLI route has been assigned a hostname.
