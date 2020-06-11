@@ -20,10 +20,10 @@ spec:
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-command-line-services
-    tag: "0.9.1-rc.2"
+    tag: "0.9.1"
 
     # Overrides the image uri
-    image: kabanero/kabanero-command-line-services:0.9.1-rc.2
+    image: kabanero/kabanero-command-line-services:0.9.1
 
     # Indicates the token expiration time 
     # Specify a positive integer followed by a unit of time, which can be hours (h), minutes (m), or seconds (s). 
@@ -120,16 +120,16 @@ spec:
         url: https://github.com/kabanero-io/kabanero-stack-hub/releases/download/0.9.0/kabanero-stack-hub-index.yaml
     pipelines:
     - id: default
-      sha256: 61281610991b7e21ed64b97cba0fbd15e1647b48cc9e3eb5e66474519aed4f7b
+      sha256: deb5162495e1fe60ab52632f0879f9c9b95e943066590574865138791cbe948f
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.3/default-kabanero-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1/default-kabanero-pipelines.tar.gz
 
   gitops:
     pipelines:
     - id: gitops
-      sha256: ffb2df99b5e4cfb3e634afd4f0d851cb43d039e52ed5e0866fd4ffac41b288e8
+      sha256: 7996bf29f338f8154e9c7db977833bf33d0a6d4e228109fab411d3b38ed4b99e
       https:
-        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1-rc.3/kabanero-gitops-pipelines.tar.gz
+        url: https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1/kabanero-gitops-pipelines.tar.gz
 
   governancePolicy:
     # Provide governance configuration for all stacks managed by Kabanero. The allowed configuration policies are:

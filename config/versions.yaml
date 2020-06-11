@@ -107,7 +107,7 @@ related-software:
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.9.1-rc.2"
+      tag: "0.9.1"
   - version: "0.9.0"
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
