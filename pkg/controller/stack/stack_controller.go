@@ -38,6 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	imagev1 "github.com/openshift/api/image/v1"
+	reference "github.com/docker/distribution/reference"
 )
 
 var log = logf.Log.WithName("controller_stack")
@@ -122,6 +124,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		log.Info(fmt.Sprintf("Tekton Pipelines may not be installed"))
 		return err
 	}
+
+	// Index ImageStreams by status.publicDockerImageRepository
+	if err := mgr.GetFieldIndexer().IndexField(&imagev1.ImageStream{}, "status.publicDockerImageRepository", func(rawObj k8runtime.Object) []string {
+		imagestream := rawObj.(*imagev1.ImageStream)
+		return []string{imagestream.Status.PublicDockerImageRepository }
+	}); err != nil {
+		return err
+	}
+
 
 	return nil
 }
@@ -333,6 +344,7 @@ func reconcileActiveVersions(stackResource *kabanerov1alpha2.Stack, c client.Cli
 					// If we had a problem loading the pipeline manifests, say so.
 					if value.ManifestError != nil {
 						newStackVersionStatus.StatusMessage = value.ManifestError.Error()
+						newStackVersionStatus.Status = kabanerov1alpha2.StackStateError
 					}
 				}
 			}
@@ -433,6 +445,47 @@ func getStatusImageDigest(c client.Client, stackResource kabanerov1alpha2.Stack,
 
 // Retrieves the input image digest from the hosting repository.
 func retrieveImageDigest(c client.Client, namespace string, imgRegistry string, skipCertVerification bool, logr logr.Logger, image string) (string, error) {
+	// Check if the image is in the local registry - imagestream using the external route
+	iref, err := reference.ParseAnyReference(image)
+	if err != nil {
+		return "", err
+	}
+	named, err := reference.ParseNormalizedNamed(iref.String())
+	if err != nil {
+		return "", err
+	}
+	
+	// ensure latest tag is added if not present
+	namedtagged := reference.TagNameOnly(named)
+	
+	// domain & path (no tag/digest)
+	imagename := namedtagged.Name()
+
+	// tag
+	tagged, _ := namedtagged.(reference.Tagged)
+	imagetag := tagged.Tag()
+
+	imagestreamlist := &imagev1.ImageStreamList{}
+	err = c.List(context.TODO(), imagestreamlist, client.MatchingFields{"status.publicDockerImageRepository": imagename})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			newError := fmt.Errorf("Unable to Get ImageStreamList while searching for image %v: %v", imagename, err)
+			return "", newError
+		}
+	}
+	
+	// Should only have 1 ImageStream with a matching publicDockerImageRepository
+	// Get the Image sha256 for the tagged image
+	if len(imagestreamlist.Items) != 0 {
+		for _, tag := range imagestreamlist.Items[0].Status.Tags {
+			if tag.Tag == imagetag {
+				// The first TagEvent Item Image should be current, in form sha256:c19d8...
+				digesthex := tag.Items[0].Image[strings.LastIndex(tag.Items[0].Image, ":")+1:]
+				return digesthex, nil
+			}
+		}
+	}
+	
 	// Search all secrets under the given namespace for the one containing the required hostname.
 	annotationKey := "kabanero.io/docker-"
 	secret, err := secret.GetMatchingSecret(c, namespace, sutils.SecretAnnotationFilter, imgRegistry, annotationKey)

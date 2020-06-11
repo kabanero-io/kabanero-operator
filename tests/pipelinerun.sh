@@ -115,17 +115,24 @@ if [ -n "$NO_APP_CHECK" ]; then
 	exit 0
 fi
 
+# Kind
+KIND="appsodyapplication"
+if [[ "$PIPELINE_REF" == *"openliberty"* ]]; then
+	KIND="openlibertyapplication"
+fi
+
+
 # Appsody check
 unset STATUS
 unset TYPE
 until [ "$STATUS" == "True" ] && [ "$TYPE" == "Reconciled" ]
 do
-	echo "Waiting for AppsodyApplication ${APP} to Reconcile"
-	STATUS=$(oc -n ${namespace} get appsodyapplication ${APP} --output=jsonpath={.status.conditions[-1:].status})
-	TYPE=$(oc -n ${namespace} get appsodyapplication ${APP} --output=jsonpath={.status.conditions[-1:].type})
-	REASON=$(oc -n ${namespace} get appsodyapplication ${APP} --output=jsonpath={.status.conditions[-1:].reason})
+	echo "Waiting for ${KIND} ${APP} to Reconcile"
+	STATUS=$(oc -n ${namespace} get ${KIND} ${APP} --output=jsonpath={.status.conditions[-1:].status})
+	TYPE=$(oc -n ${namespace} get ${KIND} ${APP} --output=jsonpath={.status.conditions[-1:].type})
+	REASON=$(oc -n ${namespace} get ${KIND} ${APP} --output=jsonpath={.status.conditions[-1:].reason})
 	if [ "$REASON" == "InternalError" ]; then
-		echo "AppsodyApplication ${APP} failed to reconcile"
+		echo "${KIND} ${APP} failed to reconcile"
 		exit 1
 	fi
 done

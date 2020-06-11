@@ -170,7 +170,7 @@ func TestReconcileGitopsPipelines(t *testing.T) {
 				Pipelines: []kabanerov1alpha2.PipelineSpec{{
 					Id: "default",
 					Sha256: digest1Pipeline.sha256,
-					Https: kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl},
+					Https: kabanerov1alpha2.HttpsProtocolFile{Url: pipelineZipUrl, SkipCertVerification: true},
 				}},
 			},
 		},

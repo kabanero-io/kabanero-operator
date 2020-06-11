@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -8,7 +10,9 @@ import (
 	"net/http/httptest"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // HTTP handler that serves pipeline zips
@@ -35,6 +39,33 @@ var basicPipeline = fileInfo{
 	name:   "/basic.pipeline.tar.gz",
 	sha256: "8080076acd8f54ecbb7de132df148d964e5e93921cce983a0f781418b0871573"}
 
+// Unit test client.
+type archiveTestClient struct {
+}
+
+func (c archiveTestClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+	return errors.New("Get is not implemented")
+}
+func (c archiveTestClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+	return errors.New("List is not implemented")
+}
+func (c archiveTestClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+	return errors.New("Create is not implemented")
+}
+func (c archiveTestClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+	return errors.New("Delete is not implemented")
+}
+func (c archiveTestClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+	return errors.New("DeleteAllOf is not implemented")
+}
+func (c archiveTestClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	return errors.New("Update is not implemented")
+}
+func (c archiveTestClient) Status() client.StatusWriter { return c }
+func (c archiveTestClient) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return errors.New("Patch is not implemented")
+}
+
 func TestGetManifests(t *testing.T) {
 	// The server that will host the pipeline zip
 	server := httptest.NewServer(stackHandler{})
@@ -46,7 +77,8 @@ func TestGetManifests(t *testing.T) {
 		Digest:     basicPipeline.sha256,
 		GitRelease: kabanerov1alpha2.GitReleaseInfo{}}
 
-	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, false, reqLogger)
+	manifests, err := GetManifests(archiveTestClient{}, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, true, reqLogger)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +99,8 @@ func TestGetManifestsQuery(t *testing.T) {
 		Digest:     basicPipeline.sha256,
 		GitRelease: kabanerov1alpha2.GitReleaseInfo{}}
 
-	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, false, reqLogger)
+	manifests, err := GetManifests(archiveTestClient{}, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, true, reqLogger)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +121,8 @@ func TestGetManifestsYaml(t *testing.T) {
 		Digest: "3b34de594df82cac3cb67c556a416443f6fafc0bc79101613eaa7ae0d59dd462",
 		GitRelease: kabanerov1alpha2.GitReleaseInfo{}}
 	
-	manifests, err := GetManifests(nil, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, false, reqLogger)
+	manifests, err := GetManifests(archiveTestClient{}, "kabanero", pipelineStatus, map[string]interface{}{"StackName": "Eclipse Microprofile", "StackId": "java-microprofile"}, true, reqLogger)
+
 	if err != nil {
 		t.Fatal(err)
 	}

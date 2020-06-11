@@ -254,6 +254,20 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - ''
+  - image.openshift.io
+  resources:
+    - imagesignatures
+  verbs:
+    - create
+    - delete
+    - get
+- nonResourceURLs:
+  - '/staging/*'
+  verbs:
+    - get
+    - put
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -294,6 +308,79 @@ rules:
   - openliberty.io
   resources:
   - openlibertyapplications
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - apps.openshift.io
+  resources:
+  - servicebindingrequests
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - kafka.strimzi.io
+  resources:
+  - kafkas
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - postgresql.baiju.dev
+  resources:
+  - databases
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - integreatly.org
+  resources:
+  - grafanadashboards
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - patch
+  - watch
+- apiGroups:
+  - "" # core API group
+  resources:
+  - secrets
+  - configmaps
   verbs:
   - get
   - list
