@@ -15,7 +15,7 @@ default: "0.9.1"
 kabanero:
 - version: "0.9.1"
   related-versions: 
-    cli-services: "0.9.0"
+    cli-services: "0.9.1"
     landing: "0.9.0"
     events: "0.9.0"
     collection-controller: "0.9.1"
@@ -103,11 +103,11 @@ related-software:
       tag: "0.6.0"
 
   cli-services:
-  - version: "go-prototype"
-    orchestrations: "orchestrations/cli-services/0.3"
+  - version: "0.9.1"
+    orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
-      repository: "davco01a/kabanero-command-line-services"
-      tag: "latest"
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.9.1"
   - version: "0.9.0"
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
