@@ -332,6 +332,7 @@ rules:
   - kafka.strimzi.io
   resources:
   - kafkas
+  - kafkatopics
   verbs:
   - get
   - list
