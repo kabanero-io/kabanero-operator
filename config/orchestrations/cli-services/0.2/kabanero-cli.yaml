@@ -88,6 +88,13 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - kabanero.io
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
 ---
 apiVersion: v1
 kind: ServiceAccount

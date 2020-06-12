@@ -69,6 +69,12 @@ func createBindingTemplates(saNamespace string) []targetNamespaceRoleBindingTemp
 			clusterRoleName: "kabanero-pipeline-deploy-role",
 		},
 		// TODO: Second role binding for CLI service
+		{
+			name: "kabanero-cli-deploy-rolebinding"
+			saName: "kabanero-cli"
+			saNamespace: saNamespace,
+			clusterRoleName: "kabanero-cli-service-deployments-role"
+		},
 	}
 }
 
