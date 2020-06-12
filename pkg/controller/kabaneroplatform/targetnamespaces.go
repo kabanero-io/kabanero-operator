@@ -1,4 +1,5 @@
 package kabaneroplatform
+
 import (
 	"context"
 	"errors"
@@ -6,41 +7,41 @@ import (
 	"strings"
 
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	
+
 	"github.com/go-logr/logr"
-	
+
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type targetNamespaceRoleBindingTemplate struct {
-	name string
-	saName string
-	saNamespace string
+	name            string
+	saName          string
+	saNamespace     string
 	clusterRoleName string
 }
 
 func (info targetNamespaceRoleBindingTemplate) generate(targetNamespace string) rbacv1.RoleBinding {
 	return rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: info.name,
+			Name:      info.name,
 			Namespace: targetNamespace,
 		},
 		Subjects: []rbacv1.Subject{
 			rbacv1.Subject{
-				Kind: "ServiceAccount",
-				Name: info.saName,
+				Kind:      "ServiceAccount",
+				Name:      info.saName,
 				Namespace: info.saNamespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind: "ClusterRole",
-			Name: info.clusterRoleName,
+			Kind:     "ClusterRole",
+			Name:     info.clusterRoleName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
@@ -50,7 +51,7 @@ func (info targetNamespaceRoleBindingTemplate) generate(targetNamespace string) 
 // namespaces from the Kabanero CR instance.
 func getTargetNamespaces(targetNamespaces []string, defaultNamespace string) []string {
 	targetnamespaceList := targetNamespaces
-	
+
 	// If targetNamespaces is empty, default to binding to kabanero
 	if len(targetnamespaceList) == 0 {
 		targetnamespaceList = append(targetnamespaceList, defaultNamespace)
@@ -60,20 +61,20 @@ func getTargetNamespaces(targetNamespaces []string, defaultNamespace string) []s
 }
 
 // Create the binding templates
-func createBindingTemplates(saNamespace string) []targetNamespaceRoleBindingTemplate{
-	return []targetNamespaceRoleBindingTemplate {
+func createBindingTemplates(saNamespace string) []targetNamespaceRoleBindingTemplate {
+	return []targetNamespaceRoleBindingTemplate{
 		{
-			name: "kabanero-pipeline-deploy-rolebinding",
-			saName: "kabanero-pipeline",
-			saNamespace: saNamespace,
+			name:            "kabanero-pipeline-deploy-rolebinding",
+			saName:          "kabanero-pipeline",
+			saNamespace:     saNamespace,
 			clusterRoleName: "kabanero-pipeline-deploy-role",
 		},
 		// TODO: Second role binding for CLI service
 		{
-			name: "kabanero-cli-deploy-rolebinding"
-			saName: "kabanero-cli"
-			saNamespace: saNamespace,
-			clusterRoleName: "kabanero-cli-service-deployments-role"
+			name:            "kabanero-cli-deploy-rolebinding",
+			saName:          "kabanero-cli",
+			saNamespace:     saNamespace,
+			clusterRoleName: "kabanero-cli-service-deployments-role",
 		},
 	}
 }
@@ -113,7 +114,7 @@ func reconcileTargetNamespaces(ctx context.Context, k *kabanerov1alpha2.Kabanero
 	// TODO: did I do this right?  need to process the namespaces, then look at errorNamespaces and
 	//       generate an error message for namespaces that did not exist.  Once we have a watch set
 	//       up, that should take care of partially active lists, and the delete case.
-	
+
 	// Compute the new, deleted, and common namespace names
 	statusTargetNamespaces := sets.NewString(getTargetNamespaces(k.Status.TargetNamespaces.Namespaces, k.GetNamespace())...)
 	oldNamespaces := statusTargetNamespaces.Difference(specTargetNamespaces)
@@ -122,7 +123,7 @@ func reconcileTargetNamespaces(ctx context.Context, k *kabanerov1alpha2.Kabanero
 
 	// Create the templates
 	bindingTemplates := createBindingTemplates(k.GetNamespace())
-	
+
 	// For removed namespaces, delete the role bindings
 	for namespace, _ := range oldNamespaces {
 		for _, bindingTemplate := range bindingTemplates {
@@ -191,7 +192,7 @@ func namespaceExists(ctx context.Context, inNamespace string, cl client.Client) 
 		Kind:    "Namespace",
 		Version: "v1",
 	})
-	err := cl.Get(ctx, client.ObjectKey{Namespace: inNamespace, Name: inNamespace,}, namespace)
+	err := cl.Get(ctx, client.ObjectKey{Namespace: inNamespace, Name: inNamespace}, namespace)
 	if err == nil {
 		return true, nil
 	}
