@@ -9,10 +9,21 @@
 
 # When the Kabanero instance does not specify which version of Kabanero to use,
 # this is the value
-default: "0.9.0"
+default: "0.9.1"
 
 # Top level: relates Kabanero versions to software versions
 kabanero:
+- version: "0.9.1"
+  related-versions: 
+    cli-services: "0.9.1"
+    landing: "0.9.0"
+    events: "0.9.0"
+    collection-controller: "0.9.1"
+    stack-controller: "0.9.1"
+    admission-webhook: "0.9.1"
+    sso: "7.3.2"
+    codeready-workspaces: "0.9.0"
+
 - version: "0.9.0"
   related-versions: 
     cli-services: "0.9.0"
@@ -92,11 +103,11 @@ related-software:
       tag: "0.6.0"
 
   cli-services:
-  - version: "go-prototype"
-    orchestrations: "orchestrations/cli-services/0.3"
+  - version: "0.9.1"
+    orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
-      repository: "davco01a/kabanero-command-line-services"
-      tag: "latest"
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.9.1"
   - version: "0.9.0"
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
@@ -148,11 +159,16 @@ related-software:
       tag: "0.1"
 
   collection-controller: 
-  - version: "0.9.0"
+  - version: "0.9.1"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
+  - version: "0.9.0"
+    orchestrations: "orchestrations/collection-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
@@ -175,11 +191,16 @@ related-software:
       tag: "0.6.0"
 
   stack-controller: 
-  - version: "0.9.0"
+  - version: "0.9.1"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
+  - version: "0.9.0"
+    orchestrations: "orchestrations/stack-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
@@ -202,11 +223,16 @@ related-software:
       tag: "0.6.0"
 
   admission-webhook:
-  - version: "0.9.0"
+  - version: "0.9.1"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
+  - version: "0.9.0"
+    orchestrations: "orchestrations/admission-webhook/0.2"
+    identifiers:
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
