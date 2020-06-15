@@ -980,6 +980,22 @@ spec:
                   version:
                     type: string
                 type: object
+              targetNamespaces:
+                description: Target namespace status
+                properties:
+                  message:
+                    type: string
+                  namespaces:
+                    description: These are the target namespaces that are currently
+                      being used.  The spec.targetNamespaces will replace these when
+                      the operator has finished applying the role bindings to those
+                      namespaces.
+                    items:
+                      type: string
+                    type: array
+                  ready:
+                    type: string
+                type: object
               tekton:
                 description: Tekton instance readiness status.
                 properties:

@@ -281,6 +281,19 @@ type KabaneroStatus struct {
 	Sso SsoStatus `json:"sso,omitempty"`
 
 	Gitops GitopsStatus `json:"gitops,omitempty"`
+
+	// Target namespace status
+	TargetNamespaces TargetNamespaceStatus `json:"targetNamespaces,omitempty"`
+}
+
+type TargetNamespaceStatus struct {
+	// These are the target namespaces that are currently being used.  The
+	// spec.targetNamespaces will replace these when the operator has finished
+	// applying the role bindings to those namespaces.
+	// +listType=set
+	Namespaces []string `json:"namespaces,omitempty"`
+	Ready string `json:"ready,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 // PipelineStatus defines the observed state of the assets located within a single pipeline .tar.gz.
