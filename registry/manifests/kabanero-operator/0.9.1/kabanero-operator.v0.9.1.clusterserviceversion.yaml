@@ -1,16 +1,16 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: kabanero-operator.v0.9.0
+  name: kabanero-operator.v0.9.1
   namespace: placeholder
   annotations:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator@sha256:3ec321bb84127e108d4f65b6d2c97f102072b7622fa545ce1a78ef6935c2f3a8
+    containerImage: kabanero/kabanero-operator:latest
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
-    olm.skipRange: '>=0.6.1 <0.9.0'
+    olm.skipRange: '>=0.6.1 <0.9.1'
     repository: https://github.com/kabanero-io/kabanero-operator
     support: IBM
     alm-examples: |-
@@ -22,7 +22,7 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.9.0",
+            "version": "0.9.1",
             "stacks": {
               "repositories": [
                 {
@@ -35,9 +35,9 @@ metadata:
               "pipelines": [
                 {
                   "id": "default",
-                  "sha256": "63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479",
+                  "sha256": "deb5162495e1fe60ab52632f0879f9c9b95e943066590574865138791cbe948f",
                   "https": {
-                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz"
+                    "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1/default-kabanero-pipelines.tar.gz"
                   }
                 }
               ]
@@ -68,9 +68,9 @@ metadata:
               { "version": "0.2.11",
                 "pipelines": [
                   { "id": "default",
-                    "sha256": "63b98242b60f6a1cf240b430d24659b9727d16013935553a798be1e6c122c479",
+                    "sha256": "deb5162495e1fe60ab52632f0879f9c9b95e943066590574865138791cbe948f",
                     "https": {
-                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.0/default-kabanero-pipelines.tar.gz"
+                      "url": "https://github.com/kabanero-io/kabanero-pipelines/releases/download/0.9.1/default-kabanero-pipelines.tar.gz"
                     }
                   }
                 ],
@@ -88,8 +88,8 @@ spec:
   minKubeVersion: 1.16.0
   apiservicedefinitions: {}
   maturity: alpha
-  version: 0.9.0
-  replaces: kabanero-operator.v0.8.0
+  version: 0.9.1
+  replaces: kabanero-operator.v0.9.0
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
@@ -283,7 +283,7 @@ spec:
                 name: kabanero-operator
                 app.kubernetes.io/name: kabanero
                 app.kubernetes.io/instance:
-                app.kubernetes.io/version: '0.9.0'
+                app.kubernetes.io/version: '0.9.1'
                 app.kubernetes.io/component: operator
                 app.kubernetes.io/part-of: kabanero
                 app.kubernetes.io/managed-by: olm
@@ -302,7 +302,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator@sha256:3ec321bb84127e108d4f65b6d2c97f102072b7622fa545ce1a78ef6935c2f3a8
+                image: kabanero/kabanero-operator:latest
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
@@ -332,12 +332,3 @@ spec:
     type: AllNamespaces
   provider:
     name: IBM
-  relatedImages:
-  - image: kabanero/kabanero-command-line-services:0.9.0
-    name: cli-services-0.9.0
-  - image: kabanero/landing:0.9.0
-    name: landing-0.9.0
-  - image: kabanero/events-operator:0.1.0
-    name: events-0.9.0
-  - image: kabanero/che-devfile-registry:0.11.0
-    name: codeready-workspaces-0.9.0

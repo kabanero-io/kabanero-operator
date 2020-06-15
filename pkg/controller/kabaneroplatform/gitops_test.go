@@ -28,7 +28,11 @@ type testLogger struct{}
 func (t testLogger) Info(msg string, keysAndValues ...interface{}) { fmt.Printf("Info: %v \n", msg) }
 func (t testLogger) Enabled() bool                                 { return true }
 func (t testLogger) Error(err error, msg string, keysAndValues ...interface{}) {
-	fmt.Printf("Error: %v: %v\n", msg, err.Error())
+	if err != nil {
+		fmt.Printf("Error: %v: %v\n", msg, err.Error())
+	} else {
+		fmt.Printf("Error: %v\n", msg)
+	}
 }
 func (t testLogger) V(level int) logr.InfoLogger                         { return t }
 func (t testLogger) WithValues(keysAndValues ...interface{}) logr.Logger { return t }

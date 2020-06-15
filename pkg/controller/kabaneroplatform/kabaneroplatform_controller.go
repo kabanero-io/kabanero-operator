@@ -10,7 +10,8 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-  "github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,24 +52,30 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "events", function: reconcileEvents},
 	{name: "sso", function: reconcileSso},
 	{name: "gitops", function: reconcileGitopsPipelines},
+	{name: "target namespaces", function: reconcileTargetNamespaces},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
-}
+	// It is very unlikely that this would fail, since the main also checks for it.
+	watchNamespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return err
+	}
 
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileKabanero{
+	// Lets be sure a single namespace is specified.
+	numberOfWatchNamespaces := len(strings.Split(watchNamespace, ","))
+	if numberOfWatchNamespaces != 1 {
+		return fmt.Errorf("%v watch namespaces were specified, but only a single watch namespace is supported: %v", numberOfWatchNamespaces, watchNamespace)
+	}
+	
+	r := &ReconcileKabanero{
 		client:          mgr.GetClient(),
 		scheme:          mgr.GetScheme(),
-		requeueDelayMap: make(map[string]RequeueData)}
-}
+		requeueDelayMap: make(map[string]RequeueData),
+	  watchNamespace:  watchNamespace}
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
 	c, err := controller.New("kabaneroplatform-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -101,6 +108,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch Namespace instances.  We only care about create and delete events, not update events.
+	// When we see that a namespace has been created/deleted, we need to process any Kabanero objects that
+	// reference that namespace.
+	err = c.Watch(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(r.targetNamespaceMapFunc)}, predicate.Funcs{
+			UpdateFunc: func(e event.UpdateEvent) bool { return false }})
+	if err != nil {
+		return err
+	}
+
 /* Useful if RoleBindingList is changed to use Structured instead of Unstructured
 	// Index Rolebindings by name
 	if err := mgr.GetFieldIndexer().IndexField(&rbacv1.RoleBinding{}, "metadata.name", func(rawObj runtime.Object) []string {
@@ -114,22 +131,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-func getOperatorImage(c client.Client) (string, error) {
+func (r *ReconcileKabanero) getOperatorImage() (string, error) {
 	// First, read the POD_NAME env variable.  This is set in the deployment spec in the CSV.
 	podName := os.Getenv("POD_NAME")
 	if len(podName) == 0 {
 		return "", fmt.Errorf("The POD_NAME environment variable is not set, or is empty")
 	}
-
-	namespace := os.Getenv("WATCH_NAMESPACE")
-	if len(namespace) == 0 {
-		return "", fmt.Errorf("The WATCH_NAMESPACE environment variable is not set, or is empty")
-	}
 	
 	// Second, get the Pod instance with that name
 	pod := &corev1.Pod{}
-	kubePodName := types.NamespacedName{Name: podName, Namespace: namespace}
-	err := c.Get(context.TODO(), kubePodName, pod)
+	kubePodName := types.NamespacedName{Name: podName, Namespace: r.watchNamespace}
+	err := r.client.Get(context.TODO(), kubePodName, pod)
 	if err != nil {
 		return "", fmt.Errorf("Pod %v could not be retrieved: %v", podName, err.Error())
 	} 
@@ -174,12 +186,40 @@ type ReconcileKabanero struct {
 	client          client.Client
 	scheme          *runtime.Scheme
 	requeueDelayMap map[string]RequeueData
+	watchNamespace  string
 }
 
 // RequeueData stores information that enables reconcile operations to be retried.
 type RequeueData struct {
 	delay      int
 	futureTime time.Time
+}
+
+// When we see that a namespace has changed, we want to reconcile any Kabanero instances that
+// reference that namespace in its targetNamespaces list.
+func (r *ReconcileKabanero) targetNamespaceMapFunc(a handler.MapObject) []reconcile.Request {
+	log.Info(fmt.Sprintf("Processing for change in namespace %v", a.Meta.GetName()))
+	
+	// List Kabanero instances
+	kabaneros := &kabanerov1alpha2.KabaneroList{}
+	err := r.client.List(context.TODO(), kabaneros, client.InNamespace(r.watchNamespace))
+	if err != nil {
+		log.Error(err, fmt.Sprintf("Could not process namespace event for \"%v\"", a.Meta.GetName()))
+		return nil
+	}
+
+	// For each Kabanero instance, if spec.targetNamespaces includes a.meta.name then add a reconcile request.
+	requests := []reconcile.Request{}
+	for _, kabanero := range kabaneros.Items {
+		for _, namespace := range kabanero.Spec.TargetNamespaces {
+			if namespace == a.Meta.GetName() {
+				requests = append(requests, reconcile.Request{types.NamespacedName{Name: kabanero.Name, Namespace: kabanero.Namespace}})
+				break
+			}
+		}
+	}
+	
+  return requests
 }
 
 // Determine if requeue is needed or not.
@@ -246,7 +286,7 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 	// in the add() method because the client is not started yet (that would have been ideal).
 	operatorContainerImageOp.Do(func() {
 		var err error
-		operatorContainerImage, err = getOperatorImage(r.client)
+		operatorContainerImage, err = r.getOperatorImage()
 		if err != nil {
 			log.Error(err, "Could not read the kabanero-operator container image from the pod")
 		}
@@ -324,13 +364,6 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 			processStatus(ctx, request, instance, r.client, reqLogger)
 			return reconcile.Result{}, err
 		}
-	}
-
-	// Reconcile the targetNamespaces
-	err = reconcileTargetNamespaces(ctx, instance, r.client, reqLogger)
-	if err != nil {
-		reqLogger.Error(err, "Error reconciling targetNamespaces")
-		return reconcile.Result{}, err
 	}
 
 	// Deploy featured stack resources.
@@ -455,6 +488,12 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 	if err != nil {
 		return err
 	}
+
+	// Remove the cross-namespace objects that target namespaces use.
+	err = cleanupTargetNamespaces(ctx, k, client)
+	if err != nil {
+		return err
+	}
 	
 	return nil
 }
@@ -492,6 +531,7 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(k, c, reqLogger)
 	isSsoReady, _ := getSsoStatus(k, c, reqLogger)
 	isGitopsReady, _ := getGitopsStatus(k)
+	isTargetNamespacesReady, _ := getTargetNamespacesStatus(k)
 
 	// Set the overall status.
 	isKabaneroReady := isStackControllerReady &&
@@ -505,7 +545,8 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 		isEventsReady &&
 		isAdmissionControllerWebhookReady &&
 		isSsoReady &&
-		isGitopsReady
+		isGitopsReady &&
+		isTargetNamespacesReady
 
 	if isKabaneroReady {
 		k.Status.KabaneroInstance.Message = ""

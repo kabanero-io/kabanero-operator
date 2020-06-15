@@ -23,6 +23,17 @@ kabanero:
     sso: "7.3.2"
     codeready-workspaces: "0.10.0"
 
+- version: "0.9.1"
+  related-versions: 
+    cli-services: "0.9.1"
+    landing: "0.9.0"
+    events: "0.9.0"
+    collection-controller: "0.9.1"
+    stack-controller: "0.9.1"
+    admission-webhook: "0.9.1"
+    sso: "7.3.2"
+    codeready-workspaces: "0.9.0"
+
 - version: "0.9.0"
   related-versions: 
     cli-services: "0.9.0"
@@ -116,7 +127,12 @@ related-software:
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
       repository: "kabanero/kabanero-command-line-services"
-      tag: "0.9.0"
+      tag: "0.9.1"
+  - version: "0.9.1"
+    orchestrations: "orchestrations/cli-services/0.2"
+    identifiers:
+      repository: "kabanero/kabanero-command-line-services"
+      tag: "0.9.1"
   - version: "0.9.0"
     orchestrations: "orchestrations/cli-services/0.2"
     identifiers:
@@ -178,11 +194,16 @@ related-software:
       tag: "0.1"
 
   collection-controller: 
-  - version: "0.9.0"
+  - version: "0.9.1"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
+  - version: "0.9.0"
+    orchestrations: "orchestrations/collection-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/collection-controller/0.1"
     identifiers:
@@ -210,11 +231,16 @@ related-software:
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
+  - version: "0.9.1"
+    orchestrations: "orchestrations/stack-controller/0.1"
+    identifiers:
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.1"
   - version: "0.9.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
-      repository: "FROM_POD"
-      tag: "FROM_POD"
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/stack-controller/0.1"
     identifiers:
@@ -242,11 +268,16 @@ related-software:
     identifiers:
       repository: "FROM_POD"
       tag: "FROM_POD"
+  - version: "0.9.1"
+    orchestrations: "orchestrations/admission-webhook/0.2"
+    identifiers:
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.1"
   - version: "0.9.0"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
-      repository: "FROM_POD"
-      tag: "FROM_POD"
+      repository: "kabanero/kabanero-operator"
+      tag: "0.9.0"
   - version: "0.8.0"
     orchestrations: "orchestrations/admission-webhook/0.2"
     identifiers:
