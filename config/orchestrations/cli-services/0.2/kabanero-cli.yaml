@@ -89,7 +89,7 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - kabanero.io
+  - apps
   resources:
   - deployments
   verbs:

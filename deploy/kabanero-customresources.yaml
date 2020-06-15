@@ -565,13 +565,10 @@ metadata:
   namespace: kabanero
   labels:
     kabanero.io/install: 27-cli-service-role
-subjects:
-- kind: ServiceAccount
-- name: kabanero-cli
-- namespace: kabanero
 rules:
 - apiGroups:
-  - rbac.authorization.k8s.io
+  - extensions
+  - apps
   resources:
   - deployments
   verbs:
