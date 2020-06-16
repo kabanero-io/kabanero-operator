@@ -53,7 +53,7 @@ IMAGE_SHA = $(lastword $(subst @, ,$(IMAGE_REPO_DIGEST)))
 REGISTRY_IMAGE_SHA = $(lastword $(subst @, ,$(REGISTRY_IMAGE_REPO_DIGEST)))
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.9.0
+CURRENT_RELEASE=0.10.0
 
 # OS detection
 ifeq ($(OS),Windows_NT)
@@ -66,11 +66,10 @@ endif
 endif
 
 
-.PHONY: build deploy deploy-olm build-image build-registry-image push-image push-registry-image push-manifest int-test-install int-test-collections int-test-uninstall int-test-lifecycle
+.PHONY: build deploy deploy-olm build-image build-registry-image push-image push-registry-image push-manifest int-test-install int-test-stacks int-test-uninstall int-test-lifecycle
 
 build: generate
 	GO111MODULE=on go install ./cmd/manager
-	GO111MODULE=on go install ./cmd/manager/collection
 	GO111MODULE=on go install ./cmd/manager/stack
 	GO111MODULE=on go install ./cmd/admission-webhook
 	GO111MODULE=on go install ./cmd/serving
@@ -81,7 +80,6 @@ build-image: generate
   # commands separately here.
   # operator-sdk build ${IMAGE}
 	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/kabanero-operator -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/kabanero-operator-collection-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/collection
 	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/kabanero-operator-stack-controller -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/manager/stack
 	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/admission-webhook -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/admission-webhook
 	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o build/_output/bin/serving -gcflags "all=-trimpath=$(GOPATH)" -asmflags "all=-trimpath=$(GOPATH)" -ldflags "-X main.GitTag=$(TRAVIS_TAG) -X main.GitCommit=$(TRAVIS_COMMIT) -X main.GitRepoSlug=$(TRAVIS_REPO_SLUG) -X main.BuildDate=`date -u +%Y%m%d.%H%M%S`" github.com/kabanero-io/kabanero-operator/cmd/serving
@@ -90,11 +88,12 @@ build-image: generate
 
 build-registry-image:
   # Build an OLM private registry for Kabanero. Should be run after push-image so the IMAGE SHA is generated
+	rm -Rf build/registry
 	mkdir -p build/registry
 	cp LICENSE build/registry/LICENSE
 	cp -R registry/manifests build/registry/
 	cp registry/Dockerfile build/registry/Dockerfile
-	cp deploy/crds/kabanero.io_kabaneros_crd.yaml deploy/crds/kabanero.io_collections_crd.yaml deploy/crds/kabanero.io_stacks_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
+	cp deploy/crds/kabanero.io_kabaneros_crd.yaml deploy/crds/kabanero.io_stacks_crd.yaml build/registry/manifests/kabanero-operator/$(CURRENT_RELEASE)/
 
 # Use the internal service address in the CSV
 ifdef INTERNAL_REGISTRY
@@ -158,7 +157,6 @@ generate:
 install:
 	kubectl config set-context $$(kubectl config current-context) --namespace=kabanero
 	kubectl apply -f deploy/crds/kabanero.io_kabaneros_crd.yaml
-	kubectl apply -f deploy/crds/kabanero.io_collections_crd.yaml
 	kubectl apply -f deploy/crds/kabanero.io_stacks_crd.yaml
 
 deploy: 
@@ -199,7 +197,7 @@ ifndef GITHUB_TOKEN
 endif
 	mkdir -p build/bin
 	curl -L https://github.com/mitchellh/golicense/releases/download/v0.2.0/golicense_0.2.0_$(detected_OS)_x86_64.tar.gz | tar -C build/bin -xzf - golicense
-	build/bin/golicense -plain ./license-rules.json build/_output/bin/admission-webhook build/_output/bin/kabanero-operator build/_output/bin/kabanero-operator-collection-controller build/_output/bin/kabanero-operator-stack-controller build/_output/bin/serving | sort > 3RD_PARTY || true
+	build/bin/golicense -plain ./license-rules.json build/_output/bin/admission-webhook build/_output/bin/kabanero-operator build/_output/bin/kabanero-operator-stack-controller build/_output/bin/serving | sort > 3RD_PARTY || true
 	rm build/bin/golicense
 
 # Integration Tests

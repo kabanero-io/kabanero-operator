@@ -1,4 +1,4 @@
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero1
@@ -9,7 +9,7 @@ spec:
     # Overrides the internally determined CLI services version with the provided value
     version: "0.1.0"
 ---
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero1
@@ -18,7 +18,7 @@ spec:
     # Overrides the internally determined CLI services image with the provided value
     image: kabanero/kabanero-command-line-services:0.1.0
 ---
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero2
@@ -28,7 +28,7 @@ spec:
     # The tag will be internally determined
     repository: kabanero/kabanero-command-line-services
 ---
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero2
@@ -38,7 +38,7 @@ spec:
     # The repository will be internally determined
     tag: "0.1.1"
 ---
-apiVersion: kabanero.io/v1alpha1
+apiVersion: kabanero.io/v1alpha2
 kind: Kabanero
 metadata:
   name: kabanero3
