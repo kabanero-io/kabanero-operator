@@ -88,6 +88,13 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
 ---
 apiVersion: v1
 kind: ServiceAccount

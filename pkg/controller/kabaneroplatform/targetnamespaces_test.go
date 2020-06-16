@@ -148,9 +148,9 @@ func TestReconcileTargetNamespaces(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Kabanero target namespace status contains an error message: %v", k.Status.TargetNamespaces.Message))
 	}
 
-	// Make sure the RoleBinding got added in the correct namespace.
-	if len(client.objs) != 1 {
-		t.Fatal(fmt.Sprintf("Should have created one RoleBinding, but created %v: %#v", len(client.objs), client.objs))
+	// Make sure the RoleBindings got added in the correct namespace.
+	if len(client.objs) != 2 {
+		t.Fatal(fmt.Sprintf("Should have created two RoleBindings, but created %v: %#v", len(client.objs), client.objs))
 	}
 
 	for key, _ := range client.objs {
@@ -236,9 +236,9 @@ func TestReconcileTargetNamespacesNamespaceNotExist(t *testing.T) {
 		t.Fatal(fmt.Sprintf("After NS create, Kabanero target namespace status contains an error message: %v", k.Status.TargetNamespaces.Message))
 	}
 
-	// Make sure the RoleBinding got added in the correct namespace.
-	if len(client.objs) != 1 {
-		t.Fatal(fmt.Sprintf("After NS create, should have created one RoleBinding, but created %v: %#v", len(client.objs), client.objs))
+	// Make sure the RoleBindings got added in the correct namespace.
+	if len(client.objs) != 2 {
+		t.Fatal(fmt.Sprintf("After NS create, should have created two RoleBindings, but created %v: %#v", len(client.objs), client.objs))
 	}
 
 	for key, _ := range client.objs {
@@ -271,9 +271,12 @@ func TestTargetNamespacesGotDeleted(t *testing.T) {
 	// Set up pre-existing objects
 	existingNamespaces := make(map[string]bool)
 	existingNamespaces[activeNamespace1] = true
-	existingRoleBinding := client.ObjectKey{Name: "kabanero-pipeline-deploy-rolebinding", Namespace: activeNamespace1}
+	existingRoleBinding1 := client.ObjectKey{Name: "kabanero-pipeline-deploy-rolebinding", Namespace: activeNamespace1}
+	existingRoleBinding2 := client.ObjectKey{Name: "kabanero-cli-deploy-rolebinding", Namespace: activeNamespace1}
+	
 	existingRoleBindings := make(map[client.ObjectKey]bool)
-	existingRoleBindings[existingRoleBinding] = true
+	existingRoleBindings[existingRoleBinding1] = true
+	existingRoleBindings[existingRoleBinding2] = true
 	client := targetnamespaceTestClient{existingRoleBindings, existingNamespaces}
 	
 	err := reconcileTargetNamespaces(context.TODO(), &k, client, nslog)
@@ -301,8 +304,8 @@ func TestTargetNamespacesGotDeleted(t *testing.T) {
 	}
 
 	// Make sure the RoleBinding map got cleared.
-	if len(client.objs) != 1 {
-		t.Fatal(fmt.Sprintf("Should have created 1 RoleBindings, but created %v: %#v", len(client.objs), client.objs))
+	if len(client.objs) != 2 {
+		t.Fatal(fmt.Sprintf("Should have created two RoleBindings, but created %v: %#v", len(client.objs), client.objs))
 	}
 }
 
@@ -325,9 +328,11 @@ func TestCleanupTargetNamespaces(t *testing.T) {
 	// Set up pre-existing objects
 	existingNamespaces := make(map[string]bool)
 	existingNamespaces[targetNamespace] = true
-	existingRoleBinding := client.ObjectKey{Name: "kabanero-pipeline-deploy-rolebinding", Namespace: targetNamespace}
+	existingRoleBinding1 := client.ObjectKey{Name: "kabanero-pipeline-deploy-rolebinding", Namespace: targetNamespace}
+	existingRoleBinding2 := client.ObjectKey{Name: "kabanero-cli-deploy-rolebinding", Namespace: targetNamespace}
 	existingRoleBindings := make(map[client.ObjectKey]bool)
-	existingRoleBindings[existingRoleBinding] = true
+	existingRoleBindings[existingRoleBinding1] = true
+	existingRoleBindings[existingRoleBinding2] = true
 	client := targetnamespaceTestClient{existingRoleBindings, existingNamespaces}
 	
 	err := cleanupTargetNamespaces(context.TODO(), &k, client)

@@ -556,3 +556,22 @@ subjects:
 - kind: ServiceAccount
   name: event-listener
   namespace: kabanero
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kabanero-cli-service-deployments-role
+  namespace: kabanero
+  labels:
+    kabanero.io/install: 27-cli-service-role
+rules:
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+
