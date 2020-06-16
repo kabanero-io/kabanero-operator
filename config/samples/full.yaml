@@ -67,9 +67,9 @@ spec:
     # Overrides the image uri
     image: kabanero/kabanero-operator:TRAVIS_TAG
 
-  serving:
+  devfileRegistry:
     # Overrides the setting for version on this component
-    version: "0.9.0"
+    version: "0.10.0"
 
     # Overrides the image as a separate repository or tag
     repository: kabanero/kabanero-operator

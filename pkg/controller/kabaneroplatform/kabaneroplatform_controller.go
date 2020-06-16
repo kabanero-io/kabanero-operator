@@ -56,7 +56,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "sso", function: reconcileSso},
 	{name: "gitops", function: reconcileGitopsPipelines},
 	{name: "target namespaces", function: reconcileTargetNamespaces},
-	{name: "serving", function: reconcileServing},
+	{name: "devfile registry controller", function: reconcileDevfileRegistry},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -503,8 +503,8 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 		return err
 	}
 	
-	// Cleanup the Serving and their cross-namespace objects
-	err = cleanupServing(k, client, reqLogger)
+	// Cleanup the Devfile registry controller and its cross-namespace objects
+	err = cleanupDevfileRegistry(k, client, reqLogger)
 	if err != nil {
 		return err
 	}

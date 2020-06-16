@@ -39,7 +39,8 @@ const (
 // +k8s:openapi-gen=true
 type StackSpec struct {
 	Name string `json:"name,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=version
 	Versions []StackVersion `json:"versions,omitempty"`
 }
 
@@ -55,12 +56,16 @@ func (s StackSpec) GetVersions() []ComponentSpecVersion {
 type StackVersion struct {
 	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
 
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=sha256
 	Pipelines            []PipelineSpec `json:"pipelines,omitempty"`
 	Version              string         `json:"version,omitempty"`
 	DesiredState         string         `json:"desiredState,omitempty"`
 	SkipCertVerification bool           `json:"skipCertVerification,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=image
 	Images               []Image        `json:"images,omitempty"`
 	Devfile              string         `json:"devfile,omitempty"`
 	Metafile             string         `json:"metafile,omitempty"`
@@ -112,7 +117,8 @@ type RepositoryAssetStatus struct {
 // +k8s:openapi-gen=true
 type StackStatus struct {
 	StatusMessage string `json:"statusMessage,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=version
 	Versions []StackVersionStatus `json:"versions,omitempty"`
 	Summary  string               `json:"summary,omitempty"`
 }
@@ -129,11 +135,15 @@ func (s StackStatus) GetVersions() []ComponentStatusVersion {
 type StackVersionStatus struct {
 	Version  string `json:"version,omitempty"`
 	Location string `json:"location,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=name
+	// +listMapKey=digest
 	Pipelines     []PipelineStatus `json:"pipelines,omitempty"`
 	Status        string           `json:"status,omitempty"`
 	StatusMessage string           `json:"statusMessage,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=image
 	Images []ImageStatus `json:"images,omitempty"`
 }
 

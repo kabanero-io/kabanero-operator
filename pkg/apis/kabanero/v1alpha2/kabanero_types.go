@@ -28,7 +28,9 @@ type KabaneroSpec struct {
 
 	Stacks InstanceStackConfig `json:"stacks,omitempty"`
 
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=sha256
 	Triggers []TriggerSpec `json:"triggers,omitempty"`
 
 	CliServices KabaneroCliServicesCustomizationSpec `json:"cliServices,omitempty"`
@@ -45,7 +47,7 @@ type KabaneroSpec struct {
 
 	AdmissionControllerWebhook AdmissionControllerWebhookCustomizationSpec `json:"admissionControllerWebhook,omitempty"`
 
-	Serving ServingSpec `json:"serving,omitempty"`
+	DevfileRegistry DevfileRegistrySpec `json:"devfileRegistry,omitempty"`
 
 	Sso SsoCustomizationSpec `json:"sso,omitempty"`
 
@@ -53,7 +55,9 @@ type KabaneroSpec struct {
 }
 
 type GitopsSpec struct {
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=sha256
 	Pipelines []PipelineSpec `json:"pipelines,omitempty"`
 }
 
@@ -73,10 +77,13 @@ func (gs GitopsSpec) GetPipelines() []PipelineSpec {
 type InstanceStackConfig struct {
 	SkipRegistryCertVerification bool `json:"skipRegistryCertVerification,omitempty"`
 
-	// +listType=set
+	// +listType=map
+	// +listMapKey=name
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=sha256
 	Pipelines []PipelineSpec `json:"pipelines,omitempty"`
 }
 
@@ -121,7 +128,9 @@ type GovernancePolicyConfig struct {
 // RepositoryConfig defines customization entries for a stack.
 type RepositoryConfig struct {
 	Name string `json:"name,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=id
+	// +listMapKey=sha256
 	Pipelines  []PipelineSpec    `json:"pipelines,omitempty"`
 	Https      HttpsProtocolFile `json:"https,omitempty"`
 	GitRelease GitReleaseSpec    `json:"gitRelease,omitempty"`
@@ -234,7 +243,7 @@ type AdmissionControllerWebhookCustomizationSpec struct {
 	Tag        string `json:"tag,omitempty"`
 }
 
-type ServingSpec struct {
+type DevfileRegistrySpec struct {
 	Version    string `json:"version,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Repository string `json:"repository,omitempty"`
@@ -311,12 +320,20 @@ type PipelineStatus struct {
 	Url        string         `json:"url,omitempty"`
 	GitRelease GitReleaseInfo `json:"gitRelease,omitempty"`
 	Digest     string         `json:"digest,omitempty"`
-	// +listType=set
+	// +listType=map
+	// +listMapKey=assetName
+	// +listMapKey=namespace
+	// +listMapKey=group
+	// +listMapKey=version
+	// +listMapKey=kind
 	ActiveAssets []RepositoryAssetStatus `json:"activeAssets,omitempty"`
 }
 
 // The status of the gitops pipelines
 type GitopsStatus struct {
+	// +listType=map
+	// +listMapKey=name
+	// +listMapKey=digest
 	Pipelines []PipelineStatus `json:"pipelines,omitempty"`
 	Ready     string `json:"ready,omitempty"`
 	Message   string `json:"message,omitempty"`

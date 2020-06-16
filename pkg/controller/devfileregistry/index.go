@@ -1,4 +1,4 @@
-package serving
+package devfileregistry
 
 import (
 	//"encoding/json"

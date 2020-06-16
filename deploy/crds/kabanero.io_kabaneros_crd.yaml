@@ -135,7 +135,9 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - url
+                    x-kubernetes-list-type: map
                 type: object
               events:
                 properties:
@@ -466,6 +468,17 @@ spec:
                   version:
                     type: string
                 type: object
+              devfileRegistry:
+                properties:
+                  image:
+                    type: string
+                  repository:
+                    type: string
+                  tag:
+                    type: string
+                  version:
+                    type: string
+                type: object
               events:
                 properties:
                   enable:
@@ -534,7 +547,10 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - id
+                    - sha256
+                    x-kubernetes-list-type: map
                 type: object
               governancePolicy:
                 description: GovernancePolicyConfig defines customization entries
@@ -549,17 +565,6 @@ spec:
                 properties:
                   enable:
                     type: boolean
-                  image:
-                    type: string
-                  repository:
-                    type: string
-                  tag:
-                    type: string
-                  version:
-                    type: string
-                type: object
-              serving:
-                properties:
                   image:
                     type: string
                   repository:
@@ -632,7 +637,10 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - id
+                    - sha256
+                    x-kubernetes-list-type: map
                   repositories:
                     items:
                       description: RepositoryConfig defines customization entries
@@ -703,10 +711,15 @@ spec:
                                 type: string
                             type: object
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-map-keys:
+                          - id
+                          - sha256
+                          x-kubernetes-list-type: map
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   skipRegistryCertVerification:
                     type: boolean
                 type: object
@@ -752,7 +765,10 @@ spec:
                       type: string
                   type: object
                 type: array
-                x-kubernetes-list-type: set
+                x-kubernetes-list-map-keys:
+                - id
+                - sha256
+                x-kubernetes-list-type: map
               version:
                 type: string
             type: object
@@ -883,7 +899,13 @@ spec:
                                 type: string
                             type: object
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-map-keys:
+                          - assetName
+                          - namespace
+                          - group
+                          - version
+                          - kind
+                          x-kubernetes-list-type: map
                         digest:
                           type: string
                         gitRelease:
@@ -908,6 +930,10 @@ spec:
                           type: string
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    - digest
+                    x-kubernetes-list-type: map
                   ready:
                     type: string
                 type: object

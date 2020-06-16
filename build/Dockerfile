@@ -17,7 +17,7 @@ ENV OPERATOR=/usr/local/bin/kabanero-operator \
 COPY build/_output/bin/kabanero-operator ${OPERATOR}
 COPY build/_output/bin/kabanero-operator-stack-controller /usr/local/bin/kabanero-operator-stack-controller
 COPY build/_output/bin/admission-webhook /usr/local/bin/admission-webhook
-COPY build/_output/bin/serving /usr/local/bin/serving
+COPY build/_output/bin/devfile-registry-controller /usr/local/bin/devfile-registry-controller
 
 RUN mkdir /devfiles && chmod +777 /devfiles
 
