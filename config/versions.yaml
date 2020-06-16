@@ -22,6 +22,7 @@ kabanero:
     admission-webhook: "0.10.0"
     sso: "7.3.2"
     codeready-workspaces: "0.10.0"
+    devfile-registry-controller: "0.10.0"
 
 - version: "0.9.1"
   related-versions: 
@@ -302,3 +303,10 @@ related-software:
   sso:
   - version: "7.3.2"
     orchestrations: "orchestrations/sso/0.1"
+
+  devfile-registry-controller:
+  - version: "0.10.0"
+    orchestrations: "orchestrations/devfile-registry-controller/0.1"
+    identifiers:
+      repository: "FROM_POD"
+      tag: "FROM_POD"

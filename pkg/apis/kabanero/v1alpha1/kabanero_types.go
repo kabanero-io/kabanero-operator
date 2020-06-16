@@ -43,7 +43,8 @@ type KabaneroSpec struct {
 
 // InstanceCollectionConfig defines the customization entries for a set of collections.
 type InstanceCollectionConfig struct {
-	// +listType=set
+	// +listType=map
+	// +listMapKey=url
 	Repositories []RepositoryConfig `json:"repositories,omitempty"`
 }
 

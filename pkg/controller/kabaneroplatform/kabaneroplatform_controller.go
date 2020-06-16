@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
+  "github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
 	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
 	mfc "github.com/manifestival/controller-runtime-client"
 	mf "github.com/manifestival/manifestival"
@@ -56,6 +56,7 @@ var reconcileFuncs = []reconcileFuncType{
 	{name: "sso", function: reconcileSso},
 	{name: "gitops", function: reconcileGitopsPipelines},
 	{name: "target namespaces", function: reconcileTargetNamespaces},
+	{name: "devfile registry controller", function: reconcileDevfileRegistry},
 }
 
 // Add creates a new Kabanero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -65,7 +66,7 @@ func Add(mgr manager.Manager) error {
 	watchNamespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		return err
-	}
+}
 
 	// Lets be sure a single namespace is specified.
 	numberOfWatchNamespaces := len(strings.Split(watchNamespace, ","))
@@ -140,7 +141,7 @@ func (r *ReconcileKabanero) getOperatorImage() (string, error) {
 	if len(podName) == 0 {
 		return "", fmt.Errorf("The POD_NAME environment variable is not set, or is empty")
 	}
-	
+
 	// Second, get the Pod instance with that name
 	pod := &corev1.Pod{}
 	kubePodName := types.NamespacedName{Name: podName, Namespace: r.watchNamespace}
@@ -495,13 +496,19 @@ func cleanup(ctx context.Context, k *kabanerov1alpha2.Kabanero, client client.Cl
 	if err != nil {
 		return err
 	}
-
+	
 	// Remove the cross-namespace objects that target namespaces use.
 	err = cleanupTargetNamespaces(ctx, k, client)
 	if err != nil {
 		return err
 	}
 	
+	// Cleanup the Devfile registry controller and its cross-namespace objects
+	err = cleanupDevfileRegistry(k, client, reqLogger)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -1,0 +1,173 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kabanero-operator-devfile-registry
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: kabanero-operator-devfile-registry-cert
+  labels:
+    app.kubernetes.io/name: kabanero-operator-devfile-registry
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: devfile-registry
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
+spec:
+  selector:
+    name: kabanero-operator-devfile-registry
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kabanero-operator-devfile-registry
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - services/finalizers
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - "get"
+  - "create"
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  - deployments
+  verbs:
+  - get
+- apiGroups:
+  - kabanero.io
+  resources:
+  - "*"
+  verbs:
+  - "get"
+  - "list"
+  - "watch"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kabanero-operator-devfile-registry
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kabanero-operator-devfile-registry
+subjects:
+- kind: ServiceAccount
+  name: kabanero-operator-devfile-registry
+roleRef:
+  kind: Role
+  name: kabanero-operator-devfile-registry
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kabanero-operator-devfile-registry
+spec:
+  to:
+    kind: Service
+    name: kabanero-operator-devfile-registry
+  tls:
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kabanero-operator-devfile-registry
+  labels:
+    name: kabanero-operator-devfile-registry
+    app.kubernetes.io/name: kabanero-operator-devfile-registry
+    app.kubernetes.io/instance: {{ .instance }}
+    app.kubernetes.io/version: {{ .version }}
+    app.kubernetes.io/component: devfile-registry
+    app.kubernetes.io/part-of: kabanero
+    app.kubernetes.io/managed-by: kabanero-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kabanero-operator-devfile-registry
+  template:
+    metadata:
+      labels:
+        name: kabanero-operator-devfile-registry
+        app.kubernetes.io/name: kabanero-operator-devfile-registry
+        app.kubernetes.io/instance: {{ .instance }}
+        app.kubernetes.io/version: {{ .version }}
+        app.kubernetes.io/component: devfile-registry
+        app.kubernetes.io/part-of: kabanero
+        app.kubernetes.io/managed-by: kabanero-operator
+    spec:
+      serviceAccount: kabanero-operator-devfile-registry
+      containers:
+        - name: kabanero-operator-devfile-registry
+          image: {{ .image }}
+          imagePullPolicy: Always
+          command:
+          - /usr/local/bin/devfile-registry-controller
+          env:
+          - name: WATCH_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: "kabanero-operator-devfile-registry"
+          volumeMounts:
+          - mountPath: /tmp/serving-certs
+            name: kabanero-operator-devfile-registry-cert
+            readOnly: true
+      volumes:
+      - name: kabanero-operator-devfile-registry-cert
+        secret:
+          secretName: kabanero-operator-devfile-registry-cert

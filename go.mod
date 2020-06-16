@@ -8,6 +8,7 @@ require (
 	github.com/docker/cli v0.0.0-20200210162036-a4bedce16568
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v1.13.1
+	github.com/elsony/devfile2-registry/tools v0.0.0-20200603181527-db339ef8dd30
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.6
 	github.com/google/go-cmp v0.4.0

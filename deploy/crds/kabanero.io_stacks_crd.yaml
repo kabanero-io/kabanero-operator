@@ -51,6 +51,8 @@ spec:
                 properties:
                   desiredState:
                     type: string
+                  devfile:
+                    type: string
                   images:
                     items:
                       description: Image defines a container image used by a stack
@@ -61,7 +63,12 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - id
+                    - image
+                    x-kubernetes-list-type: map
+                  metafile:
+                    type: string
                   pipelines:
                     items:
                       description: PipelineSpec defines a set of pipelines and associated
@@ -99,7 +106,10 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - id
+                    - sha256
+                    x-kubernetes-list-type: map
                   skipCertVerification:
                     type: boolean
                   skipRegistryCertVerification:
@@ -108,7 +118,9 @@ spec:
                     type: string
                 type: object
               type: array
-              x-kubernetes-list-type: set
+              x-kubernetes-list-map-keys:
+              - version
+              x-kubernetes-list-type: map
           type: object
         status:
           description: StackStatus defines the observed state of a stack
@@ -142,7 +154,10 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - id
+                    - image
+                    x-kubernetes-list-type: map
                   location:
                     type: string
                   pipelines:
@@ -173,7 +188,13 @@ spec:
                                 type: string
                             type: object
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-map-keys:
+                          - assetName
+                          - namespace
+                          - group
+                          - version
+                          - kind
+                          x-kubernetes-list-type: map
                         digest:
                           type: string
                         gitRelease:
@@ -198,7 +219,10 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - name
+                    - digest
+                    x-kubernetes-list-type: map
                   status:
                     type: string
                   statusMessage:
@@ -207,7 +231,9 @@ spec:
                     type: string
                 type: object
               type: array
-              x-kubernetes-list-type: set
+              x-kubernetes-list-map-keys:
+              - version
+              x-kubernetes-list-type: map
           type: object
       type: object
   version: v1alpha2
