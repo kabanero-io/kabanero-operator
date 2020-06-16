@@ -993,6 +993,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: set
                   ready:
                     type: string
                 type: object

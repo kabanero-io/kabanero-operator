@@ -11,6 +11,9 @@ import (
 	"github.com/go-logr/logr"
 	kabanerov1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/apis/kabanero/v1alpha2"
 	"github.com/kabanero-io/kabanero-operator/pkg/controller/utils/timer"
+	"github.com/kabanero-io/kabanero-operator/pkg/versioning"
+	mfc "github.com/manifestival/controller-runtime-client"
+	mf "github.com/manifestival/manifestival"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -347,6 +350,10 @@ func (r *ReconcileKabanero) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// Collections are no longer supported.  Remove any objects that were used by
+	// the collection controller.
+	cleanupCollectionController(ctx, instance, r.client, reqLogger)
+	
 	// Wait for the admission controller webhook to be ready before we try
 	// to deploy the featured stacks.
 	isAdmissionControllerWebhookReady, _ := getAdmissionControllerWebhookStatus(instance, r.client, reqLogger)
@@ -581,4 +588,47 @@ func processStatus(ctx context.Context, request reconcile.Request, k *kabanerov1
 func initializeDependencies(k *kabanerov1alpha2.Kabanero) {
 	// Codeready-workspaces initialization.
 	initializeCRW(k)
+}
+
+// Cleanup the collection controller (used in past releases)
+func cleanupCollectionController(ctx context.Context, k *kabanerov1alpha2.Kabanero, cl client.Client, reqLogger logr.Logger) {
+	// Easiest thing to do is probably to load the orchestration and delete everything.
+	orchestrationPath := "orchestrations/collection-controller/0.1"
+	templateContext := make(map[string]interface{})
+	templateContext["instance"] = "nil"
+	templateContext["version"] = "nil"
+	templateContext["image"] = "nil:nil"
+	templateContext["name"] = "kabanero-" + k.GetNamespace() + "-trigger-rolebinding"
+	templateContext["kabaneroNamespace"] = k.GetNamespace()
+	rev := versioning.SoftwareRevision{Version: "nil", OrchestrationPath: orchestrationPath, Identifiers: templateContext}
+
+	transformMap := make(map[string][]mf.Transformer)
+	transformMap["collection-controller.yaml"] = []mf.Transformer{mf.InjectNamespace(k.GetNamespace())}
+	transformMap["collection-controller-tekton.yaml"] = []mf.Transformer{}
+	for yaml, transforms := range transformMap {
+		f, err := rev.OpenOrchestration(yaml)
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Unable to open %v orchestration", yaml))
+		} else {
+			s, err := renderOrchestration(f, templateContext)
+			if err != nil {
+				reqLogger.Error(err, fmt.Sprintf("Unable to render %v orchestration", yaml))
+			} else {
+				m, err := mf.ManifestFrom(mf.Reader(strings.NewReader(s)), mf.UseClient(mfc.NewClient(cl)), mf.UseLogger(reqLogger.WithName("manifestival")))
+				if err != nil {
+					reqLogger.Error(err, fmt.Sprintf("Unable to load manifests for %v orchestration", yaml))
+				} else {
+					mt, err := m.Transform(transforms...)
+					if err != nil {
+						reqLogger.Error(err, fmt.Sprintf("Unable to transform manifests for %v orchestration", yaml))
+					} else {
+						err = mt.Delete()
+						if err != nil {
+							reqLogger.Error(err, fmt.Sprintf("Unable to delete %v objects", yaml))
+						}
+					}
+				}
+			}
+		}
+	}
 }
