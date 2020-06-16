@@ -102,6 +102,9 @@ oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 # Delete the Role used by the collection controller to manipulate triggers
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
+# Delete the ClusterRole for cli-service to get deployed apps 
+oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=27-cli-service-role
+
 # Tekton Dashboard
 curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1.5/openshift-tekton-webhooks-extension-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
 curl -s -L https://github.com/tektoncd/dashboard/releases/download/v0.6.1.5/openshift-tekton-dashboard-release.yaml | sed "s/openshift-pipelines/tekton-pipelines/" | oc delete --ignore-not-found -f -
