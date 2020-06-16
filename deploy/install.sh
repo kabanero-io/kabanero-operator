@@ -333,7 +333,7 @@ fi
 # Create service account to used by pipelines
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=24-pipeline-sa
 
-# Role used by the collection controller to manipulate triggers in the
+# Role used to manipulate triggers in the
 # tekton-pipelines namespace (for use by tekton github webhooks extension)
 oc apply -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
@@ -351,9 +351,8 @@ sleep 3
 echo "***************************************************************************"
 echo "*                                                                          "
 echo "*  The installation script is complete.  You can now create an instance    "
-echo "*  of the Kabanero CR.  If you have cloned and curated a collection set,   "
-echo "*  apply the Kabanero CR that you created.  Or, to create the default      "
-echo "*  instance:                                                               "
+echo "*  of the Kabanero CR.  If you have cloned and curated a stack hub, apply  "
+echo "*  the Kabanero CR that you created.  Or, to create the default instance:  "
 echo "*                                                                          "
 echo "*      oc apply -n kabanero -f ${SAMPLE_KAB_INSTANCE_URL}                  "
 echo "*                                                                          "

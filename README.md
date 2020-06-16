@@ -7,7 +7,7 @@ We suggest you install from a [release](https://github.com/kabanero-io/kabanero-
 [![Build Status](https://travis-ci.org/kabanero-io/kabanero-operator.svg?branch=master)](https://travis-ci.org/kabanero-io/kabanero-operator)
 
 The Kabanero operator is developed using:
-* `operator-sdk` version 0.16.0.
+* `operator-sdk` version 0.17.1.
 * `go` version 1.13.x
 
 ## Clone the Kabanero operator
@@ -17,7 +17,7 @@ git clone https://github.com/kabanero-io/kabanero-operator
 cd kabanero-operator
 ```
 
-# Quickstart - OpenShift Container Platform (OCP) 4.3
+# Quickstart - OpenShift Container Platform (OCP) 4.4
 
 We recommend you follow the install instructions referenced above to set up your cluster for the first time.  If you would rather set it up manually, please continue with the following steps:
 
@@ -31,7 +31,7 @@ oc login -u admin -p admin https://openshift.my.com:8443/
 ## Deploy Prerequisite operators:
 
 The following operators need to be installed at the cluster scope:
-* [OpenShift Serverless Operator](https://docs.openshift.com/container-platform/4.3/serverless/installing-openshift-serverless.html)
+* [OpenShift Serverless Operator](https://docs.openshift.com/container-platform/4.4/serverless/installing-openshift-serverless.html)
 * OpenShift Pipelines Operator (from community-operators)
 * Appsody Operator (from certified-operators)
 * Open Liberty Operator (from certified-operators)

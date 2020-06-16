@@ -298,6 +298,7 @@ type AdmissionControllerWebhookStatus struct {
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".status.kabaneroInstance.version",description="Kabanero operator instance version."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.kabaneroInstance.ready",description="Kabanero operator instance readiness status. The status is directly correlated to the availability of the operator's resources dependencies."
 // +kubebuilder:resource:path=kabaneros,scope=Namespaced
+// +kubebuilder:unservedversion
 type Kabanero struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

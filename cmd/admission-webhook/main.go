@@ -9,8 +9,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
-	collectionwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/collection"
-	kabanerowebhookv1alpha1 "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero/v1alpha1"
 	kabanerowebhookv1alpha2 "github.com/kabanero-io/kabanero-operator/pkg/webhook/kabanero/v1alpha2"
 	stackwebhook "github.com/kabanero-io/kabanero-operator/pkg/webhook/stack"
 
@@ -98,10 +96,6 @@ func main() {
 	// Setup the webhook server
 	hookServer := mgr.GetWebhookServer()
 	hookServer.Port = 9443
-	hookServer.Register("/validate-collections", collectionwebhook.BuildValidatingWebhook(&mgr))
-	hookServer.Register("/mutate-collections", collectionwebhook.BuildMutatingWebhook(&mgr))
-	hookServer.Register("/validate-kabaneros", kabanerowebhookv1alpha1.BuildValidatingWebhook(&mgr))
-	hookServer.Register("/mutate-kabaneros", kabanerowebhookv1alpha1.BuildMutatingWebhook(&mgr))
 	hookServer.Register("/validate-kabaneros/v1alpha2", kabanerowebhookv1alpha2.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/validate-stacks", stackwebhook.BuildValidatingWebhook(&mgr))
 	hookServer.Register("/mutate-stacks", stackwebhook.BuildMutatingWebhook(&mgr))

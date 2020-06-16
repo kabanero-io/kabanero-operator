@@ -1,16 +1,16 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: kabanero-operator.v0.9.1
+  name: kabanero-operator.v0.10.0
   namespace: placeholder
   annotations:
     capabilities: Basic Install
     categories: "Integration & Delivery"
     certified: "false"
-    containerImage: kabanero/kabanero-operator@sha256:26e3fa7765cdfb89610541528e9d8c4052a77a6e43254eb7c7513b4941711f4f
+    containerImage: kabanero/kabanero-operator:latest
     createdAt: 2019-11-19T12:00:00.000-0500
     description: Bringings together foundational open source technologies into a modern microservices-based framework.
-    olm.skipRange: '>=0.6.1 <0.9.1'
+    olm.skipRange: '>=0.6.1 <0.10.0'
     repository: https://github.com/kabanero-io/kabanero-operator
     support: IBM
     alm-examples: |-
@@ -22,7 +22,7 @@ metadata:
             "name": "kabanero"
           },
           "spec": {
-            "version": "0.9.1",
+            "version": "0.10.0",
             "stacks": {
               "repositories": [
                 {
@@ -42,18 +42,6 @@ metadata:
                 }
               ]
             }
-          }
-        },
-        {
-          "apiVersion": "kabanero.io/v1alpha1",
-          "kind": "Collection",
-          "metadata": {
-            "name": "java-openliberty"
-          },
-          "spec": {
-            "version": "0.2.11",
-            "name": "java-openliberty",
-            "desiredState": "inactive"
           }
         },
         {
@@ -88,8 +76,8 @@ spec:
   minKubeVersion: 1.16.0
   apiservicedefinitions: {}
   maturity: alpha
-  version: 0.9.1
-  replaces: kabanero-operator.v0.9.0
+  version: 0.10.0
+  replaces: kabanero-operator.v0.9.1
   displayName: Kabanero Operator
   description: |
     The Kabanero operator is used to manage Kabanero Foundation instances on your Open Shift or Kubernetes cluster.
@@ -132,38 +120,6 @@ spec:
   - 'Tekton'
   customresourcedefinitions:
     owned:
-    - kind: Collection
-      name: collections.kabanero.io
-      version: v1alpha1
-      group: kabanero.io
-      description: Kabanero Collection
-      displayName: Kabanero Collection
-      resources:
-        - kind: Pipeline
-          name: ''
-          version: v1alpha1
-        - kind: Task
-          name: ''
-          version: v1alpha1
-        - kind: ServiceAccount
-          name: ''
-          version: v1
-      statusDescriptors:
-        - description: Version of the collection
-          displayName: Version
-          path: activeVersion
-          x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: The URL where the collection is located
-          displayName: Location
-          path: activeLocation
-          x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
-        - description: The status of the collection
-          displayName: Status
-          path: status
-          x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:label'
     - kind: Stack
       name: stacks.kabanero.io
       version: v1alpha2
@@ -283,7 +239,7 @@ spec:
                 name: kabanero-operator
                 app.kubernetes.io/name: kabanero
                 app.kubernetes.io/instance:
-                app.kubernetes.io/version: '0.9.1'
+                app.kubernetes.io/version: '0.10.0'
                 app.kubernetes.io/component: operator
                 app.kubernetes.io/part-of: kabanero
                 app.kubernetes.io/managed-by: olm
@@ -302,7 +258,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: kabanero-operator
-                image: kabanero/kabanero-operator@sha256:26e3fa7765cdfb89610541528e9d8c4052a77a6e43254eb7c7513b4941711f4f
+                image: kabanero/kabanero-operator:latest
                 imagePullPolicy: Always
                 name: kabanero-operator
                 resources: {}
@@ -332,12 +288,3 @@ spec:
     type: AllNamespaces
   provider:
     name: IBM
-  relatedImages:
-  - image: kabanero/kabanero-command-line-services:0.9.1
-    name: cli-services-0.9.1
-  - image: kabanero/landing:0.9.0
-    name: landing-0.9.0
-  - image: kabanero/events-operator:0.1.0
-    name: events-0.9.0
-  - image: kabanero/che-devfile-registry:0.11.0
-    name: codeready-workspaces-0.9.0
