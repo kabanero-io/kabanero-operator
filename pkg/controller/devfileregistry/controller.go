@@ -1,4 +1,4 @@
-package collection
+package devfileregistry
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"

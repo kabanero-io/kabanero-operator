@@ -99,7 +99,7 @@ oc delete serviceaccounts,deployments --selector=kabanero.io/component=kappnav -
 oc delete clusterroles,clusterrolebindings,crds --selector=kabanero.io/component=kappnav --ignore-not-found
 oc delete namespaces --selector=kabanero.io/component=kappnav --ignore-not-found
 
-# Delete the Role used by the collection controller to manipulate triggers
+# Delete the Role used to manipulate triggers
 oc delete --ignore-not-found -f $KABANERO_CUSTOMRESOURCES_YAML --selector kabanero.io/install=25-triggers-role
 
 # Delete the ClusterRole for cli-service to get deployed apps 

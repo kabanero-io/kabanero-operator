@@ -6,75 +6,40 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
+	// "runtime"
 	"strings"
+	"net/http"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
 	"github.com/kabanero-io/kabanero-operator/pkg/apis"
-	"github.com/kabanero-io/kabanero-operator/pkg/controller"
+	"github.com/kabanero-io/kabanero-operator/pkg/controller/devfileregistry"
 
-	knsapis "knative.dev/serving/pkg/apis/serving/v1alpha1"
-	appsv1 "github.com/openshift/api/apps/v1"
-	consolev1 "github.com/openshift/api/console/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	routev1 "github.com/openshift/api/route/v1"
-	tektonapis "github.com/tektoncd/operator/pkg/apis"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	// sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 // Change below variables to serve metrics on different host or port.
 var (
-	metricsHost       = "0.0.0.0"
-	metricsPort int32 = 8383
+	metricsHost               = "0.0.0.0"
+	metricsPort         int32 = 8383
 	operatorMetricsPort int32 = 8686
 )
 var log = logf.Log.WithName("cmd")
-
-// These variables are injected during the build using ldflags
-var GitTag string
-var GitCommit string
-var GitRepoSlug string
-var BuildDate string
-
-func printVersion() {
-	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
-	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
-
-	if len(GitTag) > 0 {
-		log.Info(fmt.Sprintf("kabanero-operator Git tag: %s", GitTag))
-	}
-
-	if len(GitCommit) > 0 {
-		log.Info(fmt.Sprintf("kabanero-operator Git commit: %s", GitCommit))
-	}
-
-	if len(GitRepoSlug) > 0 {
-		log.Info(fmt.Sprintf("kabanero-operator Git repository: %s", GitRepoSlug))
-	}
-
-	if len(BuildDate) == 0 {
-		BuildDate = "unspecified"
-	}
-	log.Info(fmt.Sprintf("kabanero-operator build date: %s", BuildDate))
-}
 
 func main() {
 	// Add the zap logger flag set to the CLI. The flag set must
@@ -97,8 +62,6 @@ func main() {
 	// uniform and structured logs.
 	logf.SetLogger(zap.Logger())
 
-	printVersion()
-
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
@@ -114,7 +77,7 @@ func main() {
 
 	ctx := context.TODO()
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "kabanero-operator-lock")
+	err = leader.Become(ctx, "devfile-registry-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -150,43 +113,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := routev1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := knsapis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := tektonapis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := appsv1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-	
-	if err := consolev1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	if err := operatorv1.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := devfileregistry.AddToManager(mgr); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -194,14 +122,44 @@ func main() {
 	// Add the Metrics Service
 	addMetrics(ctx, cfg)
 
-	log.Info("Starting the Cmd.")
+	//Start HTTTPS & Cmd
+	errs := Run(mgr)
 
-	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	// Run until channel receives error
+	select {
+	case err := <-errs:
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+
 }
+
+func Run(mgr manager.Manager) chan error {
+
+	errs := make(chan error)
+
+	// Start serving devfiles index
+	go func() {
+		fs := http.FileServer(http.Dir("/devfiles"))
+		http.Handle("/", fs)
+		log.Info("Starting Devfile registry on port :8443...")
+		if err := http.ListenAndServeTLS(":8443","/tmp/serving-certs/tls.crt","/tmp/serving-certs/tls.key",nil); err != nil {
+			errs <- err
+		}
+	}()
+
+	// Start the Cmd
+	go func() {
+		log.Info("Starting the Cmd.")
+		if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+			errs <- err
+		}
+	}()
+
+	return errs
+}
+
+
 
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
 // the Prometheus operator

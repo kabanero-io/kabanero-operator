@@ -135,9 +135,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-map-keys:
-                    - url
-                    x-kubernetes-list-type: map
                 type: object
               events:
                 properties:
@@ -166,7 +163,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                 type: object
               landing:
                 description: KabaneroLandingCustomizationSpec defines customization
@@ -181,7 +177,6 @@ spec:
                 items:
                   type: string
                 type: array
-                x-kubernetes-list-type: set
               tekton:
                 description: TektonCustomizationSpec defines customization entries
                   for Tekton
@@ -258,7 +253,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                   ready:
                     type: string
                 type: object
@@ -281,7 +275,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                   ready:
                     type: string
                 type: object
@@ -303,7 +296,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                   errorMessage:
                     type: string
                   ready:
@@ -312,7 +304,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                 type: object
               knativeEventing:
                 description: Knative eventing instance readiness status.
@@ -367,7 +358,7 @@ spec:
                 type: object
             type: object
         type: object
-    served: false
+    served: true
     storage: false
   - name: v1alpha2
     schema:
@@ -468,17 +459,6 @@ spec:
                   version:
                     type: string
                 type: object
-              devfileRegistry:
-                properties:
-                  image:
-                    type: string
-                  repository:
-                    type: string
-                  tag:
-                    type: string
-                  version:
-                    type: string
-                type: object
               events:
                 properties:
                   enable:
@@ -506,7 +486,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                 type: object
               gitops:
                 properties:
@@ -547,10 +526,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-map-keys:
-                    - id
-                    - sha256
-                    x-kubernetes-list-type: map
                 type: object
               governancePolicy:
                 description: GovernancePolicyConfig defines customization entries
@@ -637,10 +612,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-map-keys:
-                    - id
-                    - sha256
-                    x-kubernetes-list-type: map
                   repositories:
                     items:
                       description: RepositoryConfig defines customization entries
@@ -711,15 +682,8 @@ spec:
                                 type: string
                             type: object
                           type: array
-                          x-kubernetes-list-map-keys:
-                          - id
-                          - sha256
-                          x-kubernetes-list-type: map
                       type: object
                     type: array
-                    x-kubernetes-list-map-keys:
-                    - name
-                    x-kubernetes-list-type: map
                   skipRegistryCertVerification:
                     type: boolean
                 type: object
@@ -727,7 +691,6 @@ spec:
                 items:
                   type: string
                 type: array
-                x-kubernetes-list-type: set
               triggers:
                 items:
                   description: TriggerSpec defines the sets of default triggers for
@@ -765,10 +728,6 @@ spec:
                       type: string
                   type: object
                 type: array
-                x-kubernetes-list-map-keys:
-                - id
-                - sha256
-                x-kubernetes-list-type: map
               version:
                 type: string
             type: object
@@ -801,7 +760,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                   message:
                     type: string
                   ready:
@@ -860,7 +818,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                   message:
                     type: string
                   ready:
@@ -899,13 +856,6 @@ spec:
                                 type: string
                             type: object
                           type: array
-                          x-kubernetes-list-map-keys:
-                          - assetName
-                          - namespace
-                          - group
-                          - version
-                          - kind
-                          x-kubernetes-list-type: map
                         digest:
                           type: string
                         gitRelease:
@@ -930,10 +880,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                    x-kubernetes-list-map-keys:
-                    - name
-                    - digest
-                    x-kubernetes-list-type: map
                   ready:
                     type: string
                 type: object
@@ -955,7 +901,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                   message:
                     type: string
                   ready:
@@ -964,7 +909,6 @@ spec:
                     items:
                       type: string
                     type: array
-                    x-kubernetes-list-type: set
                 type: object
               landing:
                 description: Kabanero Landing page readiness status.
@@ -1015,23 +959,6 @@ spec:
                   ready:
                     type: string
                   version:
-                    type: string
-                type: object
-              targetNamespaces:
-                description: Target namespace status
-                properties:
-                  message:
-                    type: string
-                  namespaces:
-                    description: These are the target namespaces that are currently
-                      being used.  The spec.targetNamespaces will replace these when
-                      the operator has finished applying the role bindings to those
-                      namespaces.
-                    items:
-                      type: string
-                    type: array
-                    x-kubernetes-list-type: set
-                  ready:
                     type: string
                 type: object
               tekton:
