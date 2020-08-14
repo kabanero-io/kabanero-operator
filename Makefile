@@ -53,7 +53,7 @@ IMAGE_SHA = $(lastword $(subst @, ,$(IMAGE_REPO_DIGEST)))
 REGISTRY_IMAGE_SHA = $(lastword $(subst @, ,$(REGISTRY_IMAGE_REPO_DIGEST)))
 
 # Current release (used for CSV management)
-CURRENT_RELEASE=0.9.1
+CURRENT_RELEASE=0.9.2
 
 # OS detection
 ifeq ($(OS),Windows_NT)
