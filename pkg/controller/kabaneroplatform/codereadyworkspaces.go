@@ -34,6 +34,7 @@ var crwlog = rlog.Log.WithName("kabanero-codeready-workspaces")
 const (
 	crwOrchestrationFilePath         = "orchestrations/codeready-workspaces/0.1"
 	crwYamlNameCodewindClusterRole   = "codewind-clusterrole.yaml"
+	crwYamlNameCodewindRoleBinding   = "codewind-rolebinding.yaml"
 	crwYamlNameCodewindTektonRole    = "codewind-tekton-role.yaml"
 	crwYamlNameCodewindTektonBinding = "codewind-tekton-rolebinding.yaml"
 	crwOperatorCR                    = "codeready-workspaces-cr.yaml"
@@ -75,6 +76,13 @@ func reconcileCRW(ctx context.Context, k *kabanerov1alpha2.Kabanero, c client.Cl
 		logger.Error(err, fmt.Sprintf("Failed to Apply clusterRole resource. Revision: %v. TemplateCtx: %v", rev, templateCtx))
 		return err
 	}
+
+	// Deploy the Codewind rolebinding
+	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwYamlNameCodewindRoleBinding, true, k.GetNamespace())
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to Apply rolebinding resource. Revision: %v. TemplateCtx: %v", rev, templateCtx))
+		return err
+	}	
 
 	// Deploy the Codewind Tekton role
 	err = processCRWYaml(ctx, k, rev, templateCtx, c, crwYamlNameCodewindTektonRole, true, "tekton-pipelines")
@@ -481,6 +489,11 @@ func deleteCRWOperatorResources(ctx context.Context, k *kabanerov1alpha2.Kabaner
 
 	if len(kiList.Items) == 1 {
 		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindClusterRole, false, k.GetNamespace())
+		if err != nil {
+			return err
+		}
+
+		err = processCRWYaml(ctx, k, rev, unstructured.Unstructured{}.Object, c, crwYamlNameCodewindRoleBinding, false, k.GetNamespace())
 		if err != nil {
 			return err
 		}

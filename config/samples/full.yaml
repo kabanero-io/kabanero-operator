@@ -92,10 +92,10 @@ spec:
 
           # Overrides the image as a separate repository or tag
           repository: kabanero/che-devfile-registry
-          tag: "0.11.0"
+          tag: "0.14.1"
 
           # Overrides the image uri
-          image: kabanero/che-devfile-registry:0.11.0
+          image: kabanero/che-devfile-registry:0.14.1
 
         # Specifies a custom cluster role to user for the Che workspaces uses the default roles if left blank.
         # The default value is kabanero-codewind.
