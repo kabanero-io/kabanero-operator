@@ -1,0 +1,11 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kabanero-codewind
+subjects:
+- kind: ServiceAccount
+  name: che-workspace
+roleRef:
+  kind: ClusterRole
+  name: kabanero-codewind
+  apiGroup: rbac.authorization.k8s.io
