@@ -3,7 +3,7 @@ kind: Kabanero
 metadata:
   name: kabanero
 spec:
-  version: "0.9.1"
+  version: "0.9.2"
   stacks:
     repositories:
     - name: central
